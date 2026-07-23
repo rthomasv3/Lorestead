@@ -4,6 +4,7 @@
     <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
   </PropertyGroup>
   <ItemGroup>
+    <PackageVersion Include="Galdr.Native" Version="2.0.0" />
     <PackageVersion Include="GaldrJson" Version="1.2.0" />
     <PackageVersion Include="Microsoft.Data.Sqlite" Version="10.0.10" />
     <!-- Transitive pin: lifts Microsoft.Data.Sqlite 10's SQLitePCLRaw 2.1.11 past GHSA-2m69-gcr7-jv3q. -->

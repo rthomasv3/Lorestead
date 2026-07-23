@@ -1,6 +1,7 @@
 <Solution>
   <Folder Name="/src/">
     <Project Path="src/SylvaNote.Core/SylvaNote.Core.csproj" />
+    <Project Path="src/SylvaNote.Client/SylvaNote.Client.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="src/tests/SylvaNote.UnitTests/SylvaNote.UnitTests.csproj" />
