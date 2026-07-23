@@ -1,0 +1,47 @@
+name: spikes
+
+on: push
+
+jobs:
+  spikes:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Publish SpikeCredentialManager
+        run: dotnet publish spikes/SpikeCredentialManager -c Release -o publish/SpikeCredentialManager
+
+      - name: Publish SpikeMcpAot
+        run: dotnet publish spikes/SpikeMcpAot -c Release -o publish/SpikeMcpAot
+
+      - name: Publish SpikeDataVersion
+        run: dotnet publish spikes/SpikeDataVersion -c Release -o publish/SpikeDataVersion
+
+      - name: Run SpikeCredentialManager
+        if: runner.os != 'Linux'
+        run: ./publish/SpikeCredentialManager/SpikeCredentialManager
+
+      # Headless runners have no unlocked keyring; best-effort unlock so the spike can
+      # exercise the real secret service. The spike itself tolerates an unavailable store
+      # on Linux (AOT-only pass per phases.md).
+      - name: Run SpikeCredentialManager (Linux, keyring best-effort)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gnome-keyring dbus-x11 libsecret-1-0
+          dbus-run-session -- bash -c 'echo -n spike | gnome-keyring-daemon --unlock --components=secrets; ./publish/SpikeCredentialManager/SpikeCredentialManager'
+
+      - name: Run SpikeMcpAot
+        run: ./publish/SpikeMcpAot/SpikeMcpAot
+
+      - name: Run SpikeDataVersion
+        run: ./publish/SpikeDataVersion/SpikeDataVersion
