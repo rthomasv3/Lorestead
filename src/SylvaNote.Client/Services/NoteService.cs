@@ -159,7 +159,7 @@ public sealed class NoteService : INoteService
         string upper = nextId != null ? notes.Get(nextId)?.Position : null;
         if (lower != null && upper != null && string.CompareOrdinal(lower, upper) >= 0)
         {
-            // Stale neighbor info from the frontend — fall back to "after previous".
+            // Stale neighbor info from the frontend - fall back to "after previous".
             upper = null;
         }
 

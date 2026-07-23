@@ -17,7 +17,7 @@ export const useNotesStore = defineStore('notes', () => {
   const currentNote = ref(null)
   const currentAttachments = ref([])
   // Tree expansion lives here (not in the Tree component) so it survives route
-  // changes — the view unmounts on navigation but the store does not.
+  // changes - the view unmounts on navigation but the store does not.
   const expandedIds = ref(new Set())
 
   const blobUrls = new Map()
@@ -115,7 +115,7 @@ export const useNotesStore = defineStore('notes', () => {
       currentNote.value = null
       currentAttachments.value = []
     } else {
-      // The previous note stays visible until the new one arrives — clearing first
+      // The previous note stays visible until the new one arrives - clearing first
       // would flash the empty state on every click, including reselects.
       const response = await noteService.getNote({ id })
       if (selectedId.value === id) {
@@ -201,12 +201,13 @@ export const useNotesStore = defineStore('notes', () => {
     }
   }
 
-  async function addAttachment({ filename, mimeType, dataBase64 }) {
+  async function addAttachment({ filename, mimeType, dataBase64, thumbnailBase64 = null }) {
     const response = await attachmentService.addAttachment({
       noteId: selectedId.value,
       filename,
       mimeType,
       dataBase64,
+      thumbnailBase64,
     })
     await refreshAttachments()
     return response.attachment
@@ -220,10 +221,11 @@ export const useNotesStore = defineStore('notes', () => {
   async function removeAttachment(id) {
     await attachmentService.deleteAttachment({ id })
     releaseBlobUrl(id)
+    releaseThumbnailUrl(id)
     await refreshAttachments()
   }
 
-  // Object URLs are cached per attachment id — blobs are immutable, so a URL stays
+  // Object URLs are cached per attachment id - blobs are immutable, so a URL stays
   // valid for the app's lifetime and both the preview and the cards reuse it.
   async function getAttachmentUrl(id) {
     if (!blobUrls.has(id)) {
@@ -244,8 +246,39 @@ export const useNotesStore = defineStore('notes', () => {
     }
   }
 
-  // Expands everything on the way to a note — ancestor notes plus the Templates/
-  // Trash virtual containers when the note lives under one — so a jump from
+  // Cards only ever pull the small thumbnail across the bridge - the full blob
+  // moves on demand (preview, body embeds, download stays fully backend-side).
+  const thumbnailUrls = new Map()
+
+  async function getAttachmentThumbnailUrl(id) {
+    if (!thumbnailUrls.has(id)) {
+      const promise = attachmentService.getAttachmentThumbnail({ id }).then((data) => {
+        if (!data.dataBase64) return null
+        const bytes = Uint8Array.from(atob(data.dataBase64), (c) => c.charCodeAt(0))
+        return URL.createObjectURL(new Blob([bytes], { type: 'image/png' }))
+      })
+      thumbnailUrls.set(id, promise)
+    }
+    return thumbnailUrls.get(id)
+  }
+
+  // Lazy rebuild path: attachments that arrived without a local thumbnail (sync,
+  // MCP) get one the first time this device holds the full image.
+  async function storeAttachmentThumbnail(id, dataBase64) {
+    await attachmentService.saveAttachmentThumbnail({ id, dataBase64 })
+    releaseThumbnailUrl(id)
+  }
+
+  function releaseThumbnailUrl(id) {
+    const cached = thumbnailUrls.get(id)
+    if (cached) {
+      thumbnailUrls.delete(id)
+      cached.then((url) => url && URL.revokeObjectURL(url)).catch(() => {})
+    }
+  }
+
+  // Expands everything on the way to a note - ancestor notes plus the Templates/
+  // Trash virtual containers when the note lives under one - so a jump from
   // search always lands on a visible row.
   function reveal(id) {
     const ids = new Set(expandedIds.value)
@@ -317,6 +350,8 @@ export const useNotesStore = defineStore('notes', () => {
     renameAttachment,
     removeAttachment,
     getAttachmentUrl,
+    getAttachmentThumbnailUrl,
+    storeAttachmentThumbnail,
     reveal,
     pathOf,
   }

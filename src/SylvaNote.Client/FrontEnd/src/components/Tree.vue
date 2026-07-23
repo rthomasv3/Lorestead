@@ -12,7 +12,7 @@ const props = defineProps({
   selectedId: { type: [String, Number, null], default: null },
   defaultExpanded: { type: Array, default: () => [] },
   // canDrag(item) → bool. resolveDrop(sourceItem, targetItem, zone) → false | true |
-  // { targetId, zone } — zones are 'above' | 'below' | 'into'; returning a different
+  // { targetId, zone } - zones are 'above' | 'below' | 'into'; returning a different
   // targetId redirects the drop (e.g. trash children redirect to the Trash node).
   canDrag: { type: Function, default: null },
   resolveDrop: { type: Function, default: null },

@@ -1,4 +1,5 @@
 using System;
+using Galdr.Native;
 using SylvaNote.Client.Commands.Contracts;
 using SylvaNote.Client.Services.Abstractions;
 using SylvaNote.Core.DataAccess;
@@ -11,10 +12,12 @@ public sealed class AttachmentService : IAttachmentService
     private const long MaxSizeBytes = 100L * 1024 * 1024;
 
     private readonly RepositoryFactory _repositories;
+    private readonly IDialogService _dialogs;
 
-    public AttachmentService(RepositoryFactory repositories)
+    public AttachmentService(RepositoryFactory repositories, IDialogService dialogs)
     {
         _repositories = repositories;
+        _dialogs = dialogs;
     }
 
     public GetAttachmentsResponse GetForNote(GetAttachmentsRequest request)
@@ -38,13 +41,49 @@ public sealed class AttachmentService : IAttachmentService
         {
             Id = Guid.CreateVersion7().ToString(),
             NoteId = request.NoteId,
+            TaskId = request.TaskId,
             Filename = string.IsNullOrEmpty(request.Filename) ? "attachment" : request.Filename,
             MimeType = string.IsNullOrEmpty(request.MimeType) ? "application/octet-stream" : request.MimeType,
             SizeBytes = data.LongLength,
         };
         attachments.Save(attachment);
         attachments.SaveBlob(attachment.Id, data);
+        if (!string.IsNullOrEmpty(request.ThumbnailBase64))
+        {
+            attachments.SaveThumbnail(attachment.Id, Convert.FromBase64String(request.ThumbnailBase64));
+        }
         return new AddAttachmentResponse { Attachment = attachment };
+    }
+
+    public GetAttachmentThumbnailResponse GetThumbnail(GetAttachmentThumbnailRequest request)
+    {
+        byte[] data = _repositories.Attachments.GetThumbnail(request.Id);
+        return new GetAttachmentThumbnailResponse
+        {
+            DataBase64 = data != null ? Convert.ToBase64String(data) : string.Empty,
+        };
+    }
+
+    public SaveAttachmentThumbnailResponse SaveThumbnail(SaveAttachmentThumbnailRequest request)
+    {
+        _repositories.Attachments.SaveThumbnail(request.Id, Convert.FromBase64String(request.DataBase64 ?? string.Empty));
+        return new SaveAttachmentThumbnailResponse { Ok = true };
+    }
+
+    // Download never routes the blob through the frontend - bytes go straight from
+    // SQLite to the chosen file.
+    public DownloadAttachmentResponse Download(DownloadAttachmentRequest request)
+    {
+        bool saved = false;
+        AttachmentRepository attachments = _repositories.Attachments;
+        Attachment attachment = GetRequired(attachments, request.Id);
+        string path = _dialogs.OpenSaveDialog(defaultName: attachment.Filename);
+        if (!string.IsNullOrEmpty(path))
+        {
+            System.IO.File.WriteAllBytes(path, attachments.GetBlob(request.Id) ?? new byte[0]);
+            saved = true;
+        }
+        return new DownloadAttachmentResponse { Saved = saved };
     }
 
     public RenameAttachmentResponse Rename(RenameAttachmentRequest request)

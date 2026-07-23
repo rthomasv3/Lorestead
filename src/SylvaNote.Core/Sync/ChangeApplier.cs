@@ -7,7 +7,7 @@ using SylvaNote.Core.Entities;
 
 namespace SylvaNote.Core.Sync
 {
-    // Applies pulled server entries in seq order — pure LWW: each upsert overwrites the
+    // Applies pulled server entries in seq order - pure LWW: each upsert overwrites the
     // item row wholesale, so the last entry in the stream wins by construction. One
     // transaction per batch; deferred FKs let mixed-order batches commit.
     public sealed class ChangeApplier
@@ -39,7 +39,7 @@ namespace SylvaNote.Core.Sync
                     if (entry.DeviceId == _localDeviceId)
                     {
                         // Own change coming back around: item state already reflects it (or a
-                        // newer local edit) — stamp/mirror the log only, never reapply.
+                        // newer local edit) - stamp/mirror the log only, never reapply.
                         if (!ChangeLogRepository.TryStampPendingWithin(connection, transaction, entry))
                         {
                             ChangeLogRepository.AppendWithin(connection, transaction, entry);

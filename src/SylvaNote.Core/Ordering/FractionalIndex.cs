@@ -58,7 +58,7 @@ namespace SylvaNote.Core.Ordering
                 else
                 {
                     // Adjacent digits: fix the lower digit, then anything after a's
-                    // remainder works — the differing digit already keeps it below b.
+                    // remainder works - the differing digit already keeps it below b.
                     string aRest = i + 1 <= a.Length ? a.Substring(i + 1) : string.Empty;
                     result = b.Substring(0, i) + Alphabet[digitA] + KeyAfter(aRest);
                 }
@@ -67,8 +67,8 @@ namespace SylvaNote.Core.Ordering
         }
 
         // Shortest reasonable key strictly greater than s (no upper bound): bump the first
-        // non-'z' digit and truncate; all-'z' (or empty) appends '1' — the lowest legal
-        // digit — so sequential appends burn through all 61 values per added character.
+        // non-'z' digit and truncate; all-'z' (or empty) appends '1' - the lowest legal
+        // digit - so sequential appends burn through all 61 values per added character.
         private static string KeyAfter(string s)
         {
             string result = null;

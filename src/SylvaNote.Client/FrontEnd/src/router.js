@@ -2,7 +2,7 @@ import { nextTick } from 'vue'
 import { createWebHashHistory, createRouter } from 'vue-router'
 
 const NotesView = () => import('./views/notes/NotesView.vue')
-const BoardsView = () => import('./views/BoardsView.vue')
+const BoardsView = () => import('./views/boards/BoardsView.vue')
 const SettingsView = () => import('./views/SettingsView.vue')
 
 const routes = [

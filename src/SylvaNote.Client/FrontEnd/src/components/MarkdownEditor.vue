@@ -59,7 +59,7 @@ function settingsExtensions() {
 }
 
 // The markdown parser tags *text* and _text_ as the same Emphasis node, but the
-// preview (markdown-it-underline) renders underscores as underline — mirror that
+// preview (markdown-it-underline) renders underscores as underline - mirror that
 // here by checking the delimiter character and restyling underscore spans.
 const underlineMark = Decoration.mark({ class: 'cm-md-underline' })
 
@@ -113,11 +113,11 @@ function createView() {
         syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
         underscoreEmphasis,
         EditorView.lineWrapping,
-        // placeholder('Start writing…'),
+        // placeholder('Start writing...'),
         configurable.of(settingsExtensions()),
         readonlyCompartment.of(EditorState.readOnly.of(props.readonly)),
         EditorView.updateListener.of((update) => {
-          // Prop-driven doc swaps (note switch) must not echo back as edits —
+          // Prop-driven doc swaps (note switch) must not echo back as edits -
           // the parent would mark the note dirty just for selecting it.
           if (update.docChanged && !syncingFromProp) {
             emit('update:modelValue', update.state.doc.toString())
@@ -132,7 +132,7 @@ let dropCleanup = null
 
 onMounted(() => {
   createView()
-  // Attachment cards dragged into the editor insert a link at the cursor —
+  // Attachment cards dragged into the editor insert a link at the cursor -
   // images use the embed form so they render inline in the preview.
   dropCleanup = dropTargetForElements({
     element: host.value,
@@ -153,7 +153,13 @@ onUnmounted(() => {
 watch(() => props.modelValue, (value) => {
   if (view && value !== view.state.doc.toString()) {
     syncingFromProp = true
-    view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: value } })
+    // Cursor goes to the start on note switch (remember-cursor-position is a
+    // Phase 7 setting).
+    view.dispatch({
+      changes: { from: 0, to: view.state.doc.length, insert: value },
+      selection: { anchor: 0 },
+      scrollIntoView: true,
+    })
     syncingFromProp = false
   }
 })
@@ -175,7 +181,7 @@ function focus() {
 function wrapSelection(prefix, suffix = prefix) {
   if (!view || props.readonly) return
   const { state } = view
-  // changeByRange requires real SelectionRange instances — plain {anchor, head}
+  // changeByRange requires real SelectionRange instances - plain {anchor, head}
   // objects corrupt the selection on the next transaction.
   const changes = state.changeByRange((range) => {
     const text = state.sliceDoc(range.from, range.to)

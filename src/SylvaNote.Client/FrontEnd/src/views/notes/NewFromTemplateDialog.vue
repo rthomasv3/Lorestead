@@ -58,7 +58,7 @@ async function create() {
         <SelectMenu v-if="templateOptions.length > 0" v-model="templateId" :options="templateOptions"
           placeholder="Select a template" />
         <p v-else class="text-sm text-on-surface-muted">
-          No templates yet — drag a note into the Templates section to create one.
+          No templates yet - drag a note into the Templates section to create one.
         </p>
 
         <div class="flex justify-end gap-2 mt-5">

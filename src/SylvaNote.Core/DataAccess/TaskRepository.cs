@@ -67,6 +67,62 @@ namespace SylvaNote.Core.DataAccess
             return task;
         }
 
+        // Tasks have no trash UI - delete tombstones immediately (data.md tombstone
+        // flag; sync propagates it like any other change).
+        public void Delete(string id)
+        {
+            using SqliteConnection connection = _connectionManager.CreateConnection();
+            using SqliteTransaction transaction = connection.BeginTransaction();
+
+            TombstoneWithin(connection, transaction, id, _deviceId, Timestamps.UtcNowIso());
+
+            transaction.Commit();
+        }
+
+        // One query for the whole kanban view; NoteIds are left null - cards don't
+        // show links, the edit dialog loads the full task.
+        public List<TaskItem> GetActiveForBoard(string boardId)
+        {
+            List<TaskItem> tasks = new List<TaskItem>();
+            using SqliteConnection connection = _connectionManager.CreateConnection();
+            using SqliteCommand select = connection.CreateCommand();
+            select.CommandText = @"
+                SELECT task.id, task.column_id, task.title, task.body, task.position, task.deleted, task.created_at, task.updated_at
+                FROM task
+                JOIN board_column bc ON bc.id = task.column_id
+                WHERE bc.board_id = @board_id AND task.deleted = 0 AND bc.deleted = 0
+                ORDER BY task.position";
+            select.Parameters.AddWithValue("@board_id", boardId);
+            using SqliteDataReader reader = select.ExecuteReader();
+            while (reader.Read())
+            {
+                tasks.Add(ReadTask(reader));
+            }
+            return tasks;
+        }
+
+        // Position uniqueness spans ALL tasks in the column - tombstoned rows share
+        // the fractional keyspace even though they never render.
+        public string GetMaxPosition(string columnId)
+        {
+            using SqliteConnection connection = _connectionManager.CreateConnection();
+            using SqliteCommand select = connection.CreateCommand();
+            select.CommandText = "SELECT MAX(position) FROM task WHERE column_id = @column_id";
+            select.Parameters.AddWithValue("@column_id", columnId);
+            object result = select.ExecuteScalar();
+            return result is string value ? value : null;
+        }
+
+        public bool PositionExists(string columnId, string position)
+        {
+            using SqliteConnection connection = _connectionManager.CreateConnection();
+            using SqliteCommand select = connection.CreateCommand();
+            select.CommandText = "SELECT 1 FROM task WHERE column_id = @column_id AND position = @position LIMIT 1";
+            select.Parameters.AddWithValue("@column_id", columnId);
+            select.Parameters.AddWithValue("@position", position);
+            return select.ExecuteScalar() != null;
+        }
+
         public List<TaskItem> GetForColumn(string columnId)
         {
             List<TaskItem> tasks = new List<TaskItem>();
@@ -130,6 +186,58 @@ namespace SylvaNote.Core.DataAccess
                 insert.Parameters.AddWithValue("@note_id", noteId);
                 insert.ExecuteNonQuery();
             }
+        }
+
+        // Shared by the column/board delete cascades so every tombstone gets its own
+        // outbox entry with the task's full state (including its note links).
+        public static void TombstoneWithin(SqliteConnection connection, SqliteTransaction transaction, string id, string deviceId, string now)
+        {
+            TaskItem task = GetWithin(connection, transaction, id);
+            if (task != null && !task.Deleted)
+            {
+                task.Deleted = true;
+                task.UpdatedAt = now;
+                task.NoteIds = GetNoteIds(connection, id);
+                UpsertWithin(connection, transaction, task);
+                ChangeLogRepository.AppendWithin(connection, transaction, new ChangeLogEntry
+                {
+                    ItemType = ItemTypes.Task,
+                    ItemId = task.Id,
+                    Op = ChangeOps.Upsert,
+                    Payload = PayloadJson.Serialize(task),
+                    BaseSeq = ChangeLogRepository.MaxSeqForItemWithin(connection, transaction, ItemTypes.Task, task.Id),
+                    DeviceId = deviceId,
+                    ChangedAt = now,
+                });
+            }
+        }
+
+        public static List<string> ReadActiveIdsForColumnWithin(SqliteConnection connection, SqliteTransaction transaction, string columnId)
+        {
+            List<string> ids = new List<string>();
+            using SqliteCommand select = connection.CreateCommand();
+            select.CommandText = "SELECT id FROM task WHERE column_id = @column_id AND deleted = 0";
+            select.Parameters.AddWithValue("@column_id", columnId);
+            using SqliteDataReader reader = select.ExecuteReader();
+            while (reader.Read())
+            {
+                ids.Add(reader.GetString(0));
+            }
+            return ids;
+        }
+
+        private static TaskItem GetWithin(SqliteConnection connection, SqliteTransaction transaction, string id)
+        {
+            TaskItem task = null;
+            using SqliteCommand select = connection.CreateCommand();
+            select.CommandText = SelectSql + " WHERE id = @id";
+            select.Parameters.AddWithValue("@id", id);
+            using SqliteDataReader reader = select.ExecuteReader();
+            if (reader.Read())
+            {
+                task = ReadTask(reader);
+            }
+            return task;
         }
 
         public static void DeleteRowWithin(SqliteConnection connection, SqliteTransaction transaction, string id)

@@ -19,6 +19,7 @@ namespace SylvaNote.IntegrationTests
             Assert.Contains("task_note", names);
             Assert.Contains("attachment", names);
             Assert.Contains("attachment_blob", names);
+            Assert.Contains("attachment_thumbnail", names);
             Assert.Contains("change_log", names);
             Assert.Contains("note_link", names);
             Assert.Contains("note_fts", names);
@@ -35,7 +36,7 @@ namespace SylvaNote.IntegrationTests
             Assert.Contains("task_fts_delete", triggers);
             Assert.Contains("task_fts_update", triggers);
 
-            Assert.Equal(2, GetSchemaVersion(db));
+            Assert.Equal(3, GetSchemaVersion(db));
         }
 
         [Fact]
@@ -62,7 +63,7 @@ namespace SylvaNote.IntegrationTests
                 migrator.Add(migration);
             }
             migrator.Run(connection);
-            Assert.Equal(2, GetSchemaVersion(db));
+            Assert.Equal(3, GetSchemaVersion(db));
         }
 
         private static List<string> GetSchemaNames(TestDb db, string type)

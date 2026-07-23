@@ -3,18 +3,22 @@ import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { DialogRoot, DialogPortal, DialogOverlay, DialogContent, DialogTitle, VisuallyHidden } from 'reka-ui'
 import { useNotesStore } from '../stores/notesStore.js'
+import { useBoardsStore } from '../stores/boardsStore.js'
 
 const router = useRouter()
 const notesStore = useNotesStore()
+const boardsStore = useBoardsStore()
 
 const open = ref(false)
 const query = ref('')
 const noteResults = ref([])
+const taskResults = ref([])
+const boardResults = ref([])
 const selectedIndex = ref(0)
 const input = ref(null)
 let searchTimer = null
 
-// Static in-app list (features/search.md) — settings entries never touch the DB.
+// Static in-app list (features/search.md) - settings entries never touch the DB.
 const SETTINGS_ENTRIES = [
   ['Theme', 'Application'], ['Accent color', 'Application'], ['Date format', 'Application'],
   ['Time format', 'Application'], ['History retention', 'Application'], ['Trash retention', 'Application'],
@@ -41,6 +45,8 @@ const settingsResults = computed(() => {
     }))
 })
 
+// Content hits (notes, tasks) first; board/settings name matches after
+// (features/search.md ordering).
 const results = computed(() => [
   ...noteResults.value.map((r) => ({
     kind: 'note',
@@ -50,6 +56,22 @@ const results = computed(() => [
     label: r.title || 'Untitled',
     snippet: r.snippet,
   })),
+  ...taskResults.value.map((r) => ({
+    kind: 'task',
+    key: `task:${r.id}`,
+    id: r.id,
+    boardId: r.boardId,
+    breadcrumb: [r.boardName || 'Untitled board', r.columnName || 'Untitled list', r.title || 'Untitled task'],
+    label: r.title || 'Untitled task',
+    snippet: r.snippet,
+  })),
+  ...boardResults.value.map((r) => ({
+    kind: 'board',
+    key: `board:${r.id}`,
+    id: r.id,
+    breadcrumb: ['Boards', r.title || 'Untitled board'],
+    label: r.title || 'Untitled board',
+  })),
   ...settingsResults.value,
 ])
 
@@ -58,10 +80,20 @@ watch(query, (value) => {
   selectedIndex.value = 0
   if (!value.trim()) {
     noteResults.value = []
+    taskResults.value = []
+    boardResults.value = []
     return
   }
   searchTimer = setTimeout(async () => {
-    noteResults.value = await notesStore.search(value.trim(), { includeTrashed: true })
+    const q = value.trim()
+    const [notes, tasks, boards] = await Promise.all([
+      notesStore.search(q, { includeTrashed: true }),
+      boardsStore.searchTasks(q),
+      boardsStore.searchBoards(q),
+    ])
+    noteResults.value = notes
+    taskResults.value = tasks
+    boardResults.value = boards
   }, 150)
 })
 
@@ -69,6 +101,8 @@ watch(open, async (value) => {
   if (value) {
     query.value = ''
     noteResults.value = []
+    taskResults.value = []
+    boardResults.value = []
     selectedIndex.value = 0
     if (!notesStore.loaded) notesStore.load()
     await nextTick()
@@ -115,6 +149,13 @@ async function choose(result) {
     await router.push('/notes')
     notesStore.reveal(result.id)
     notesStore.select(result.id)
+  } else if (result.kind === 'task') {
+    await boardsStore.select(result.boardId)
+    boardsStore.openTaskRequest = result.id
+    await router.push('/boards')
+  } else if (result.kind === 'board') {
+    await boardsStore.select(result.id)
+    await router.push('/boards')
   } else {
     await router.push('/settings')
     setTimeout(() => {
@@ -171,7 +212,7 @@ onUnmounted(() => {
 
         <div class="flex items-center gap-2.5 px-3.5 h-11 border-b border-border">
           <i-lucide-search class="size-4 shrink-0 text-on-surface-muted" />
-          <input ref="input" v-model="query" placeholder="Search notes, boards, tasks, settings…"
+          <input ref="input" v-model="query" placeholder="Search notes, boards, tasks, settings..."
             class="flex-1 min-w-0 bg-transparent text-sm outline-none placeholder:text-on-surface-muted/60" />
           <button class="text-on-surface-muted hover:text-on-surface" @click="open = false">
             <i-lucide-x class="size-4" />

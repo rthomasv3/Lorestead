@@ -2,7 +2,7 @@ using SylvaNote.Core.Entities;
 
 namespace SylvaNote.Client.Commands.Contracts;
 
-// Tree row without the body — the full note loads on selection via getNote.
+// Tree row without the body - the full note loads on selection via getNote.
 public sealed class NoteSummary
 {
     public string Id { get; set; }

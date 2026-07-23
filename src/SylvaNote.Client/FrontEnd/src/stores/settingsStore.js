@@ -5,7 +5,7 @@ import { getSettings, saveApplicationSettings, saveEditorSettings } from '../ser
 export const THEMES = ['system', 'light', 'dark']
 export const ACCENTS = ['indigo', 'violet', 'blue', 'cyan', 'emerald', 'rose']
 
-// Cached copy of the last-applied theme/accent, used only for the first synchronous paint —
+// Cached copy of the last-applied theme/accent, used only for the first synchronous paint -
 // the DB is authoritative and overwrites it as soon as getSettings resolves.
 const PAINT_HINT_KEY = 'SylvaNote-appearance'
 
@@ -103,7 +103,7 @@ export const useSettingsStore = defineStore('settings', () => {
       const hint = JSON.parse(localStorage.getItem(PAINT_HINT_KEY))
       if (hint) applyAppearance(hint.theme, hint.accent)
     } catch {
-      // No hint yet — first paint uses the defaults.
+      // No hint yet - first paint uses the defaults.
     }
 
     window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
@@ -117,7 +117,7 @@ export const useSettingsStore = defineStore('settings', () => {
       if (result?.application) application.value = result.application
       if (result?.editor) editor.value = result.editor
     } catch {
-      // DB unavailable — keep defaults; the failure is already in the log.
+      // DB unavailable - keep defaults; the failure is already in the log.
     }
     loaded.value = true
     applyAppearance(application.value.theme, application.value.accentColor)

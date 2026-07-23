@@ -4,12 +4,15 @@ using SylvaNote.Core.Search;
 
 namespace SylvaNote.Client.Services;
 
-// Item repositories need the device id, which only exists after the DB opens —
+// Item repositories need the device id, which only exists after the DB opens -
 // so they are built lazily instead of registered at composition time.
 public sealed class RepositoryFactory
 {
     private readonly ConnectionManager _connectionManager;
     private NoteRepository _notes;
+    private BoardRepository _boards;
+    private BoardColumnRepository _columns;
+    private TaskRepository _tasks;
     private AttachmentRepository _attachments;
     private SearchRepository _search;
 
@@ -27,6 +30,42 @@ public sealed class RepositoryFactory
                 _notes = new NoteRepository(_connectionManager, GetDeviceId());
             }
             return _notes;
+        }
+    }
+
+    public BoardRepository Boards
+    {
+        get
+        {
+            if (_boards == null)
+            {
+                _boards = new BoardRepository(_connectionManager, GetDeviceId());
+            }
+            return _boards;
+        }
+    }
+
+    public BoardColumnRepository Columns
+    {
+        get
+        {
+            if (_columns == null)
+            {
+                _columns = new BoardColumnRepository(_connectionManager, GetDeviceId());
+            }
+            return _columns;
+        }
+    }
+
+    public TaskRepository Tasks
+    {
+        get
+        {
+            if (_tasks == null)
+            {
+                _tasks = new TaskRepository(_connectionManager, GetDeviceId());
+            }
+            return _tasks;
         }
     }
 
@@ -59,7 +98,7 @@ public sealed class RepositoryFactory
         Core.Entities.SyncState state = new SyncStateRepository(_connectionManager).Get();
         if (state == null)
         {
-            throw new InvalidOperationException("Sync state is not initialized — the database failed to open.");
+            throw new InvalidOperationException("Sync state is not initialized - the database failed to open.");
         }
         return state.DeviceId;
     }

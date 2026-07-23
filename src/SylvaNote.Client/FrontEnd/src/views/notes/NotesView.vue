@@ -236,7 +236,7 @@ onMounted(() => {
             </button>
             <div class="flex-1" />
             <span v-if="readonly" class="text-xs text-on-surface-muted border border-border rounded px-1.5 py-0.5 mr-1">
-              In Trash — read-only
+              In Trash - read-only
             </span>
             <button title="Toggle preview" class="p-1.5 rounded"
               :class="previewOpen ? 'text-accent bg-accent-soft' : 'text-on-surface-muted hover:text-on-surface hover:bg-surface-alt'"
@@ -294,13 +294,13 @@ onMounted(() => {
 
     <!-- Dialogs -->
     <ConfirmDialog :open="pendingTrash !== null" title="Move to Trash?" :message="pendingTrash && hasChildren(pendingTrash)
-      ? `“${pendingTrash.label}” and all of its child notes will move to Trash.`
-      : `“${pendingTrash?.label}” will move to Trash.`" confirm-label="Delete"
+      ? `&quot;${pendingTrash.label}&quot; and all of its child notes will move to Trash.`
+      : `&quot;${pendingTrash?.label}&quot; will move to Trash.`" confirm-label="Delete"
       @update:open="(v) => { if (!v) pendingTrash = null }" @confirm="confirmTrash" />
 
     <ConfirmDialog :open="pendingPurge !== null" title="Delete permanently?" :message="pendingPurge && hasChildren(pendingPurge)
-      ? `“${pendingPurge.label}” and all of its child notes will be permanently deleted. This cannot be undone.`
-      : `“${pendingPurge?.label}” will be permanently deleted. This cannot be undone.`"
+      ? `&quot;${pendingPurge.label}&quot; and all of its child notes will be permanently deleted. This cannot be undone.`
+      : `&quot;${pendingPurge?.label}&quot; will be permanently deleted. This cannot be undone.`"
       confirm-label="Delete Permanently" @update:open="(v) => { if (!v) pendingPurge = null }"
       @confirm="confirmPurge" />
 

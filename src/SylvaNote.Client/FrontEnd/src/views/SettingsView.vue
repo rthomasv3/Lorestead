@@ -211,7 +211,7 @@ onMounted(async () => {
               class="w-24 text-sm bg-transparent border border-border rounded-md px-2 py-1.5 focus:outline-none focus:border-accent"
               @input="debounced('history', saveHistoryRetention)"
             />
-            <span class="text-xs text-on-surface-muted">versions kept per item (10–100)</span>
+            <span class="text-xs text-on-surface-muted">versions kept per item (10-100)</span>
           </div>
 
           <div class="flex items-center gap-3">
@@ -362,7 +362,7 @@ onMounted(async () => {
             <i-lucide-trees class="size-8 text-accent shrink-0" />
             <div class="flex flex-col">
               <span class="text-sm font-medium">{{ about?.appName ?? 'SylvaNote' }}</span>
-              <span class="text-xs text-on-surface-muted">Version {{ about?.version ?? '…' }} · MIT License</span>
+              <span class="text-xs text-on-surface-muted">Version {{ about?.version ?? '...' }} - MIT License</span>
             </div>
           </div>
           <p class="text-xs text-on-surface-muted">
@@ -384,7 +384,7 @@ onMounted(async () => {
               <Button size="icon" title="Refresh" @click="refreshLog">
                 <i-lucide-refresh-cw class="size-4" />
               </Button>
-              <span class="text-xs text-on-surface-muted">Application errors land here — there are no popups.</span>
+              <span class="text-xs text-on-surface-muted">Application errors land here - there are no popups.</span>
             </div>
             <pre
               class="font-mono text-xs bg-surface-alt border border-border rounded-md p-3 max-h-96 overflow-auto whitespace-pre-wrap"

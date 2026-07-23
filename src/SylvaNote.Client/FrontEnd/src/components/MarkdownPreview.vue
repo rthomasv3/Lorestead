@@ -6,6 +6,7 @@ import footnote from 'markdown-it-footnote'
 import mark from 'markdown-it-mark'
 import underline from 'markdown-it-underline'
 import hljs from 'highlight.js/lib/common'
+import AttachmentPreviewDialog from './AttachmentPreviewDialog.vue'
 import { useSettingsStore } from '../stores/settingsStore.js'
 import { useNotesStore } from '../stores/notesStore.js'
 
@@ -16,6 +17,9 @@ const props = defineProps({
 const settingsStore = useSettingsStore()
 const notesStore = useNotesStore()
 const container = ref(null)
+// The dialog lives here so attachment links preview in every surface that
+// renders markdown; the link only knows the id - the dialog resolves the rest.
+const previewId = ref(null)
 
 const md = computed(() => {
   const editor = settingsStore.editor
@@ -58,13 +62,20 @@ watch([html, container], async () => {
   for (const link of root.querySelectorAll('a[href^="attachment://"]')) {
     const id = link.getAttribute('href').slice('attachment://'.length)
     link.addEventListener('click', (e) => {
+      // stopPropagation: in the task dialog's reading mode a container click
+      // enters edit mode - following a link must not do that too.
       e.preventDefault()
-      notesStore.getAttachmentUrl(id).then((url) => window.open(url)).catch(() => { })
+      e.stopPropagation()
+      previewId.value = id
     })
   }
 }, { immediate: true })
 </script>
 
 <template>
-  <div ref="container" class="markdown-preview text-sm leading-relaxed max-w-none" v-html="html" />
+  <div>
+    <div ref="container" class="markdown-preview text-sm leading-relaxed max-w-none" v-html="html" />
+    <AttachmentPreviewDialog :open="previewId !== null" :attachment="previewId ? { id: previewId } : null"
+      @update:open="(v) => { if (!v) previewId = null }" />
+  </div>
 </template>

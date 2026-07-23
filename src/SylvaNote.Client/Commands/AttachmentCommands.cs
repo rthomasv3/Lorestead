@@ -13,6 +13,9 @@ internal static class AttachmentCommands
         builder.AddFunction("renameAttachment", (RenameAttachmentRequest request, IAttachmentService attachments) => attachments.Rename(request));
         builder.AddFunction("deleteAttachment", (DeleteAttachmentRequest request, IAttachmentService attachments) => attachments.Delete(request));
         builder.AddFunction("getAttachmentData", (GetAttachmentDataRequest request, IAttachmentService attachments) => attachments.GetData(request));
+        builder.AddFunction("getAttachmentThumbnail", (GetAttachmentThumbnailRequest request, IAttachmentService attachments) => attachments.GetThumbnail(request));
+        builder.AddFunction("saveAttachmentThumbnail", (SaveAttachmentThumbnailRequest request, IAttachmentService attachments) => attachments.SaveThumbnail(request));
+        builder.AddFunction("downloadAttachment", (DownloadAttachmentRequest request, IAttachmentService attachments) => attachments.Download(request));
         return builder;
     }
 }

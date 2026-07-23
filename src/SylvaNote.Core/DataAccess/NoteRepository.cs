@@ -96,7 +96,7 @@ namespace SylvaNote.Core.DataAccess
             return links;
         }
 
-        // Position uniqueness is checked against ALL children of a parent — trashed and
+        // Position uniqueness is checked against ALL children of a parent - trashed and
         // template siblings share the fractional keyspace even though they render in
         // separate groups, and a restored sibling must not collide.
         public string GetMaxChildPosition(string parentId)
@@ -153,7 +153,7 @@ namespace SylvaNote.Core.DataAccess
         }
 
         // Restore also acts on the whole subtree. A restored child whose parent is still
-        // trashed goes to root level (ui/pages/notes.md — plain Restore on a child).
+        // trashed goes to root level (ui/pages/notes.md - plain Restore on a child).
         public void RestoreSubtree(string id)
         {
             using SqliteConnection connection = _connectionManager.CreateConnection();

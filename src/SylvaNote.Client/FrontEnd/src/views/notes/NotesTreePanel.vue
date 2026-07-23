@@ -77,9 +77,10 @@ function expandFiltered() {
 
 // --- Selection / rename / add ---
 
-function onSelect(item) {
+async function onSelect(item) {
   if (item.type === 'note') {
-    notesStore.select(item.noteId)
+    await notesStore.select(item.noteId)
+    window.dispatchEvent(new CustomEvent('editor:focus'))
   }
 }
 
@@ -135,7 +136,7 @@ function resolveDrop(source, target, zone) {
   return result
 }
 
-// Returns null both for "root level" and "not found" — callers only pass ids that
+// Returns null both for "root level" and "not found" - callers only pass ids that
 // exist in the tree, so null always means root level.
 function findParentItem(items, id, parent = null) {
   for (const item of items) {

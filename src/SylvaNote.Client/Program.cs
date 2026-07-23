@@ -37,10 +37,11 @@ internal class Program
             .AddSingleton<ISettingsService, SettingsService>()
             .AddSingleton<INoteService, NoteService>()
             .AddSingleton<IAttachmentService, AttachmentService>()
+            .AddSingleton<IBoardService, BoardService>()
             .OnBeforeStartup(() =>
             {
                 // Startup survives a broken DB so Settings (and its Logs section) still
-                // loads — commands that need the DB then fail into the log instead.
+                // loads - commands that need the DB then fail into the log instead.
                 try
                 {
                     connectionManager.Open(config.DbFilePath, MigrationSets.Client());
@@ -83,6 +84,7 @@ internal class Program
         builder.AddSystemCommands();
         builder.AddNoteCommands();
         builder.AddAttachmentCommands();
+        builder.AddBoardCommands();
 
 //-:cnd:noEmit
 #if DEBUG
@@ -114,7 +116,7 @@ internal class Program
             Galdr.Native.Galdr galdr = serviceProvider.GetRequiredService<Galdr.Native.Galdr>();
             WindowData windowData = settings.GetWindowData();
 
-            // Skip size restoration on macOS — AppKit's setFrameAutosaveName (wired in
+            // Skip size restoration on macOS - AppKit's setFrameAutosaveName (wired in
             // Galdr.Native) persists frame natively; state is not part of that autosave,
             // so Maximized / Fullscreen still applies there.
             if (!RuntimeInformation.IsOSPlatform(OSPlatform.OSX) && windowData.Width > 0 && windowData.Height > 0)
@@ -145,7 +147,7 @@ internal class Program
             {
                 ISettingsService settings = serviceProvider.GetRequiredService<ISettingsService>();
 
-                // Size only persists in the Normal state — saving while maximized or
+                // Size only persists in the Normal state - saving while maximized or
                 // fullscreen would record screen-sized dimensions as the windowed size.
                 if (context.State == WindowState.Normal)
                 {

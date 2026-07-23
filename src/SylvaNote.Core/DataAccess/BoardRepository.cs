@@ -73,6 +73,87 @@ namespace SylvaNote.Core.DataAccess
             return boards;
         }
 
+        public List<Board> GetActive()
+        {
+            List<Board> boards = new List<Board>();
+            using SqliteConnection connection = _connectionManager.CreateConnection();
+            using SqliteCommand select = connection.CreateCommand();
+            select.CommandText = SelectSql + " WHERE deleted = 0 ORDER BY position";
+            using SqliteDataReader reader = select.ExecuteReader();
+            while (reader.Read())
+            {
+                boards.Add(ReadBoard(reader));
+            }
+            return boards;
+        }
+
+        // Boards have no trash - delete tombstones the board and cascades to its
+        // columns and their tasks, each with its own outbox entry (sync-safe).
+        public void DeleteCascade(string id)
+        {
+            using SqliteConnection connection = _connectionManager.CreateConnection();
+            using SqliteTransaction transaction = connection.BeginTransaction();
+
+            string now = Timestamps.UtcNowIso();
+            Board board = GetWithin(connection, transaction, id);
+            if (board != null && !board.Deleted)
+            {
+                board.Deleted = true;
+                board.UpdatedAt = now;
+                UpsertWithin(connection, transaction, board);
+                ChangeLogRepository.AppendWithin(connection, transaction, new ChangeLogEntry
+                {
+                    ItemType = ItemTypes.Board,
+                    ItemId = board.Id,
+                    Op = ChangeOps.Upsert,
+                    Payload = PayloadJson.Serialize(board),
+                    BaseSeq = ChangeLogRepository.MaxSeqForItemWithin(connection, transaction, ItemTypes.Board, board.Id),
+                    DeviceId = _deviceId,
+                    ChangedAt = now,
+                });
+
+                foreach (string columnId in BoardColumnRepository.ReadActiveIdsForBoardWithin(connection, transaction, id))
+                {
+                    BoardColumnRepository.TombstoneCascadeWithin(connection, transaction, columnId, _deviceId, now);
+                }
+            }
+
+            transaction.Commit();
+        }
+
+        // Board positions share one keyspace across active and tombstoned rows.
+        public string GetMaxPosition()
+        {
+            using SqliteConnection connection = _connectionManager.CreateConnection();
+            using SqliteCommand select = connection.CreateCommand();
+            select.CommandText = "SELECT MAX(position) FROM board";
+            object result = select.ExecuteScalar();
+            return result is string value ? value : null;
+        }
+
+        public bool PositionExists(string position)
+        {
+            using SqliteConnection connection = _connectionManager.CreateConnection();
+            using SqliteCommand select = connection.CreateCommand();
+            select.CommandText = "SELECT 1 FROM board WHERE position = @position LIMIT 1";
+            select.Parameters.AddWithValue("@position", position);
+            return select.ExecuteScalar() != null;
+        }
+
+        private static Board GetWithin(SqliteConnection connection, SqliteTransaction transaction, string id)
+        {
+            Board board = null;
+            using SqliteCommand select = connection.CreateCommand();
+            select.CommandText = SelectSql + " WHERE id = @id";
+            select.Parameters.AddWithValue("@id", id);
+            using SqliteDataReader reader = select.ExecuteReader();
+            if (reader.Read())
+            {
+                board = ReadBoard(reader);
+            }
+            return board;
+        }
+
         public static void UpsertWithin(SqliteConnection connection, SqliteTransaction transaction, Board board)
         {
             using SqliteCommand upsert = connection.CreateCommand();
