@@ -47,7 +47,7 @@ function openSearch() {
         <TooltipRoot :disabled="!collapsed">
           <TooltipTrigger as-child>
             <button
-              class="flex items-center gap-3 rounded-md px-2.5 h-9 text-sm shrink-0 border border-border bg-surface-alt text-on-surface-muted hover:text-on-surface"
+              class="flex items-center gap-3 rounded-md px-2.5 h-9 text-sm shrink-0 mb-3 border border-border bg-surface-alt text-on-surface-muted hover:text-on-surface"
               @click="openSearch"
             >
               <i-lucide-search class="size-4 shrink-0" />

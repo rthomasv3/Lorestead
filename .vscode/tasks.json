@@ -7,7 +7,7 @@
             "type": "process",
             "args": [
                 "build",
-                "${workspaceFolder}/SylvaNote.Client.csproj",
+                "${workspaceFolder}/src/SylvaNote.Client/SylvaNote.Client.csproj",
                 "/property:GenerateFullPaths=true",
                 "/consoleloggerparameters:NoSummary"
             ],
@@ -18,7 +18,7 @@
             "type": "shell",
             "command": "npm run dev",
             "options": {
-                "cwd": "${workspaceFolder}/FrontEnd"
+                "cwd": "${workspaceFolder}/src/SylvaNote.Client/FrontEnd"
             },
             "isBackground": true,
             "problemMatcher": {
