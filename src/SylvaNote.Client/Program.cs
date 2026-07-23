@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.IO;
 using System.Runtime.InteropServices;
 using Galdr.Native;
@@ -8,6 +9,7 @@ using SylvaNote.Client.Services;
 using SylvaNote.Client.Services.Abstractions;
 using SylvaNote.Core.DataAccess;
 using SylvaNote.Core.DataAccess.Migrations;
+using SylvaNote.Core.Entities;
 
 namespace SylvaNote.Client;
 
@@ -31,7 +33,10 @@ internal class Program
             .AddSingleton(connectionManager)
             .AddSingleton<SettingsRepository>()
             .AddSingleton<SyncStateRepository>()
+            .AddSingleton<RepositoryFactory>()
             .AddSingleton<ISettingsService, SettingsService>()
+            .AddSingleton<INoteService, NoteService>()
+            .AddSingleton<IAttachmentService, AttachmentService>()
             .OnBeforeStartup(() =>
             {
                 // Startup survives a broken DB so Settings (and its Logs section) still
@@ -39,7 +44,8 @@ internal class Program
                 try
                 {
                     connectionManager.Open(config.DbFilePath, MigrationSets.Client());
-                    new SyncStateRepository(connectionManager).EnsureInitialized();
+                    SyncState syncState = new SyncStateRepository(connectionManager).EnsureInitialized();
+                    PurgeExpiredTrash(connectionManager, syncState.DeviceId);
                 }
                 catch (Exception ex)
                 {
@@ -75,6 +81,8 @@ internal class Program
 
         builder.AddSettingsCommands();
         builder.AddSystemCommands();
+        builder.AddNoteCommands();
+        builder.AddAttachmentCommands();
 
 //-:cnd:noEmit
 #if DEBUG
@@ -87,6 +95,15 @@ internal class Program
 //+:cnd:noEmit
 
         using Galdr.Native.Galdr galdr = builder.Build().Run();
+    }
+
+    static void PurgeExpiredTrash(ConnectionManager connectionManager, string deviceId)
+    {
+        ApplicationSettings settings = new SettingsRepository(connectionManager).GetApplication();
+        string cutoff = DateTime.UtcNow
+            .AddDays(-settings.TrashRetentionDays)
+            .ToString("O", CultureInfo.InvariantCulture);
+        new NoteRepository(connectionManager, deviceId).PurgeExpiredTrash(cutoff);
     }
 
     static void RestoreWindow(IServiceProvider serviceProvider, ILoggingService logger)

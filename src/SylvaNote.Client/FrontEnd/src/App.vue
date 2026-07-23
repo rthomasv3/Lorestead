@@ -1,6 +1,7 @@
 <script setup>
 import { useSettingsStore } from './stores/settingsStore'
 import Sidebar from './components/Sidebar.vue'
+import SearchDialog from './components/SearchDialog.vue'
 
 useSettingsStore().init()
 </script>
@@ -11,5 +12,6 @@ useSettingsStore().init()
     <main class="flex-1 min-w-0 flex flex-col min-h-0 bg-surface [view-transition-name:main-view]">
       <router-view />
     </main>
+    <SearchDialog />
   </div>
 </template>

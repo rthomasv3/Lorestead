@@ -5,6 +5,11 @@ import App from './App.vue'
 
 import './style.css'
 
+if (import.meta.env.DEV && typeof window.galdrInvoke === 'undefined') {
+  const { installMockBackend } = await import('./dev/mockBackend.js')
+  installMockBackend()
+}
+
 const app = createApp(App)
 app.use(createPinia())
 app.use(router)

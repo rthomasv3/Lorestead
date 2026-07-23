@@ -147,7 +147,7 @@ onMounted(async () => {
       <div class="max-w-3xl mx-auto flex flex-col gap-8 pb-8">
 
         <div class="flex flex-col gap-3">
-          <h2 class="text-sm font-semibold">Application</h2>
+          <h2 id="settings-application" class="text-sm font-semibold">Application</h2>
 
           <div class="flex items-center gap-3">
             <span class="text-sm text-on-surface-muted w-40 shrink-0">Theme</span>
@@ -278,7 +278,7 @@ onMounted(async () => {
         </div>
 
         <div class="flex flex-col gap-3">
-          <h2 class="text-sm font-semibold">Editor</h2>
+          <h2 id="settings-editor" class="text-sm font-semibold">Editor</h2>
 
           <div class="flex items-center gap-3">
             <span class="text-sm text-on-surface-muted w-40 shrink-0">Font size</span>
@@ -357,7 +357,7 @@ onMounted(async () => {
         </div>
 
         <div class="flex flex-col gap-3">
-          <h2 class="text-sm font-semibold">About</h2>
+          <h2 id="settings-about" class="text-sm font-semibold">About</h2>
           <div class="flex items-center gap-3">
             <i-lucide-trees class="size-8 text-accent shrink-0" />
             <div class="flex flex-col">

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Microsoft.Data.Sqlite;
 using SylvaNote.Core.Entities;
 using SylvaNote.Core.Sync;
@@ -56,6 +57,21 @@ namespace SylvaNote.Core.DataAccess
                 attachment = ReadAttachment(reader);
             }
             return attachment;
+        }
+
+        public List<Attachment> GetForNote(string noteId)
+        {
+            List<Attachment> attachments = new List<Attachment>();
+            using SqliteConnection connection = _connectionManager.CreateConnection();
+            using SqliteCommand select = connection.CreateCommand();
+            select.CommandText = SelectSql + " WHERE note_id = @note_id AND deleted = 0 ORDER BY created_at";
+            select.Parameters.AddWithValue("@note_id", noteId);
+            using SqliteDataReader reader = select.ExecuteReader();
+            while (reader.Read())
+            {
+                attachments.Add(ReadAttachment(reader));
+            }
+            return attachments;
         }
 
         // Blobs never touch the change log (data.md) — they move over dedicated endpoints.
