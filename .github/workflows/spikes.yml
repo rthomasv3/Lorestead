@@ -38,7 +38,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y gnome-keyring dbus-x11 libsecret-1-0
-          dbus-run-session -- bash -c 'echo -n spike | gnome-keyring-daemon --unlock --components=secrets; ./publish/SpikeCredentialManager/SpikeCredentialManager'
+          dbus-run-session -- bash -c 'echo -n spike | gnome-keyring-daemon --unlock --components=secrets; GCM_CREDENTIAL_STORE=secretservice ./publish/SpikeCredentialManager/SpikeCredentialManager'
 
       - name: Run SpikeMcpAot
         run: ./publish/SpikeMcpAot/SpikeMcpAot
