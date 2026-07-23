@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/SylvaNote.Core/SylvaNote.Core.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="src/tests/SylvaNote.UnitTests/SylvaNote.UnitTests.csproj" />
+    <Project Path="src/tests/SylvaNote.IntegrationTests/SylvaNote.IntegrationTests.csproj" />
+  </Folder>
+</Solution>
