@@ -1,12 +1,14 @@
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import { useSettingsStore, ACCENTS } from '../stores/settingsStore'
+import { useSyncStore } from '../stores/syncStore'
 import { getAbout, getLog } from '../services/systemService'
 import SelectMenu from '../components/SelectMenu.vue'
 import Toggle from '../components/Toggle.vue'
 import Button from '../components/Button.vue'
 
 const store = useSettingsStore()
+const sync = useSyncStore()
 
 const THEME_OPTIONS = [
   { value: 'system', label: 'System' },
@@ -65,6 +67,7 @@ function syncInputs() {
   fontSize.value = String(store.editor.fontSize)
   fontFamily.value = store.editor.fontFamily
   autosaveDebounceMs.value = String(store.editor.autosaveDebounceMs)
+  syncServerUrl.value = sync.status?.serverUrl ?? store.application.serverUrl ?? ''
 }
 
 function saveHistoryRetention() {
@@ -93,6 +96,42 @@ function saveAutosaveDebounce() {
   const value = clamp(autosaveDebounceMs.value, 100, 10000, store.editor.autosaveDebounceMs)
   autosaveDebounceMs.value = String(value)
   store.saveEditor({ autosaveDebounceMs: value })
+}
+
+// Sync inputs commit on blur/Enter, not while typing - a partial URL or token
+// must never reach the engine and trigger an attempt against garbage.
+const syncServerUrl = ref('')
+const syncToken = ref('')
+const tokenEditing = ref(false)
+const tokenInputEl = ref(null)
+
+function commitSyncServerUrl() {
+  const url = syncServerUrl.value.trim()
+  syncServerUrl.value = url
+  if (url !== (sync.status?.serverUrl ?? '')) {
+    sync.saveServerUrl(url)
+  }
+}
+
+// The stored token is write-only: once set, the input collapses to a masked row
+// with Replace/Remove, and an input only exists as a transient editing state.
+function startTokenReplace() {
+  tokenEditing.value = true
+  nextTick(() => tokenInputEl.value?.focus())
+}
+
+function commitSyncToken() {
+  const token = syncToken.value.trim()
+  if (token) {
+    sync.saveToken(token)
+  }
+  syncToken.value = ''
+  tokenEditing.value = false
+}
+
+function cancelTokenEdit() {
+  syncToken.value = ''
+  tokenEditing.value = false
 }
 
 const MD_TOGGLES = [
@@ -152,28 +191,19 @@ onMounted(async () => {
           <div class="flex items-center gap-3">
             <span class="text-sm text-on-surface-muted w-40 shrink-0">Theme</span>
             <div class="w-40">
-              <SelectMenu
-                :model-value="store.application.theme"
-                :options="THEME_OPTIONS"
-                @update:model-value="store.saveApplication({ theme: $event })"
-              />
+              <SelectMenu :model-value="store.application.theme" :options="THEME_OPTIONS"
+                @update:model-value="store.saveApplication({ theme: $event })" />
             </div>
           </div>
 
           <div class="flex items-center gap-3">
             <span class="text-sm text-on-surface-muted w-40 shrink-0">Accent</span>
             <div class="flex items-center gap-2">
-              <button
-                v-for="a in ACCENT_SWATCHES"
-                :key="a.value"
-                type="button"
-                :title="a.label"
-                :aria-label="a.label"
+              <button v-for="a in ACCENT_SWATCHES" :key="a.value" type="button" :title="a.label" :aria-label="a.label"
                 :aria-pressed="activeAccent === a.value"
                 class="size-6 rounded-full flex items-center justify-center ring-offset-2 ring-offset-surface transition"
                 :class="[a.dot, activeAccent === a.value ? 'ring-2 ring-on-surface/40' : 'hover:ring-2 hover:ring-border']"
-                @click="store.saveApplication({ accentColor: a.value })"
-              >
+                @click="store.saveApplication({ accentColor: a.value })">
                 <i-lucide-check v-if="activeAccent === a.value" class="size-3.5 text-white" />
               </button>
             </div>
@@ -182,88 +212,62 @@ onMounted(async () => {
           <div class="flex items-center gap-3">
             <span class="text-sm text-on-surface-muted w-40 shrink-0">Date format</span>
             <div class="w-40">
-              <SelectMenu
-                :model-value="store.application.dateFormat"
-                :options="DATE_FORMAT_OPTIONS"
-                @update:model-value="store.saveApplication({ dateFormat: $event })"
-              />
+              <SelectMenu :model-value="store.application.dateFormat" :options="DATE_FORMAT_OPTIONS"
+                @update:model-value="store.saveApplication({ dateFormat: $event })" />
             </div>
           </div>
 
           <div class="flex items-center gap-3">
             <span class="text-sm text-on-surface-muted w-40 shrink-0">Time format</span>
             <div class="w-40">
-              <SelectMenu
-                :model-value="store.application.timeFormat"
-                :options="TIME_FORMAT_OPTIONS"
-                @update:model-value="store.saveApplication({ timeFormat: $event })"
-              />
+              <SelectMenu :model-value="store.application.timeFormat" :options="TIME_FORMAT_OPTIONS"
+                @update:model-value="store.saveApplication({ timeFormat: $event })" />
             </div>
           </div>
 
           <div class="flex items-center gap-3">
             <span class="text-sm text-on-surface-muted w-40 shrink-0">History retention</span>
-            <input
-              v-model="historyRetention"
-              type="number"
-              min="10"
-              max="100"
+            <input v-model="historyRetention" type="number" min="10" max="100"
               class="w-24 text-sm bg-transparent border border-border rounded-md px-2 py-1.5 focus:outline-none focus:border-accent"
-              @input="debounced('history', saveHistoryRetention)"
-            />
+              @input="debounced('history', saveHistoryRetention)" />
             <span class="text-xs text-on-surface-muted">versions kept per item (10-100)</span>
           </div>
 
           <div class="flex items-center gap-3">
             <span class="text-sm text-on-surface-muted w-40 shrink-0">Trash retention</span>
-            <input
-              v-model="trashRetentionDays"
-              type="number"
-              min="1"
-              max="365"
+            <input v-model="trashRetentionDays" type="number" min="1" max="365"
               class="w-24 text-sm bg-transparent border border-border rounded-md px-2 py-1.5 focus:outline-none focus:border-accent"
-              @input="debounced('trash', saveTrashRetention)"
-            />
+              @input="debounced('trash', saveTrashRetention)" />
             <span class="text-xs text-on-surface-muted">days before deleted items purge</span>
           </div>
 
           <div class="flex items-center gap-3">
             <span class="text-sm text-on-surface-muted w-40 shrink-0">New note focus</span>
             <div class="w-40">
-              <SelectMenu
-                :model-value="store.application.newNoteFocus"
-                :options="FOCUS_OPTIONS"
-                @update:model-value="store.saveApplication({ newNoteFocus: $event })"
-              />
+              <SelectMenu :model-value="store.application.newNoteFocus" :options="FOCUS_OPTIONS"
+                @update:model-value="store.saveApplication({ newNoteFocus: $event })" />
             </div>
           </div>
 
           <div class="flex items-center gap-3">
             <span class="text-sm text-on-surface-muted w-40 shrink-0">New task focus</span>
             <div class="w-40">
-              <SelectMenu
-                :model-value="store.application.newTaskFocus"
-                :options="FOCUS_OPTIONS"
-                @update:model-value="store.saveApplication({ newTaskFocus: $event })"
-              />
+              <SelectMenu :model-value="store.application.newTaskFocus" :options="FOCUS_OPTIONS"
+                @update:model-value="store.saveApplication({ newTaskFocus: $event })" />
             </div>
           </div>
 
           <div class="flex items-center gap-3">
             <span class="text-sm text-on-surface-muted w-40 shrink-0">Check for updates</span>
-            <Toggle
-              :model-value="store.application.autoCheckUpdates"
-              @update:model-value="store.saveApplication({ autoCheckUpdates: $event })"
-            />
+            <Toggle :model-value="store.application.autoCheckUpdates"
+              @update:model-value="store.saveApplication({ autoCheckUpdates: $event })" />
             <span class="text-xs text-on-surface-muted">check automatically at startup</span>
           </div>
 
           <div class="flex items-center gap-3">
             <span class="text-sm text-on-surface-muted w-40 shrink-0">Auto-update</span>
-            <Toggle
-              :model-value="store.application.autoUpdate"
-              @update:model-value="store.saveApplication({ autoUpdate: $event })"
-            />
+            <Toggle :model-value="store.application.autoUpdate"
+              @update:model-value="store.saveApplication({ autoUpdate: $event })" />
             <span class="text-xs text-on-surface-muted">pre-download and apply on restart</span>
           </div>
 
@@ -282,63 +286,41 @@ onMounted(async () => {
 
           <div class="flex items-center gap-3">
             <span class="text-sm text-on-surface-muted w-40 shrink-0">Font size</span>
-            <input
-              v-model="fontSize"
-              type="number"
-              min="8"
-              max="32"
+            <input v-model="fontSize" type="number" min="8" max="32"
               class="w-24 text-sm bg-transparent border border-border rounded-md px-2 py-1.5 focus:outline-none focus:border-accent"
-              @input="debounced('fontSize', saveFontSize)"
-            />
+              @input="debounced('fontSize', saveFontSize)" />
           </div>
 
           <div class="flex items-center gap-3">
             <span class="text-sm text-on-surface-muted w-40 shrink-0">Font family</span>
-            <input
-              v-model="fontFamily"
-              type="text"
-              spellcheck="false"
-              placeholder="System monospace"
+            <input v-model="fontFamily" type="text" spellcheck="false" placeholder="System monospace"
               class="w-64 text-sm bg-transparent border border-border rounded-md px-2 py-1.5 focus:outline-none focus:border-accent"
-              @input="debounced('fontFamily', saveFontFamily)"
-            />
+              @input="debounced('fontFamily', saveFontFamily)" />
           </div>
 
           <div class="flex items-center gap-3">
             <span class="text-sm text-on-surface-muted w-40 shrink-0">Spellcheck</span>
-            <Toggle
-              :model-value="store.editor.spellcheckEnabled"
-              @update:model-value="store.saveEditor({ spellcheckEnabled: $event })"
-            />
+            <Toggle :model-value="store.editor.spellcheckEnabled"
+              @update:model-value="store.saveEditor({ spellcheckEnabled: $event })" />
           </div>
 
           <div class="flex items-center gap-3">
             <span class="text-sm text-on-surface-muted w-40 shrink-0">Show line count</span>
-            <Toggle
-              :model-value="store.editor.showLineCount"
-              @update:model-value="store.saveEditor({ showLineCount: $event })"
-            />
+            <Toggle :model-value="store.editor.showLineCount"
+              @update:model-value="store.saveEditor({ showLineCount: $event })" />
           </div>
 
           <div class="flex items-center gap-3">
             <span class="text-sm text-on-surface-muted w-40 shrink-0">Highlight active line</span>
-            <Toggle
-              :model-value="store.editor.highlightActiveLine"
-              @update:model-value="store.saveEditor({ highlightActiveLine: $event })"
-            />
+            <Toggle :model-value="store.editor.highlightActiveLine"
+              @update:model-value="store.saveEditor({ highlightActiveLine: $event })" />
           </div>
 
           <div class="flex items-center gap-3">
             <span class="text-sm text-on-surface-muted w-40 shrink-0">Autosave debounce</span>
-            <input
-              v-model="autosaveDebounceMs"
-              type="number"
-              min="100"
-              max="10000"
-              step="100"
+            <input v-model="autosaveDebounceMs" type="number" min="100" max="10000" step="100"
               class="w-24 text-sm bg-transparent border border-border rounded-md px-2 py-1.5 focus:outline-none focus:border-accent"
-              @input="debounced('autosave', saveAutosaveDebounce)"
-            />
+              @input="debounced('autosave', saveAutosaveDebounce)" />
             <span class="text-xs text-on-surface-muted">ms after typing stops (Ctrl+S saves immediately)</span>
           </div>
 
@@ -346,13 +328,49 @@ onMounted(async () => {
             <span class="text-sm text-on-surface-muted w-40 shrink-0 pt-0.5">Markdown extensions</span>
             <div class="flex flex-col gap-2">
               <label v-for="t in MD_TOGGLES" :key="t.key" class="flex items-center gap-2.5">
-                <Toggle
-                  :model-value="store.editor[t.key]"
-                  @update:model-value="store.saveEditor({ [t.key]: $event })"
-                />
+                <Toggle :model-value="store.editor[t.key]"
+                  @update:model-value="store.saveEditor({ [t.key]: $event })" />
                 <span class="text-sm">{{ t.label }}</span>
               </label>
             </div>
+          </div>
+        </div>
+
+        <div class="flex flex-col gap-3">
+          <h2 id="settings-sync" class="text-sm font-semibold">Sync Server</h2>
+
+          <div class="flex items-center gap-3">
+            <span class="text-sm text-on-surface-muted w-40 shrink-0">Status</span>
+            <span class="size-2.5 rounded-full shrink-0" :class="sync.connected ? 'bg-emerald-500' : 'bg-rose-500'" />
+            <span class="text-sm text-on-surface-muted min-w-0 break-words">{{ sync.label }}</span>
+          </div>
+
+          <div class="flex items-center gap-3">
+            <span class="text-sm text-on-surface-muted w-40 shrink-0">Server URL</span>
+            <input v-model="syncServerUrl" type="text" spellcheck="false" placeholder="https://sync.example.com"
+              class="w-80 text-sm bg-transparent border border-border rounded-md px-2 py-1.5 focus:outline-none focus:border-accent"
+              @blur="commitSyncServerUrl" @keydown.enter.prevent="$event.target.blur()" />
+          </div>
+
+          <div class="flex items-center gap-3">
+            <span class="text-sm text-on-surface-muted w-40 shrink-0">Token</span>
+            <template v-if="sync.status?.tokenSet && !tokenEditing">
+              <span class="text-sm text-on-surface-muted w-40">••••••••</span>
+              <Button @click="startTokenReplace">Replace</Button>
+              <Button @click="sync.removeToken()">Remove</Button>
+            </template>
+            <input v-else ref="tokenInputEl" v-model="syncToken" type="password" spellcheck="false"
+              placeholder="Paste the server token"
+              class="w-80 text-sm bg-transparent border border-border rounded-md px-2 py-1.5 focus:outline-none focus:border-accent"
+              @blur="commitSyncToken" @keydown.enter.prevent="$event.target.blur()" @keydown.esc="cancelTokenEdit" />
+          </div>
+
+          <div class="flex items-center gap-3">
+            <span class="text-sm text-on-surface-muted w-40 shrink-0"></span>
+            <Button :disabled="!sync.status?.configured || !sync.status?.tokenSet || sync.syncing" @click="sync.sync()">
+              <i-lucide-refresh-cw class="size-4" :class="sync.syncing ? 'animate-spin' : ''" />
+              Sync now
+            </Button>
           </div>
         </div>
 
@@ -371,24 +389,19 @@ onMounted(async () => {
         </div>
 
         <div class="flex flex-col gap-3">
-          <button
-            type="button"
-            class="flex items-center gap-2 text-sm font-semibold text-left"
-            @click="toggleLog"
-          >
+          <button type="button" class="flex items-center gap-2 text-sm font-semibold text-left" @click="toggleLog">
             <i-lucide-chevron-right class="size-4 transition-transform" :class="logOpen ? 'rotate-90' : ''" />
             Logs
           </button>
           <div v-if="logOpen" class="flex flex-col gap-2">
             <div class="flex items-center gap-2">
+              <span class="text-xs text-on-surface-muted">System logs and errors</span>
               <Button size="icon" title="Refresh" @click="refreshLog">
                 <i-lucide-refresh-cw class="size-4" />
               </Button>
-              <span class="text-xs text-on-surface-muted">Application errors land here - there are no popups.</span>
             </div>
             <pre
-              class="font-mono text-xs bg-surface-alt border border-border rounded-md p-3 max-h-96 overflow-auto whitespace-pre-wrap"
-            >{{ logText || 'The log is empty.' }}</pre>
+              class="font-mono text-xs bg-surface-alt border border-border rounded-md p-3 max-h-96 overflow-auto whitespace-pre-wrap">{{ logText || 'The log is empty.' }}</pre>
           </div>
         </div>
 

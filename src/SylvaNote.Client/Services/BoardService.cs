@@ -11,10 +11,12 @@ namespace SylvaNote.Client.Services;
 public sealed class BoardService : IBoardService
 {
     private readonly RepositoryFactory _repositories;
+    private readonly ISyncService _sync;
 
-    public BoardService(RepositoryFactory repositories)
+    public BoardService(RepositoryFactory repositories, ISyncService sync)
     {
         _repositories = repositories;
+        _sync = sync;
     }
 
     public GetBoardsResponse GetBoards()
@@ -32,6 +34,7 @@ public sealed class BoardService : IBoardService
             Position = FractionalIndex.Between(boards.GetMaxPosition(), null),
         };
         boards.Save(board);
+        _sync.NotifyLocalChange();
         return new CreateBoardResponse { Board = board };
     }
 
@@ -41,6 +44,7 @@ public sealed class BoardService : IBoardService
         Board board = GetRequiredBoard(boards, request.Id);
         board.Name = request.Name ?? string.Empty;
         boards.Save(board);
+        _sync.NotifyLocalChange();
         return new RenameBoardResponse { UpdatedAt = board.UpdatedAt };
     }
 
@@ -52,12 +56,14 @@ public sealed class BoardService : IBoardService
         string upper = request.NextId != null ? boards.Get(request.NextId)?.Position : null;
         board.Position = AllocatePosition(lower, upper, position => boards.PositionExists(position));
         boards.Save(board);
+        _sync.NotifyLocalChange();
         return new MoveBoardResponse { Position = board.Position };
     }
 
     public DeleteBoardResponse DeleteBoard(DeleteBoardRequest request)
     {
         _repositories.Boards.DeleteCascade(request.Id);
+        _sync.NotifyLocalChange();
         return new DeleteBoardResponse { Ok = true };
     }
 
@@ -94,6 +100,7 @@ public sealed class BoardService : IBoardService
             Position = FractionalIndex.Between(columns.GetMaxPosition(request.BoardId), null),
         };
         columns.Save(column);
+        _sync.NotifyLocalChange();
         return new CreateColumnResponse { Column = column };
     }
 
@@ -103,6 +110,7 @@ public sealed class BoardService : IBoardService
         BoardColumn column = GetRequiredColumn(columns, request.Id);
         column.Name = request.Name ?? string.Empty;
         columns.Save(column);
+        _sync.NotifyLocalChange();
         return new RenameColumnResponse { UpdatedAt = column.UpdatedAt };
     }
 
@@ -114,12 +122,14 @@ public sealed class BoardService : IBoardService
         string upper = request.NextId != null ? columns.Get(request.NextId)?.Position : null;
         column.Position = AllocatePosition(lower, upper, position => columns.PositionExists(column.BoardId, position));
         columns.Save(column);
+        _sync.NotifyLocalChange();
         return new MoveColumnResponse { Position = column.Position };
     }
 
     public DeleteColumnResponse DeleteColumn(DeleteColumnRequest request)
     {
         _repositories.Columns.DeleteCascade(request.Id);
+        _sync.NotifyLocalChange();
         return new DeleteColumnResponse { Ok = true };
     }
 
@@ -136,6 +146,7 @@ public sealed class BoardService : IBoardService
             NoteIds = new List<string>(),
         };
         tasks.Save(task);
+        _sync.NotifyLocalChange();
         return new CreateTaskResponse { Task = task };
     }
 
@@ -156,6 +167,7 @@ public sealed class BoardService : IBoardService
         task.Body = request.Body ?? string.Empty;
         task.NoteIds = request.NoteIds ?? new List<string>();
         tasks.Save(task);
+        _sync.NotifyLocalChange();
         return new SaveTaskResponse { UpdatedAt = task.UpdatedAt };
     }
 
@@ -168,12 +180,14 @@ public sealed class BoardService : IBoardService
         string upper = request.NextId != null ? tasks.Get(request.NextId)?.Position : null;
         task.Position = AllocatePosition(lower, upper, position => tasks.PositionExists(request.ColumnId, position));
         tasks.Save(task);
+        _sync.NotifyLocalChange();
         return new MoveTaskResponse { Position = task.Position };
     }
 
     public DeleteTaskResponse DeleteTask(DeleteTaskRequest request)
     {
         _repositories.Tasks.Delete(request.Id);
+        _sync.NotifyLocalChange();
         return new DeleteTaskResponse { Ok = true };
     }
 

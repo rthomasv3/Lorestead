@@ -18,6 +18,10 @@ internal class Program
     [STAThread]
     static void Main(string[] args)
     {
+        // Explicit provider init: the reflection-based auto-init is not AOT-reliable,
+        // and this host's provider is plain SQLite (bundle_e_sqlite3).
+        SQLitePCL.Batteries_V2.Init();
+
         Config config = Config.Create("SylvaNote");
         FileLoggingService logger = new FileLoggingService(config);
         ConnectionManager connectionManager = new ConnectionManager();
@@ -34,10 +38,12 @@ internal class Program
             .AddSingleton<SettingsRepository>()
             .AddSingleton<SyncStateRepository>()
             .AddSingleton<RepositoryFactory>()
+            .AddSingleton<SyncCredentialStore>()
             .AddSingleton<ISettingsService, SettingsService>()
             .AddSingleton<INoteService, NoteService>()
             .AddSingleton<IAttachmentService, AttachmentService>()
             .AddSingleton<IBoardService, BoardService>()
+            .AddSingleton<ISyncService, SyncEngine>()
             .OnBeforeStartup(() =>
             {
                 // Startup survives a broken DB so Settings (and its Logs section) still
@@ -53,7 +59,11 @@ internal class Program
                     logger.Error("Startup", "Database open/migration failed", ex);
                 }
             })
-            .OnStartup(serviceProvider => RestoreWindow(serviceProvider, logger))
+            .OnStartup(serviceProvider =>
+            {
+                RestoreWindow(serviceProvider, logger);
+                serviceProvider.GetRequiredService<ISyncService>().Start();
+            })
             .OnWindowChanged((galdr, context, serviceProvider) => SaveWindow(context, serviceProvider, logger))
             .OnCommandError((context, serviceProvider) =>
             {
@@ -81,6 +91,7 @@ internal class Program
             });
 
         builder.AddSettingsCommands();
+        builder.AddSyncCommands();
         builder.AddSystemCommands();
         builder.AddNoteCommands();
         builder.AddAttachmentCommands();

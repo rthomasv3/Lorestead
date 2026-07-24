@@ -10,7 +10,9 @@ namespace SylvaNote.Core.DataAccess
 
         public string ConnectionString { get; private set; }
 
-        public void Open(string dbPath, IReadOnlyList<IMigration> migrations)
+        // password: SQLCipher key, applied as PRAGMA key on every open (server DB);
+        // null on the plain-SQLite client. The host picks the matching provider bundle.
+        public void Open(string dbPath, IReadOnlyList<IMigration> migrations, string password = null)
         {
             SqliteConnectionStringBuilder builder = new SqliteConnectionStringBuilder
             {
@@ -18,6 +20,10 @@ namespace SylvaNote.Core.DataAccess
                 ForeignKeys = true,
                 Pooling = false,
             };
+            if (!string.IsNullOrEmpty(password))
+            {
+                builder.Password = password;
+            }
             ConnectionString = builder.ToString();
 
             using SqliteConnection connection = CreateConnection();

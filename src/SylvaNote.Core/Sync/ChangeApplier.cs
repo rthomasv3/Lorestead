@@ -7,18 +7,21 @@ using SylvaNote.Core.Entities;
 
 namespace SylvaNote.Core.Sync
 {
-    // Applies pulled server entries in seq order - pure LWW: each upsert overwrites the
-    // item row wholesale, so the last entry in the stream wins by construction. One
+    // Applies pulled server entries in seq order - pure LWW: the item row always holds
+    // the newest known state, meaning the highest stamped seq for the item or a pending
+    // local edit that will outrank it once uploaded (see LocalStateIsAhead). One
     // transaction per batch; deferred FKs let mixed-order batches commit.
     public sealed class ChangeApplier
     {
         private readonly ConnectionManager _connectionManager;
         private readonly string _localDeviceId;
+        private readonly int _historyRetention;
 
-        public ChangeApplier(ConnectionManager connectionManager, string localDeviceId)
+        public ChangeApplier(ConnectionManager connectionManager, string localDeviceId, int historyRetention = 50)
         {
             _connectionManager = connectionManager;
             _localDeviceId = localDeviceId;
+            _historyRetention = historyRetention;
         }
 
         public void Apply(IReadOnlyList<ChangeLogEntry> entries)
@@ -36,26 +39,39 @@ namespace SylvaNote.Core.Sync
 
                 if (!ChangeLogRepository.HasSeqWithin(connection, transaction, entry.Seq.Value))
                 {
-                    if (entry.DeviceId == _localDeviceId)
+                    // Own change whose pending entry is still here: stamping is the whole
+                    // job - the item row already reflects it (or a newer local edit). An own
+                    // entry with no pending match (post-resync wipe) flows through the normal
+                    // apply path, or the wiped row would never get its own state back.
+                    bool stampedOwnPending = entry.DeviceId == _localDeviceId
+                        && ChangeLogRepository.TryStampPendingWithin(connection, transaction, entry);
+
+                    if (!stampedOwnPending)
                     {
-                        // Own change coming back around: item state already reflects it (or a
-                        // newer local edit) - stamp/mirror the log only, never reapply.
-                        if (!ChangeLogRepository.TryStampPendingWithin(connection, transaction, entry))
+                        if (LocalStateIsAhead(connection, transaction, entry))
                         {
+                            // The item row must keep the newest known state: a pending outbox edit
+                            // outranks this entry once uploaded, and an already stamped higher seq
+                            // (outbox drain racing the pull) makes it old news. Mirror only -
+                            // applying it would show the losing version on the winning device.
+                            // Purges follow the same rule: a concurrent local edit resurrects the
+                            // item on the server, so deleting here would diverge (decisions.md).
+                            ChangeLogRepository.AppendWithin(connection, transaction, entry);
+                        }
+                        else if (entry.Op == ChangeOps.Purge)
+                        {
+                            PayloadApplier.PurgeWithin(connection, transaction, entry);
+                            // Mirrored after the history delete so the purge entry itself survives it.
+                            ChangeLogRepository.AppendWithin(connection, transaction, entry);
+                        }
+                        else
+                        {
+                            PayloadApplier.UpsertWithin(connection, transaction, entry);
                             ChangeLogRepository.AppendWithin(connection, transaction, entry);
                         }
                     }
-                    else if (entry.Op == ChangeOps.Purge)
-                    {
-                        ApplyPurge(connection, transaction, entry);
-                        // Mirrored after the history delete so the purge entry itself survives it.
-                        ChangeLogRepository.AppendWithin(connection, transaction, entry);
-                    }
-                    else
-                    {
-                        ApplyUpsert(connection, transaction, entry);
-                        ChangeLogRepository.AppendWithin(connection, transaction, entry);
-                    }
+
+                    ChangeLogRepository.PruneItemVersionsWithin(connection, transaction, entry.ItemType, entry.ItemId, _historyRetention);
                 }
 
                 if (entry.Seq.Value > maxSeq)
@@ -72,59 +88,17 @@ namespace SylvaNote.Core.Sync
             transaction.Commit();
         }
 
-        private static void ApplyUpsert(SqliteConnection connection, SqliteTransaction transaction, ChangeLogEntry entry)
+        private static bool LocalStateIsAhead(SqliteConnection connection, SqliteTransaction transaction, ChangeLogEntry entry)
         {
-            switch (entry.ItemType)
-            {
-                case ItemTypes.Note:
-                    Note note = PayloadJson.Deserialize<Note>(entry.Payload);
-                    NoteRepository.UpsertWithin(connection, transaction, note);
-                    NoteLinkRebuilder.RebuildForNoteWithin(connection, transaction, note.Id, note.Body);
-                    break;
-                case ItemTypes.Board:
-                    BoardRepository.UpsertWithin(connection, transaction, PayloadJson.Deserialize<Board>(entry.Payload));
-                    break;
-                case ItemTypes.Column:
-                    BoardColumnRepository.UpsertWithin(connection, transaction, PayloadJson.Deserialize<BoardColumn>(entry.Payload));
-                    break;
-                case ItemTypes.Task:
-                    TaskItem task = PayloadJson.Deserialize<TaskItem>(entry.Payload);
-                    TaskRepository.UpsertWithin(connection, transaction, task);
-                    TaskRepository.ReplaceNoteLinksWithin(connection, transaction, task.Id, task.NoteIds);
-                    NoteLinkRebuilder.RebuildForTaskWithin(connection, transaction, task.Id, task.Body);
-                    break;
-                case ItemTypes.Attachment:
-                    AttachmentRepository.UpsertWithin(connection, transaction, PayloadJson.Deserialize<Attachment>(entry.Payload));
-                    break;
-                default:
-                    throw new InvalidOperationException($"Unknown change_log item_type '{entry.ItemType}'.");
-            }
-        }
+            bool ahead = ChangeLogRepository.HasPendingForItemWithin(connection, transaction, entry.ItemType, entry.ItemId);
 
-        private static void ApplyPurge(SqliteConnection connection, SqliteTransaction transaction, ChangeLogEntry entry)
-        {
-            switch (entry.ItemType)
+            if (!ahead)
             {
-                case ItemTypes.Note:
-                    NoteRepository.DeleteRowWithin(connection, transaction, entry.ItemId);
-                    break;
-                case ItemTypes.Board:
-                    BoardRepository.DeleteRowWithin(connection, transaction, entry.ItemId);
-                    break;
-                case ItemTypes.Column:
-                    BoardColumnRepository.DeleteRowWithin(connection, transaction, entry.ItemId);
-                    break;
-                case ItemTypes.Task:
-                    TaskRepository.DeleteRowWithin(connection, transaction, entry.ItemId);
-                    break;
-                case ItemTypes.Attachment:
-                    AttachmentRepository.DeleteRowWithin(connection, transaction, entry.ItemId);
-                    break;
-                default:
-                    throw new InvalidOperationException($"Unknown change_log item_type '{entry.ItemType}'.");
+                long? head = ChangeLogRepository.MaxSeqForItemWithin(connection, transaction, entry.ItemType, entry.ItemId);
+                ahead = head != null && head.Value >= entry.Seq.Value;
             }
 
-            ChangeLogRepository.DeleteForItemWithin(connection, transaction, entry.ItemType, entry.ItemId);
+            return ahead;
         }
     }
 }

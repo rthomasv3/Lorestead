@@ -1,0 +1,10 @@
+**/bin/
+**/obj/
+**/node_modules/
+.git/
+.github/
+src/SylvaNote.Client/
+src/SylvaNote.Mcp/
+src/tests/
+spikes/
+*.md

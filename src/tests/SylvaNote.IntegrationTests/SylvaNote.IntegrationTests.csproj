@@ -17,6 +17,12 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\SylvaNote.Core\SylvaNote.Core.csproj" />
+    <ProjectReference Include="..\..\SylvaNote.Server\SylvaNote.Server.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Hosting the real server in-process (ServerFixture) needs the ASP.NET runtime. -->
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
 
 </Project>

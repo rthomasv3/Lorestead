@@ -4,11 +4,19 @@
     <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
   </PropertyGroup>
   <ItemGroup>
+    <PackageVersion Include="Devlooped.CredentialManager" Version="2.7.0" />
     <PackageVersion Include="Galdr.Native" Version="2.0.0" />
-    <PackageVersion Include="GaldrJson" Version="1.2.0" />
-    <PackageVersion Include="Microsoft.Data.Sqlite" Version="10.0.10" />
-    <!-- Transitive pin: lifts Microsoft.Data.Sqlite 10's SQLitePCLRaw 2.1.11 past GHSA-2m69-gcr7-jv3q. -->
+    <PackageVersion Include="GaldrJson" Version="1.2.2" />
+    <PackageVersion Include="GaldrJson.AspNetCore" Version="1.2.1" />
+    <!-- Provider-less core: each host picks its own SQLitePCLRaw bundle so the client
+         (plain SQLite) and the server (SQLCipher) don't fight over batteries_v2. -->
+    <PackageVersion Include="Microsoft.Data.Sqlite.Core" Version="10.0.10" />
+    <!-- Client bundle; 2.1.12 lifts past GHSA-2m69-gcr7-jv3q (SQLite < 3.50.2). -->
     <PackageVersion Include="SQLitePCLRaw.bundle_e_sqlite3" Version="2.1.12" />
+    <!-- Server bundle (SQLCipher at rest). Latest available; its SQLite core predates
+         3.50.2 (CVE-2025-6965 needs attacker-run SQL, which the server never executes) -
+         bump when a 2.1.12+ sqlcipher bundle ships. -->
+    <PackageVersion Include="SQLitePCLRaw.bundle_e_sqlcipher" Version="2.1.11" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.8.1" />
     <PackageVersion Include="xunit.v3" Version="3.2.2" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />

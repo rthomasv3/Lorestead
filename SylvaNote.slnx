@@ -1,10 +1,15 @@
 <Solution>
+  <Folder Name="/Solution Items/">
+    <File Path="compose.yaml" />
+    <File Path="Dockerfile" />
+  </Folder>
   <Folder Name="/src/">
-    <Project Path="src/SylvaNote.Core/SylvaNote.Core.csproj" />
     <Project Path="src/SylvaNote.Client/SylvaNote.Client.csproj" />
+    <Project Path="src/SylvaNote.Core/SylvaNote.Core.csproj" />
+    <Project Path="src/SylvaNote.Server/SylvaNote.Server.csproj" />
   </Folder>
   <Folder Name="/tests/">
-    <Project Path="src/tests/SylvaNote.UnitTests/SylvaNote.UnitTests.csproj" />
     <Project Path="src/tests/SylvaNote.IntegrationTests/SylvaNote.IntegrationTests.csproj" />
+    <Project Path="src/tests/SylvaNote.UnitTests/SylvaNote.UnitTests.csproj" />
   </Folder>
 </Solution>

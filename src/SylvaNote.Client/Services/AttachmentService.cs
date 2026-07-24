@@ -13,11 +13,13 @@ public sealed class AttachmentService : IAttachmentService
 
     private readonly RepositoryFactory _repositories;
     private readonly IDialogService _dialogs;
+    private readonly ISyncService _sync;
 
-    public AttachmentService(RepositoryFactory repositories, IDialogService dialogs)
+    public AttachmentService(RepositoryFactory repositories, IDialogService dialogs, ISyncService sync)
     {
         _repositories = repositories;
         _dialogs = dialogs;
+        _sync = sync;
     }
 
     public GetAttachmentsResponse GetForNote(GetAttachmentsRequest request)
@@ -52,6 +54,7 @@ public sealed class AttachmentService : IAttachmentService
         {
             attachments.SaveThumbnail(attachment.Id, Convert.FromBase64String(request.ThumbnailBase64));
         }
+        _sync.NotifyLocalChange();
         return new AddAttachmentResponse { Attachment = attachment };
     }
 
@@ -92,6 +95,7 @@ public sealed class AttachmentService : IAttachmentService
         Attachment attachment = GetRequired(attachments, request.Id);
         attachment.Filename = request.Filename ?? string.Empty;
         attachments.Save(attachment);
+        _sync.NotifyLocalChange();
         return new RenameAttachmentResponse { Ok = true };
     }
 
@@ -103,6 +107,7 @@ public sealed class AttachmentService : IAttachmentService
         Attachment attachment = GetRequired(attachments, request.Id);
         attachment.Deleted = true;
         attachments.Save(attachment);
+        _sync.NotifyLocalChange();
         return new DeleteAttachmentResponse { Ok = true };
     }
 

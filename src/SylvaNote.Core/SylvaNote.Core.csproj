@@ -12,7 +12,7 @@
 
   <ItemGroup>
     <PackageReference Include="GaldrJson" />
-    <PackageReference Include="Microsoft.Data.Sqlite" />
+    <PackageReference Include="Microsoft.Data.Sqlite.Core" />
   </ItemGroup>
 
 </Project>

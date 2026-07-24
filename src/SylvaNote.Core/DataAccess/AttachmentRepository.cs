@@ -164,6 +164,24 @@ namespace SylvaNote.Core.DataAccess
             return data;
         }
 
+        // Sync backfill: live attachments whose blob has not arrived yet.
+        public List<string> GetIdsMissingBlob()
+        {
+            List<string> ids = new List<string>();
+            using SqliteConnection connection = _connectionManager.CreateConnection();
+            using SqliteCommand select = connection.CreateCommand();
+            select.CommandText = @"
+                SELECT a.id FROM attachment a
+                LEFT JOIN attachment_blob b ON b.attachment_id = a.id
+                WHERE b.attachment_id IS NULL AND a.deleted = 0";
+            using SqliteDataReader reader = select.ExecuteReader();
+            while (reader.Read())
+            {
+                ids.Add(reader.GetString(0));
+            }
+            return ids;
+        }
+
         public static void UpsertWithin(SqliteConnection connection, SqliteTransaction transaction, Attachment attachment)
         {
             using SqliteCommand upsert = connection.CreateCommand();

@@ -53,6 +53,17 @@ namespace SylvaNote.IntegrationTests
         }
 
         [Fact]
+        public void ServerMigrationsAddServerState()
+        {
+            using TestDb db = new TestDb(MigrationSets.Server());
+            List<string> names = GetSchemaNames(db, "table");
+            Assert.Contains("server_state", names);
+            Assert.DoesNotContain("sync_state", names);
+            Assert.DoesNotContain("application_settings", names);
+            Assert.Equal(4, GetSchemaVersion(db));
+        }
+
+        [Fact]
         public void MigrationsAreIdempotentOnExistingDb()
         {
             using TestDb db = new TestDb();

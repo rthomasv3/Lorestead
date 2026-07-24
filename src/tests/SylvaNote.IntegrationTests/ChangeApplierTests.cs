@@ -107,6 +107,141 @@ namespace SylvaNote.IntegrationTests
         }
 
         [Fact]
+        public void PendingLocalEditIsNotClobberedByForeignPull()
+        {
+            using TestDb db = new TestDb();
+            db.SyncState.EnsureInitializedWithDevice(db.DeviceId);
+            ChangeApplier applier = new ChangeApplier(db.ConnectionManager, db.DeviceId);
+
+            Note note = Items.Note("A-edit");
+            db.Notes.Save(note);
+
+            Note foreign = ClonePayload(db.Notes.Get(note.Id));
+            foreign.Title = "B-edit";
+            applier.Apply(new List<ChangeLogEntry> { ForeignUpsert(foreign, 10) });
+
+            // The pending outbox edit outranks the pulled entry once uploaded - the row
+            // must keep showing it, while the entry still mirrors and moves the cursor.
+            Assert.Equal("A-edit", db.Notes.Get(note.Id).Title);
+            Assert.Single(db.ChangeLog.GetPending());
+            Assert.Contains(db.ChangeLog.GetForItem(ItemTypes.Note, note.Id), e => e.Seq == 10);
+            Assert.Equal(10, db.SyncState.Get().LastSeenSeq);
+        }
+
+        [Fact]
+        public void StampedNewerSeqBlocksOlderForeignEntry()
+        {
+            using TestDb db = new TestDb();
+            db.SyncState.EnsureInitializedWithDevice(db.DeviceId);
+            ChangeApplier applier = new ChangeApplier(db.ConnectionManager, db.DeviceId);
+
+            Note note = Items.Note("A-edit");
+            db.Notes.Save(note);
+            // Outbox drain raced the pull: the upload response already stamped seq 11.
+            PendingChange pending = Assert.Single(db.ChangeLog.GetPending());
+            db.ChangeLog.AssignSeq(pending.LocalId, 11);
+
+            Note foreign = ClonePayload(db.Notes.Get(note.Id));
+            foreign.Title = "B-edit";
+            applier.Apply(new List<ChangeLogEntry> { ForeignUpsert(foreign, 10) });
+
+            Assert.Equal("A-edit", db.Notes.Get(note.Id).Title);
+            Assert.Contains(db.ChangeLog.GetForItem(ItemTypes.Note, note.Id), e => e.Seq == 10);
+        }
+
+        [Fact]
+        public void PurgeIsSkippedWhileALocalEditIsPending()
+        {
+            using TestDb db = new TestDb();
+            db.SyncState.EnsureInitializedWithDevice(db.DeviceId);
+            ChangeApplier applier = new ChangeApplier(db.ConnectionManager, db.DeviceId);
+
+            Note note = Items.Note("Survivor");
+            db.Notes.Save(note);
+
+            applier.Apply(new List<ChangeLogEntry>
+            {
+                new ChangeLogEntry
+                {
+                    Seq = 10,
+                    ItemType = ItemTypes.Note,
+                    ItemId = note.Id,
+                    Op = ChangeOps.Purge,
+                    Payload = "",
+                    DeviceId = OtherDevice,
+                    ChangedAt = Timestamps.UtcNowIso(),
+                },
+            });
+
+            // The pending edit will resurrect the item on the server (ingest treats a
+            // post-purge edit as a recreate), so deleting locally would diverge.
+            Assert.NotNull(db.Notes.Get(note.Id));
+            Assert.Single(db.ChangeLog.GetPending());
+        }
+
+        [Fact]
+        public void OwnEntryWithoutPendingMatchAppliesLikeForeign()
+        {
+            using TestDb db = new TestDb();
+            db.SyncState.EnsureInitializedWithDevice(db.DeviceId);
+            ChangeApplier applier = new ChangeApplier(db.ConnectionManager, db.DeviceId);
+
+            // Post-resync wipe: this device's own stamped entries come back through the
+            // full pull and must rebuild the item row.
+            Note note = Items.Note("Mine, from the server");
+            Stamp(note);
+            applier.Apply(new List<ChangeLogEntry>
+            {
+                new ChangeLogEntry
+                {
+                    Seq = 1,
+                    ItemType = ItemTypes.Note,
+                    ItemId = note.Id,
+                    Op = ChangeOps.Upsert,
+                    Payload = PayloadJson.Serialize(note),
+                    DeviceId = db.DeviceId,
+                    ChangedAt = Timestamps.UtcNowIso(),
+                },
+            });
+
+            Assert.Equal("Mine, from the server", db.Notes.Get(note.Id).Title);
+        }
+
+        [Fact]
+        public void PullPrunesMirroredHistoryButNeverPendingEntries()
+        {
+            using TestDb db = new TestDb();
+            db.SyncState.EnsureInitializedWithDevice(db.DeviceId);
+            ChangeApplier applier = new ChangeApplier(db.ConnectionManager, db.DeviceId, historyRetention: 2);
+
+            Note mirrored = Items.Note("Remote");
+            Stamp(mirrored);
+            for (long seq = 1; seq <= 4; seq++)
+            {
+                mirrored.Title = $"Remote v{seq}";
+                applier.Apply(new List<ChangeLogEntry> { ForeignUpsert(ClonePayload(mirrored), seq) });
+            }
+
+            List<ChangeLogEntry> history = db.ChangeLog.GetForItem(ItemTypes.Note, mirrored.Id);
+            Assert.Equal(2, history.Count);
+            Assert.Equal(4, history[0].Seq);
+
+            // An item with a pending local edit only mirrors pulled entries, and the
+            // pending entry itself is never prune-eligible.
+            Note local = Items.Note("Local");
+            db.Notes.Save(local);
+            Note foreignLocal = ClonePayload(db.Notes.Get(local.Id));
+            for (long seq = 5; seq <= 8; seq++)
+            {
+                foreignLocal.Title = $"Foreign v{seq}";
+                applier.Apply(new List<ChangeLogEntry> { ForeignUpsert(ClonePayload(foreignLocal), seq) });
+            }
+
+            Assert.Equal("Local", db.Notes.Get(local.Id).Title);
+            Assert.Single(db.ChangeLog.GetPending());
+        }
+
+        [Fact]
         public void PurgeRemovesItemHistoryAndCascades()
         {
             using TestDb db = new TestDb();

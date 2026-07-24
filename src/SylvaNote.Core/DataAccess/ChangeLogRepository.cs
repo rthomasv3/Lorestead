@@ -43,6 +43,42 @@ namespace SylvaNote.Core.DataAccess
             return result is long value ? value : (long?)null;
         }
 
+        public static long MaxSeqWithin(SqliteConnection connection, SqliteTransaction transaction)
+        {
+            using SqliteCommand select = connection.CreateCommand();
+            select.CommandText = "SELECT MAX(seq) FROM change_log";
+            object result = select.ExecuteScalar();
+            return result is long value ? value : 0L;
+        }
+
+        // Retry recognition for uploads: the same client edit re-POSTed after a lost
+        // response is found by its identity tuple instead of being appended twice.
+        public static ChangeLogEntry FindUploadedWithin(SqliteConnection connection, SqliteTransaction transaction, ChangeLogEntry entry)
+        {
+            using SqliteCommand select = connection.CreateCommand();
+            select.CommandText = @"
+                SELECT id, seq, item_type, item_id, op, payload, base_seq, superseded_concurrent, device_id, changed_at
+                FROM change_log
+                WHERE seq IS NOT NULL AND device_id = @device_id AND item_type = @item_type
+                      AND item_id = @item_id AND changed_at = @changed_at
+                ORDER BY seq LIMIT 1";
+            select.Parameters.AddWithValue("@device_id", entry.DeviceId);
+            select.Parameters.AddWithValue("@item_type", entry.ItemType);
+            select.Parameters.AddWithValue("@item_id", entry.ItemId);
+            select.Parameters.AddWithValue("@changed_at", entry.ChangedAt);
+            using SqliteDataReader reader = select.ExecuteReader();
+            return reader.Read() ? ReadEntry(reader) : null;
+        }
+
+        public static bool HasPendingForItemWithin(SqliteConnection connection, SqliteTransaction transaction, string itemType, string itemId)
+        {
+            using SqliteCommand select = connection.CreateCommand();
+            select.CommandText = "SELECT 1 FROM change_log WHERE seq IS NULL AND item_type = @item_type AND item_id = @item_id LIMIT 1";
+            select.Parameters.AddWithValue("@item_type", itemType);
+            select.Parameters.AddWithValue("@item_id", itemId);
+            return select.ExecuteScalar() != null;
+        }
+
         public static bool HasSeqWithin(SqliteConnection connection, SqliteTransaction transaction, long seq)
         {
             using SqliteCommand select = connection.CreateCommand();
@@ -71,6 +107,46 @@ namespace SylvaNote.Core.DataAccess
             update.Parameters.AddWithValue("@item_id", entry.ItemId);
             update.Parameters.AddWithValue("@changed_at", entry.ChangedAt);
             return update.ExecuteNonQuery() > 0;
+        }
+
+        // Per-item history cap. Only stamped entries are ever pruned - a pending
+        // (seq NULL) entry is an un-uploaded edit and must survive at any age.
+        public static void PruneItemVersionsWithin(SqliteConnection connection, SqliteTransaction transaction, string itemType, string itemId, int keep)
+        {
+            using SqliteCommand delete = connection.CreateCommand();
+            delete.CommandText = @"
+                DELETE FROM change_log WHERE id IN (
+                    SELECT id FROM change_log
+                    WHERE item_type = @item_type AND item_id = @item_id AND seq IS NOT NULL
+                    ORDER BY seq DESC LIMIT -1 OFFSET @keep)";
+            delete.Parameters.AddWithValue("@item_type", itemType);
+            delete.Parameters.AddWithValue("@item_id", itemId);
+            delete.Parameters.AddWithValue("@keep", keep);
+            delete.ExecuteNonQuery();
+        }
+
+        // Purge entries have no item history to cap, so they age out by changed_at.
+        // Returns the highest pruned seq (the new replay watermark), or null.
+        public static long? PrunePurgeEntriesBeforeWithin(SqliteConnection connection, SqliteTransaction transaction, string cutoffChangedAt)
+        {
+            long? maxPruned;
+            using (SqliteCommand select = connection.CreateCommand())
+            {
+                select.CommandText = "SELECT MAX(seq) FROM change_log WHERE op = 'purge' AND changed_at < @cutoff";
+                select.Parameters.AddWithValue("@cutoff", cutoffChangedAt);
+                object result = select.ExecuteScalar();
+                maxPruned = result is long value ? value : (long?)null;
+            }
+
+            if (maxPruned != null)
+            {
+                using SqliteCommand delete = connection.CreateCommand();
+                delete.CommandText = "DELETE FROM change_log WHERE op = 'purge' AND changed_at < @cutoff";
+                delete.Parameters.AddWithValue("@cutoff", cutoffChangedAt);
+                delete.ExecuteNonQuery();
+            }
+
+            return maxPruned;
         }
 
         public static void DeleteForItemWithin(SqliteConnection connection, SqliteTransaction transaction, string itemType, string itemId)
@@ -112,6 +188,14 @@ namespace SylvaNote.Core.DataAccess
             update.ExecuteNonQuery();
         }
 
+        // Post-drain pruning: entries just stamped by the upload response count toward
+        // the cap immediately instead of waiting for the next pull to touch the item.
+        public void PruneItemVersions(string itemType, string itemId, int keep)
+        {
+            using SqliteConnection connection = _connectionManager.CreateConnection();
+            PruneItemVersionsWithin(connection, null, itemType, itemId, keep);
+        }
+
         public List<ChangeLogEntry> GetForItem(string itemType, string itemId)
         {
             List<ChangeLogEntry> entries = new List<ChangeLogEntry>();
@@ -122,6 +206,25 @@ namespace SylvaNote.Core.DataAccess
                 FROM change_log WHERE item_type = @item_type AND item_id = @item_id ORDER BY id DESC";
             select.Parameters.AddWithValue("@item_type", itemType);
             select.Parameters.AddWithValue("@item_id", itemId);
+            using SqliteDataReader reader = select.ExecuteReader();
+            while (reader.Read())
+            {
+                entries.Add(ReadEntry(reader));
+            }
+            return entries;
+        }
+
+        // Server feed: stamped entries after the client's cursor, oldest first.
+        public List<ChangeLogEntry> GetAfter(long since, int limit)
+        {
+            List<ChangeLogEntry> entries = new List<ChangeLogEntry>();
+            using SqliteConnection connection = _connectionManager.CreateConnection();
+            using SqliteCommand select = connection.CreateCommand();
+            select.CommandText = @"
+                SELECT id, seq, item_type, item_id, op, payload, base_seq, superseded_concurrent, device_id, changed_at
+                FROM change_log WHERE seq > @since ORDER BY seq LIMIT @limit";
+            select.Parameters.AddWithValue("@since", since);
+            select.Parameters.AddWithValue("@limit", limit);
             using SqliteDataReader reader = select.ExecuteReader();
             while (reader.Read())
             {

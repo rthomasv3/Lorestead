@@ -11,10 +11,12 @@ namespace SylvaNote.Client.Services;
 public sealed class NoteService : INoteService
 {
     private readonly RepositoryFactory _repositories;
+    private readonly ISyncService _sync;
 
-    public NoteService(RepositoryFactory repositories)
+    public NoteService(RepositoryFactory repositories, ISyncService sync)
     {
         _repositories = repositories;
+        _sync = sync;
     }
 
     public GetNotesResponse GetNotes()
@@ -59,6 +61,7 @@ public sealed class NoteService : INoteService
             Type = request.Template ? NoteType.Template : NoteType.Normal,
         };
         notes.Save(note);
+        _sync.NotifyLocalChange();
         return new CreateNoteResponse { Note = note };
     }
 
@@ -68,6 +71,7 @@ public sealed class NoteService : INoteService
         Note note = GetRequired(notes, request.Id);
         note.Body = request.Body ?? string.Empty;
         notes.Save(note);
+        _sync.NotifyLocalChange();
         return new SaveNoteResponse { UpdatedAt = note.UpdatedAt };
     }
 
@@ -77,6 +81,7 @@ public sealed class NoteService : INoteService
         Note note = GetRequired(notes, request.Id);
         note.Title = request.Title ?? string.Empty;
         notes.Save(note);
+        _sync.NotifyLocalChange();
         return new RenameNoteResponse { UpdatedAt = note.UpdatedAt };
     }
 
@@ -88,12 +93,14 @@ public sealed class NoteService : INoteService
         note.Position = AllocatePosition(notes, request.ParentId, request.PreviousId, request.NextId);
         note.Type = request.Template ? NoteType.Template : NoteType.Normal;
         notes.Save(note);
+        _sync.NotifyLocalChange();
         return new MoveNoteResponse { Position = note.Position };
     }
 
     public TrashNoteResponse Trash(TrashNoteRequest request)
     {
         _repositories.Notes.TrashSubtree(request.Id);
+        _sync.NotifyLocalChange();
         return new TrashNoteResponse { Ok = true };
     }
 
@@ -107,6 +114,7 @@ public sealed class NoteService : INoteService
         {
             _repositories.Notes.RestoreSubtree(request.Id);
         }
+        _sync.NotifyLocalChange();
         return new RestoreNoteResponse { Ok = true };
     }
 
@@ -115,12 +123,14 @@ public sealed class NoteService : INoteService
         NoteRepository notes = _repositories.Notes;
         string position = AllocatePosition(notes, request.ParentId, request.PreviousId, request.NextId);
         notes.RestoreSubtreeAt(request.Id, request.ParentId, position);
+        _sync.NotifyLocalChange();
         return new RestoreNoteAtResponse { Ok = true };
     }
 
     public PurgeNoteResponse Purge(PurgeNoteRequest request)
     {
         _repositories.Notes.PurgeSubtree(request.Id);
+        _sync.NotifyLocalChange();
         return new PurgeNoteResponse { Ok = true };
     }
 
@@ -129,6 +139,7 @@ public sealed class NoteService : INoteService
         NoteRepository notes = _repositories.Notes;
         string position = FractionalIndex.Between(notes.GetMaxChildPosition(request.ParentId), null);
         string rootId = notes.InstantiateTemplate(request.TemplateId, request.Title, request.ParentId, position);
+        _sync.NotifyLocalChange();
         return new CreateFromTemplateResponse { RootId = rootId };
     }
 

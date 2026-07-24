@@ -1,0 +1,20 @@
+# Sample deployment. The server speaks plain HTTP - terminate TLS at your reverse
+# proxy (caddy, traefik, nginx) in front of it.
+services:
+  sylvanote:
+    image: sylvanote-server
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      # Both are required - the server refuses to start without them.
+      SYLVANOTE_TOKEN: change-me
+      SYLVANOTE_DB_KEY: change-me-too
+      # Optional, shown with defaults:
+      # SYLVANOTE_HISTORY_RETENTION: 50   # versions kept per item (10-100)
+      # SYLVANOTE_PURGE_RETENTION_DAYS: 90
+    volumes:
+      # The container runs as non-root uid 1654; on a Linux host the bind-mounted
+      # directory must be writable by it: chown -R 1654:1654 ./data
+      - ./data:/data
+    restart: unless-stopped
