@@ -1,0 +1,11 @@
+using GaldrJson;
+
+namespace SylvaNote.Core.Mcp.Contracts
+{
+    [GaldrJsonSerializable]
+    public sealed class McpTemplateSummary
+    {
+        public string Id { get; set; }
+        public string Title { get; set; }
+    }
+}

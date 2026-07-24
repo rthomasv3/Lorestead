@@ -44,6 +44,7 @@ internal class Program
             .AddSingleton<IAttachmentService, AttachmentService>()
             .AddSingleton<IBoardService, BoardService>()
             .AddSingleton<ISyncService, SyncEngine>()
+            .AddSingleton<IChangeWatcher, DataVersionWatcher>()
             .OnBeforeStartup(() =>
             {
                 // Startup survives a broken DB so Settings (and its Logs section) still
@@ -63,6 +64,7 @@ internal class Program
             {
                 RestoreWindow(serviceProvider, logger);
                 serviceProvider.GetRequiredService<ISyncService>().Start();
+                serviceProvider.GetRequiredService<IChangeWatcher>().Start();
             })
             .OnWindowChanged((galdr, context, serviceProvider) => SaveWindow(context, serviceProvider, logger))
             .OnCommandError((context, serviceProvider) =>

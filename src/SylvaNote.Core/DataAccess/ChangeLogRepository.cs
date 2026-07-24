@@ -79,6 +79,35 @@ namespace SylvaNote.Core.DataAccess
             return select.ExecuteScalar() != null;
         }
 
+        public static List<PendingChange> ReadPendingWithin(SqliteConnection connection, SqliteTransaction transaction)
+        {
+            List<PendingChange> pending = new List<PendingChange>();
+            using SqliteCommand select = connection.CreateCommand();
+            select.CommandText = @"
+                SELECT id, seq, item_type, item_id, op, payload, base_seq, superseded_concurrent, device_id, changed_at
+                FROM change_log WHERE seq IS NULL ORDER BY id";
+            using SqliteDataReader reader = select.ExecuteReader();
+            while (reader.Read())
+            {
+                pending.Add(new PendingChange
+                {
+                    LocalId = reader.GetInt64(0),
+                    Entry = ReadEntry(reader),
+                });
+            }
+            return pending;
+        }
+
+        public static void StampWithin(SqliteConnection connection, SqliteTransaction transaction, long localId, long seq, bool supersededConcurrent)
+        {
+            using SqliteCommand update = connection.CreateCommand();
+            update.CommandText = "UPDATE change_log SET seq = @seq, superseded_concurrent = @superseded_concurrent WHERE id = @id";
+            update.Parameters.AddWithValue("@seq", seq);
+            update.Parameters.AddWithValue("@superseded_concurrent", supersededConcurrent ? 1 : 0);
+            update.Parameters.AddWithValue("@id", localId);
+            update.ExecuteNonQuery();
+        }
+
         public static bool HasSeqWithin(SqliteConnection connection, SqliteTransaction transaction, long seq)
         {
             using SqliteCommand select = connection.CreateCommand();

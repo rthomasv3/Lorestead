@@ -17,6 +17,10 @@
          3.50.2 (CVE-2025-6965 needs attacker-run SQL, which the server never executes) -
          bump when a 2.1.12+ sqlcipher bundle ships. -->
     <PackageVersion Include="SQLitePCLRaw.bundle_e_sqlcipher" Version="2.1.11" />
+    <!-- Official MCP SDK; Core carries the tool/registration types (manual registration
+         for AOT), AspNetCore adds MapMcp for the server's streamable HTTP transport. -->
+    <PackageVersion Include="ModelContextProtocol.Core" Version="1.4.1" />
+    <PackageVersion Include="ModelContextProtocol.AspNetCore" Version="1.4.1" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.8.1" />
     <PackageVersion Include="xunit.v3" Version="3.2.2" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />

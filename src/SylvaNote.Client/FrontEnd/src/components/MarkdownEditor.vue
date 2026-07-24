@@ -154,7 +154,7 @@ watch(() => props.modelValue, (value) => {
   if (view && value !== view.state.doc.toString()) {
     syncingFromProp = true
     // Cursor goes to the start on note switch (remember-cursor-position is a
-    // Phase 7 setting).
+    // Phase 8 setting).
     view.dispatch({
       changes: { from: 0, to: view.state.doc.length, insert: value },
       selection: { anchor: 0 },

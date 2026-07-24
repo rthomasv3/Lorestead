@@ -25,7 +25,7 @@ internal static class SystemCommands
 
     private static string GetVersion()
     {
-        // Auto-stamped by the build (MinVer from Phase 8 on); never manually synced.
+        // Auto-stamped by the build (MinVer from Phase 9 on); never manually synced.
         AssemblyInformationalVersionAttribute attribute =
             typeof(SystemCommands).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>();
         return attribute == null ? "dev" : attribute.InformationalVersion;
