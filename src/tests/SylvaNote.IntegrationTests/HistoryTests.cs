@@ -62,6 +62,27 @@ namespace SylvaNote.IntegrationTests
             Assert.Contains("body 5", versions[0].Payload);
         }
 
+        [Fact]
+        public void AVersionCanBeFetchedByIdButOnlyForItsOwnNote()
+        {
+            using TestDb db = new TestDb();
+            Note note = Items.Note("Mine", "my body");
+            db.Notes.Save(note);
+            Note other = Items.Note("Theirs", "their body");
+            db.Notes.Save(other);
+
+            ItemVersion mine = Assert.Single(db.ChangeLog.GetVersionsForItem(ItemTypes.Note, note.Id));
+
+            ItemVersion found = db.ChangeLog.GetVersionForItem(ItemTypes.Note, note.Id, mine.Id);
+            Assert.NotNull(found);
+            Assert.Contains("my body", found.Payload);
+
+            // Restore names a version by local row id, so that id has to be proven to
+            // belong to the note being restored.
+            Assert.Null(db.ChangeLog.GetVersionForItem(ItemTypes.Note, other.Id, mine.Id));
+            Assert.Null(db.ChangeLog.GetVersionForItem(ItemTypes.Note, note.Id, mine.Id + 9999));
+        }
+
         private static void AppendPurge(TestDb db, string noteId)
         {
             using SqliteConnection connection = db.ConnectionManager.CreateConnection();

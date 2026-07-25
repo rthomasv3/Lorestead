@@ -74,6 +74,47 @@ public sealed class NoteService : INoteService
         return new GetNoteHistoryResponse { Versions = versions };
     }
 
+    // Title and body only. parent_id, position, type, deleted and created_at carry
+    // forward from the current row: reverting those would move the note in the tree,
+    // turn a template back into a note, or resurrect a trashed one around the
+    // restore-with-parent dialog, none of it visible in a panel showing a body diff
+    // (decisions.md). Enforced here rather than in the panel so the rule holds
+    // wherever a restore is called from.
+    public RestoreNoteVersionResponse RestoreVersion(RestoreNoteVersionRequest request)
+    {
+        NoteRepository notes = _repositories.Notes;
+        Note note = notes.Get(request.NoteId);
+        if (note == null)
+        {
+            throw new InvalidOperationException("Note not found.");
+        }
+        if (note.Deleted)
+        {
+            throw new InvalidOperationException("Cannot restore a version of a trashed note.");
+        }
+
+        ItemVersion version = _repositories.ChangeLog.GetVersionForItem(ItemTypes.Note, request.NoteId, request.VersionId);
+        if (version == null)
+        {
+            throw new InvalidOperationException("That version is no longer in this note's history.");
+        }
+
+        Note payload = PayloadJson.Deserialize<Note>(version.Payload);
+        note.Title = payload?.Title ?? string.Empty;
+        note.Body = payload?.Body ?? string.Empty;
+        // One save, so the restore is a single new version - never a rewrite of
+        // history, and itself undoable.
+        notes.Save(note);
+        _sync.NotifyLocalChange();
+
+        return new RestoreNoteVersionResponse
+        {
+            Title = note.Title,
+            Body = note.Body,
+            UpdatedAt = note.UpdatedAt,
+        };
+    }
+
     public CreateNoteResponse Create(CreateNoteRequest request)
     {
         NoteRepository notes = _repositories.Notes;

@@ -12,6 +12,10 @@ export async function getNoteHistory(request) {
   return invoke('getNoteHistory', { request })
 }
 
+export async function restoreNoteVersion(request) {
+  return invoke('restoreNoteVersion', { request })
+}
+
 export async function createNote(request) {
   return invoke('createNote', { request })
 }

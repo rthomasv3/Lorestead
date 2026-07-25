@@ -282,6 +282,33 @@ namespace SylvaNote.Core.DataAccess
             return versions;
         }
 
+        // Scoped to the item on purpose: a restore names a version by local row id,
+        // and that id must be proven to belong to the note being restored.
+        public ItemVersion GetVersionForItem(string itemType, string itemId, long versionId)
+        {
+            using SqliteConnection connection = _connectionManager.CreateConnection();
+            using SqliteCommand select = connection.CreateCommand();
+            select.CommandText = @"
+                SELECT id, changed_at, device_id, superseded_concurrent, payload
+                FROM change_log
+                WHERE id = @id AND item_type = @item_type AND item_id = @item_id AND op = @op";
+            select.Parameters.AddWithValue("@id", versionId);
+            select.Parameters.AddWithValue("@item_type", itemType);
+            select.Parameters.AddWithValue("@item_id", itemId);
+            select.Parameters.AddWithValue("@op", ChangeOps.Upsert);
+            using SqliteDataReader reader = select.ExecuteReader();
+            return reader.Read()
+                ? new ItemVersion
+                {
+                    Id = reader.GetInt64(0),
+                    ChangedAt = reader.GetString(1),
+                    DeviceId = reader.GetString(2),
+                    SupersededConcurrent = reader.GetInt64(3) != 0,
+                    Payload = reader.GetString(4),
+                }
+                : null;
+        }
+
         public List<ChangeLogEntry> GetForItem(string itemType, string itemId)
         {
             List<ChangeLogEntry> entries = new List<ChangeLogEntry>();

@@ -214,6 +214,18 @@ export const useNotesStore = defineStore('notes', () => {
     currentHistory.value = []
   }
 
+  // The restore itself is one save on the backend (title and body only), so this
+  // just re-reads: the tree picks up the title, select() swaps the editor buffer
+  // through NotesView's currentNote watch, and the new version joins the list.
+  async function restoreVersion(versionId) {
+    const id = selectedId.value
+    if (!id) return
+    await noteService.restoreNoteVersion({ noteId: id, versionId })
+    await load()
+    await select(id)
+    await loadHistory()
+  }
+
   // Backlinks are derived from other items' bodies, so they change without this
   // note changing - refreshed alongside attachments on every notes:changed.
   async function refreshBacklinks() {
@@ -391,6 +403,7 @@ export const useNotesStore = defineStore('notes', () => {
     refreshBacklinks,
     loadHistory,
     clearHistory,
+    restoreVersion,
     addAttachment,
     renameAttachment,
     removeAttachment,

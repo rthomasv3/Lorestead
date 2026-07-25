@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
+import ConfirmDialog from '../../components/ConfirmDialog.vue'
 import { useNotesStore } from '../../stores/notesStore.js'
 import { useSettingsStore } from '../../stores/settingsStore.js'
 import { formatTimestamp } from '../../utils/dateFormat.js'
@@ -9,13 +10,19 @@ const props = defineProps({
   // The live editor buffer, not the stored note - the diff has to show what
   // restoring would undo, including edits still inside the save debounce.
   currentBody: { type: String, default: '' },
+  // A trashed note's editor is locked, and every write path refuses it.
+  readonly: { type: Boolean, default: false },
 })
+
+// The view owns the buffer and the save debounce, so it performs the restore.
+const emit = defineEmits(['restore'])
 
 const notesStore = useNotesStore()
 const settingsStore = useSettingsStore()
 
 const selected = ref(null)
 const expandedGaps = ref(new Set())
+const pendingRestore = ref(false)
 
 // A version belongs to one note; switching notes must drop back to the list rather
 // than diffing the old note's text against the new note's editor.
@@ -71,6 +78,13 @@ function open(version) {
 
 function back() {
   selected.value = null
+}
+
+function confirmRestore() {
+  const version = selected.value
+  pendingRestore.value = false
+  selected.value = null
+  emit('restore', version)
 }
 
 function toggleGap(index) {
@@ -130,7 +144,13 @@ function toggleGap(index) {
           @click="back">
           <i-lucide-chevron-left class="size-4" />
         </button>
-        <span class="text-sm font-medium truncate">{{ selected ? stamp(selected.changedAt) : '' }}</span>
+        <span class="flex-1 min-w-0 text-sm font-medium truncate">{{ selected ? stamp(selected.changedAt) : '' }}</span>
+        <button
+          class="shrink-0 px-2 py-1 rounded text-xs text-on-surface-muted hover:text-on-surface hover:bg-surface-alt disabled:opacity-40 disabled:hover:text-on-surface-muted disabled:hover:bg-transparent"
+          :title="readonly ? 'Note is in the trash' : 'Restore this version'" :disabled="readonly"
+          @click="pendingRestore = true">
+          Restore
+        </button>
       </div>
 
       <div class="flex-1 min-h-0 overflow-auto p-2 font-mono text-xs leading-relaxed">
@@ -165,5 +185,9 @@ function toggleGap(index) {
         </div>
       </div>
     </div>
+
+    <ConfirmDialog :open="pendingRestore" title="Restore this version?"
+      message="The note's title and body will be replaced with this version. The current text is kept in history, so a restore can itself be undone."
+      confirm-label="Restore" @update:open="(v) => { if (!v) pendingRestore = false }" @confirm="confirmRestore" />
   </div>
 </template>

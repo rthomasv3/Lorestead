@@ -205,6 +205,16 @@ function runToolbar(name) {
   editorRef.value?.[name]?.()
 }
 
+// The pending autosave is cancelled first: it is the later write under LWW, so it
+// would overwrite the restored text the moment it fired. The store's re-select then
+// swaps the buffer through the currentNote watch below (decisions.md).
+async function onRestoreVersion(version) {
+  if (readonly.value || !editingNoteId || !version) return
+  clearTimeout(saveTimer)
+  dirty.value = false
+  await notesStore.restoreVersion(version.id)
+}
+
 function toggleTool(name) {
   toolOpen.value = toolOpen.value === name ? null : name
   // History carries every retained version's payload, so it is fetched on open and
@@ -311,7 +321,7 @@ onMounted(() => {
           </ToolPanelShell>
 
           <ToolPanelShell :open="toolOpen === 'history'" storage-key="SylvaNote-history-panel-width">
-            <HistoryPanel :current-body="body" />
+            <HistoryPanel :current-body="body" :readonly="readonly" @restore="onRestoreVersion" />
           </ToolPanelShell>
 
           <TooltipProvider :delay-duration="300">
