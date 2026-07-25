@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
+import Button from '../../components/Button.vue'
 import ConfirmDialog from '../../components/ConfirmDialog.vue'
 import { useNotesStore } from '../../stores/notesStore.js'
 import { useSettingsStore } from '../../stores/settingsStore.js'
@@ -140,17 +141,15 @@ function toggleGap(index) {
     <div class="absolute inset-0 flex flex-col min-h-0 bg-surface transition-transform duration-250 ease-[cubic-bezier(0.32,0.72,0,1)]"
       :class="selected ? 'translate-x-0' : 'translate-x-full'">
       <div class="flex items-center gap-1.5 px-2 h-10 shrink-0 border-b border-border">
-        <button class="p-1 rounded text-on-surface-muted hover:text-on-surface hover:bg-surface-alt" title="Back"
-          @click="back">
+        <Button variant="ghost" size="icon" title="Back" @click="back">
           <i-lucide-chevron-left class="size-4" />
-        </button>
+        </Button>
         <span class="flex-1 min-w-0 text-sm font-medium truncate">{{ selected ? stamp(selected.changedAt) : '' }}</span>
-        <button
-          class="shrink-0 px-2 py-1 rounded text-xs text-on-surface-muted hover:text-on-surface hover:bg-surface-alt disabled:opacity-40 disabled:hover:text-on-surface-muted disabled:hover:bg-transparent"
+        <Button variant="ghost" size="sm" class="shrink-0"
           :title="readonly ? 'Note is in the trash' : 'Restore this version'" :disabled="readonly"
           @click="pendingRestore = true">
           Restore
-        </button>
+        </Button>
       </div>
 
       <div class="flex-1 min-h-0 overflow-auto p-2 font-mono text-xs leading-relaxed">

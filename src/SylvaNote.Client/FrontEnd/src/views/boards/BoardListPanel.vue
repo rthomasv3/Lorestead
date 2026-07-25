@@ -1,6 +1,7 @@
 <script setup>
 import { ref } from 'vue'
 import BoardListRow from './BoardListRow.vue'
+import Button from '../../components/Button.vue'
 import { useBoardsStore } from '../../stores/boardsStore.js'
 
 const emit = defineEmits(['request-delete'])
@@ -40,15 +41,14 @@ function onKeydown(e) {
 
 <template>
   <div class="h-full flex flex-col min-h-0" tabindex="-1" @keydown="onKeydown">
-    <div class="flex items-center justify-between pl-3 pr-2 h-10 shrink-0">
+    <div class="flex items-center justify-between pl-3 pr-2 h-10 shrink-0 border-b border-border">
       <span class="text-sm font-medium">Boards</span>
-      <button class="p-1 rounded text-on-surface-muted hover:text-on-surface hover:bg-surface-alt" title="New board"
-        @click="addBoard">
+      <Button variant="ghost" size="icon" title="New board" @click="addBoard">
         <i-lucide-plus class="size-4" />
-      </button>
+      </Button>
     </div>
 
-    <div class="flex-1 min-h-0 overflow-y-auto px-2 pb-2 flex flex-col gap-0.5">
+    <div class="flex-1 min-h-0 overflow-y-auto px-2 pt-1.5 pb-2 flex flex-col gap-0.5">
       <BoardListRow v-for="board in boardsStore.boards" :key="board.id" :board="board"
         :selected="board.id === boardsStore.selectedBoardId" :renaming="renamingId === board.id"
         @select="boardsStore.select(board.id)" @rename="(name) => onRename(board.id, name)"

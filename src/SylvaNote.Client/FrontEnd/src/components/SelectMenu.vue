@@ -12,13 +12,18 @@ import {
   SelectItemIndicator,
   SelectItemText,
 } from 'reka-ui'
+import { fieldSize } from '../utils/fieldSizes.js'
 
 const props = defineProps({
   modelValue: { type: String, default: '' },
   options: { type: Array, default: () => [] }, // [{ value: string, label: string }]
   placeholder: { type: String, default: 'Select' },
+  size: { type: String, default: 'normal' },
 })
 defineEmits(['update:modelValue'])
+
+// Shared with TextField so a select and an input in the same row line up.
+const sizing = computed(() => fieldSize(props.size))
 
 // Render the label ourselves so the trigger always reflects the selection even before the item
 // list (popper) has mounted.
@@ -28,7 +33,8 @@ const selected = computed(() => props.options.find((o) => o.value === props.mode
 <template>
   <SelectRoot :model-value="modelValue" @update:model-value="$emit('update:modelValue', $event)">
     <SelectTrigger
-      class="flex w-full items-center justify-between gap-2 rounded-md border border-border bg-surface-alt px-3 py-1.5 text-sm outline-none focus:border-accent data-[placeholder]:text-on-surface-muted"
+      class="flex w-full items-center justify-between rounded-md border border-border bg-surface-alt outline-none focus:border-accent data-[placeholder]:text-on-surface-muted"
+      :class="sizing.field"
     >
       <SelectValue :placeholder="placeholder">
         <span v-if="selected" class="truncate">{{ selected.label }}</span>
@@ -49,7 +55,7 @@ const selected = computed(() => props.options.find((o) => o.value === props.mode
             v-for="o in options"
             :key="o.value"
             :value="o.value"
-            class="flex cursor-pointer items-center justify-between gap-2 rounded px-2 py-1.5 text-sm outline-none data-[highlighted]:bg-surface-alt data-[state=checked]:text-accent"
+            class="flex cursor-pointer items-center justify-between gap-2 rounded px-2 py-1.5 text-sm outline-none data-highlighted:bg-accent/10 data-[state=checked]:text-accent"
           >
             <SelectItemText>{{ o.label }}</SelectItemText>
             <SelectItemIndicator>

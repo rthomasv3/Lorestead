@@ -163,7 +163,7 @@ const sizeLabel = () => {
           <div v-else
             class="flex flex-col items-center gap-3 rounded-lg border border-border bg-surface-elevated shadow-2xl px-10 py-8 text-on-surface-muted">
             <i-lucide-file class="size-10" />
-            <div class="text-sm">No preview available for this file type.</div>
+            <div class="text-sm">No preview available for this file type</div>
             <div class="text-xs">{{ shown?.filename }} ({{ sizeLabel() }})</div>
             <Button variant="outline" @click="download">
               <i-lucide-download class="size-4" />

@@ -107,10 +107,15 @@ onUnmounted(() => {
       <component :is="typeIcon" v-else class="size-6 text-on-surface-muted" />
     </div>
     <div class="flex-1 min-w-0">
+      <!-- block: this column is not a flex row, so an inline-block input would sit
+           on the text baseline and add descender space under it. -->
       <input v-if="editing" ref="editInput" :value="attachment.filename"
-        class="w-full bg-transparent text-sm border-b border-accent outline-none"
+        class="block w-full bg-transparent text-sm border-b border-accent outline-none"
         @keydown.enter="commitRename" @keydown.esc="cancelRename" @blur="commitRename" @click.stop />
-      <div v-else class="text-sm truncate" :title="attachment.filename" @dblclick="startRename">
+      <!-- The transparent border matches the rename input's underline, so
+           entering edit mode doesn't grow the card by a pixel. -->
+      <div v-else class="text-sm truncate border-b border-transparent" :title="attachment.filename"
+        @dblclick="startRename">
         {{ attachment.filename }}</div>
       <div class="text-xs text-on-surface-muted">{{ sizeLabel }}</div>
     </div>

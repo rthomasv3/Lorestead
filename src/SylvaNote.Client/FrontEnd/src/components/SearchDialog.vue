@@ -246,8 +246,8 @@ onUnmounted(() => {
 
         <div class="flex items-center gap-4 px-3.5 h-8 border-t border-border text-xs text-on-surface-muted">
           <span><kbd>↑</kbd> <kbd>↓</kbd> to navigate</span>
-          <span><kbd>enter</kbd> to select</span>
-          <span><kbd>esc</kbd> to close</span>
+          <span><kbd>Enter</kbd> to select</span>
+          <span><kbd>Esc</kbd> to close</span>
         </div>
       </DialogContent>
     </DialogPortal>

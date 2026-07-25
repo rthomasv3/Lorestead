@@ -95,6 +95,10 @@ button:not(:disabled),
     --color-accent-strong: var(--color-indigo-600);
     --color-accent-strong-hover: var(--color-indigo-700);
     --color-accent-soft: rgb(99 102 241 / 0.13);
+    /* Drop feedback — one token for every drag-over surface, tree rows and whole
+       panels alike. Deliberately a step above `accent-soft`: it is transient and
+       has to outrank a resting selection. */
+    --color-drop-target: rgb(99 102 241 / 0.18);
     --color-code-indicator: #219;
 }
 
@@ -111,6 +115,7 @@ button:not(:disabled),
 
     --color-accent: var(--accent-on-light);
     --color-accent-soft: color-mix(in oklab, var(--accent-soft-base) 13%, transparent);
+    --color-drop-target: color-mix(in oklab, var(--accent-soft-base) 18%, transparent);
 
     --color-code-indicator: #219;
 }
@@ -128,6 +133,7 @@ button:not(:disabled),
 
     --color-accent: var(--accent-on-dark);
     --color-accent-soft: color-mix(in oklab, var(--accent-soft-base-dark) 22%, transparent);
+    --color-drop-target: color-mix(in oklab, var(--accent-soft-base-dark) 30%, transparent);
 
     --color-code-indicator: rgb(89, 77, 248);
 }

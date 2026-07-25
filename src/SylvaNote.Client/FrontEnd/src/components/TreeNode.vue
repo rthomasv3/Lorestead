@@ -56,7 +56,7 @@ function onContextOpenChange(open) {
       <ContextMenuTrigger as-child>
         <button :ref="setRef" :tabindex="focused ? 0 : -1" @mousedown="onMousedown" @click="onClick" @dblclick="onDblClick"
           class="group w-full text-left py-1.5 pr-3 transition-colors flex items-center gap-2" :class="[
-            contextOpen ? 'bg-on-surface/5' : dropTarget ? 'bg-accent/10' : selected ? 'bg-accent/10' : 'hover:bg-surface-alt',
+            contextOpen ? 'bg-on-surface/5' : dropTarget ? 'bg-drop-target' : selected ? 'bg-accent-soft' : 'hover:bg-surface-alt',
             dragged ? 'opacity-30' : '',
           ]" :style="{ paddingLeft: indent }">
           <i-lucide-chevron-right v-if="isExpandable" aria-hidden="true" @click="onChevronClick"
@@ -77,7 +77,7 @@ function onContextOpenChange(open) {
     </ContextMenuRoot>
     <button v-else :ref="setRef" :tabindex="focused ? 0 : -1" @mousedown="onMousedown" @click="onClick" @dblclick="onDblClick"
       class="group w-full text-left py-1.5 pr-3 transition-colors flex items-center gap-2" :class="[
-        dropTarget ? 'bg-accent/10' : selected ? 'bg-accent/10' : 'hover:bg-surface-alt',
+        dropTarget ? 'bg-drop-target' : selected ? 'bg-accent-soft' : 'hover:bg-surface-alt',
         dragged ? 'opacity-30' : '',
       ]" :style="{ paddingLeft: indent }">
       <i-lucide-chevron-right v-if="isExpandable" aria-hidden="true" @click="onChevronClick"
@@ -88,7 +88,7 @@ function onContextOpenChange(open) {
       <span v-if="dropTarget && item.dropLabel" class="ml-auto text-xs text-accent shrink-0">{{ item.dropLabel }}</span>
     </button>
     <div v-if="tree.lineIndicator.value?.itemId === item.id"
-      class="absolute left-0 right-0 h-0.5 bg-accent z-10 pointer-events-none"
+      class="absolute left-0 right-0 h-0.5 rounded bg-accent z-10 pointer-events-none"
       :class="tree.lineIndicator.value.edge === 'top' ? '-top-px' : '-bottom-px'" />
   </div>
 

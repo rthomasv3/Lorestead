@@ -3,6 +3,7 @@ import { ref, computed, watch } from 'vue'
 import { DialogRoot, DialogPortal, DialogOverlay, DialogContent, DialogTitle } from 'reka-ui'
 import SelectMenu from '../../components/SelectMenu.vue'
 import Button from '../../components/Button.vue'
+import TextField from '../../components/TextField.vue'
 import { useNotesStore } from '../../stores/notesStore.js'
 
 const props = defineProps({
@@ -50,8 +51,7 @@ async function create() {
         <DialogTitle class="font-semibold mb-4">New note from template</DialogTitle>
 
         <label class="block text-sm text-on-surface-muted mb-1">Name</label>
-        <input v-model="name" placeholder="Note name"
-          class="w-full rounded-md border border-border bg-surface-alt px-3 py-1.5 text-sm outline-none focus:border-accent mb-4"
+        <TextField v-model="name" placeholder="Note name" class="w-full mb-4"
           :ref="(el) => el && open && el.focus()" />
 
         <label class="block text-sm text-on-surface-muted mb-1">Template</label>

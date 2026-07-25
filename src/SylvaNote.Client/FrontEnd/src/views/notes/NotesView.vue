@@ -110,7 +110,8 @@ const modifiedLabel = computed(() => {
   const summary = notesStore.byId.get(note.id)
   const iso = summary?.updatedAt || note.updatedAt || summary?.createdAt || note.createdAt
   const app = settingsStore.application
-  return formatTimestamp(iso, app.dateFormat, app.timeFormat)
+  const stamp = formatTimestamp(iso, app.dateFormat, app.timeFormat)
+  return stamp ? `Last updated ${stamp}` : ''
 })
 
 function onEditorFocusRequest() {
@@ -255,14 +256,13 @@ onMounted(() => {
         <div class="h-full flex min-h-0">
           <div class="flex-1 min-w-0 flex flex-col min-h-0">
         <div v-if="!currentNote" class="h-full flex items-center justify-center p-8">
-          <p class="text-on-surface-muted text-center">Select a note, or create one with the + button in the tree.</p>
+          <p class="text-on-surface-muted text-center">Select a note, or create one with the + button in the tree</p>
         </div>
 
         <div v-else class="h-full flex flex-col min-h-0">
           <div class="flex items-center gap-0.5 px-2 h-10 shrink-0 border-b border-border">
-            <button v-for="action in toolbarActions" :key="action.name" :title="action.title"
-              class="p-1.5 rounded text-on-surface-muted hover:text-on-surface hover:bg-surface-alt disabled:opacity-40"
-              :disabled="readonly" @click="runToolbar(action.name)">
+            <Button v-for="action in toolbarActions" :key="action.name" variant="ghost" size="icon"
+              :title="action.title" :disabled="readonly" @click="runToolbar(action.name)">
               <i-lucide-bold v-if="action.name === 'bold'" class="size-4" />
               <i-lucide-italic v-else-if="action.name === 'italic'" class="size-4" />
               <i-lucide-underline v-else-if="action.name === 'underline'" class="size-4" />
@@ -276,16 +276,15 @@ onMounted(() => {
               <i-lucide-square-code v-else-if="action.name === 'codeBlock'" class="size-4" />
               <i-lucide-text-quote v-else-if="action.name === 'quote'" class="size-4" />
               <i-lucide-table v-else class="size-4" />
-            </button>
+            </Button>
             <div class="flex-1" />
             <span v-if="readonly" class="text-xs text-on-surface-muted border border-border rounded px-1.5 py-0.5 mr-1">
-              In Trash - read-only
+              In trash - read-only
             </span>
-            <button title="Toggle preview" class="p-1.5 rounded"
-              :class="previewOpen ? 'text-accent bg-accent-soft' : 'text-on-surface-muted hover:text-on-surface hover:bg-surface-alt'"
+            <Button variant="ghost" size="icon" title="Toggle preview" :active="previewOpen"
               @click="previewOpen = !previewOpen">
               <i-lucide-columns-2 class="size-4" />
-            </button>
+            </Button>
           </div>
 
           <SplitterGroup direction="horizontal" class="flex-1 min-h-0">
@@ -307,7 +306,7 @@ onMounted(() => {
             class="grid grid-cols-3 items-center px-3 h-7 shrink-0 border-t border-border text-xs text-on-surface-muted">
             <span>{{ wordCount }} {{ wordCount === 1 ? 'word' : 'words' }}</span>
             <span class="text-center truncate">{{ modifiedLabel }}</span>
-            <span class="text-right">{{ readonly ? 'read-only' : dirty ? 'unsaved' : 'saved' }}</span>
+            <span class="text-right">{{ readonly ? 'Read-only' : dirty ? 'Unsaved' : 'Saved' }}</span>
           </div>
         </div>
           </div>
@@ -370,7 +369,7 @@ onMounted(() => {
     <ConfirmDialog :open="pendingPurge !== null" title="Delete permanently?" :message="pendingPurge && hasChildren(pendingPurge)
       ? `&quot;${pendingPurge.label}&quot; and all of its child notes will be permanently deleted. This cannot be undone.`
       : `&quot;${pendingPurge?.label}&quot; will be permanently deleted. This cannot be undone.`"
-      confirm-label="Delete Permanently" @update:open="(v) => { if (!v) pendingPurge = null }"
+      confirm-label="Delete permanently" @update:open="(v) => { if (!v) pendingPurge = null }"
       @confirm="confirmPurge" />
 
     <DialogRoot :open="restoreTarget !== null" @update:open="(v) => { if (!v) restoreTarget = null }">

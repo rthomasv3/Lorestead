@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import AttachmentCard from '../../components/AttachmentCard.vue'
+import Button from '../../components/Button.vue'
 import AttachmentPreviewDialog from '../../components/AttachmentPreviewDialog.vue'
 import ConfirmDialog from '../../components/ConfirmDialog.vue'
 import { useNotesStore } from '../../stores/notesStore.js'
@@ -58,14 +59,14 @@ function onPick(e) {
   <div class="h-full flex flex-col min-h-0">
     <div class="flex items-center justify-between px-3 h-10 shrink-0 border-b border-border">
       <span class="text-sm font-medium">Attachments</span>
-      <button class="text-on-surface-muted hover:text-on-surface disabled:opacity-40 disabled:hover:text-on-surface-muted"
-        :title="readonly ? 'Note is in the trash' : 'Add attachment'" :disabled="readonly" @click="fileInput.click()">
+      <Button variant="ghost" size="icon" :title="readonly ? 'Note is in the trash' : 'Add attachment'"
+        :disabled="readonly" @click="fileInput.click()">
         <i-lucide-plus class="size-4" />
-      </button>
+      </Button>
       <input ref="fileInput" type="file" multiple class="hidden" @change="onPick" />
     </div>
 
-    <div class="flex-1 min-h-0 overflow-y-auto p-2 flex flex-col gap-1.5" :class="dragOver ? 'bg-accent/5' : ''"
+    <div class="flex-1 min-h-0 overflow-y-auto p-2 flex flex-col gap-1.5" :class="dragOver ? 'bg-drop-target' : ''"
       @dragover.prevent="dragOver = !readonly" @dragleave="dragOver = false" @drop.prevent="onDrop">
       <AttachmentCard v-for="attachment in notesStore.currentAttachments" :key="attachment.id" :attachment="attachment"
         :readonly="readonly" @rename="(filename) => notesStore.renameAttachment(attachment.id, filename)"
@@ -74,7 +75,7 @@ function onPick(e) {
       <div v-if="notesStore.currentAttachments.length === 0"
         class="flex-1 flex items-center justify-center text-center text-sm text-on-surface-muted/60 rounded-md border border-dashed border-border m-1 p-4">
         <template v-if="readonly">This note is in the trash</template>
-        <template v-else>Drop files here or use + to attach.<br />Up to 100 MB each.</template>
+        <template v-else>Drop files here or use + to attach<br />Up to 100 MB each</template>
       </div>
     </div>
 

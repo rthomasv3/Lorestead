@@ -3,9 +3,11 @@ import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { TooltipProvider } from 'reka-ui'
 import HoverTip from './HoverTip.vue'
+import TextField from './TextField.vue'
 import IconNotebookText from '~icons/lucide/notebook-text'
 import IconSquareKanban from '~icons/lucide/square-kanban'
 import IconSettings from '~icons/lucide/settings'
+import IconSearch from '~icons/lucide/search'
 
 const STORAGE_KEY = 'SylvaNote-sidebar-collapsed'
 
@@ -46,14 +48,8 @@ function openSearch() {
 
       <div class="flex-1 flex flex-col gap-1 px-2 py-2 min-h-0">
         <HoverTip text="Search" :disabled="!collapsed">
-          <button
-            class="flex items-center gap-3 rounded-md px-2.5 h-9 text-sm shrink-0 mb-3 border border-border bg-surface-alt text-on-surface-muted hover:text-on-surface"
-            @click="openSearch"
-          >
-            <i-lucide-search class="size-4 shrink-0" />
-            <span v-if="!collapsed" class="truncate">Search</span>
-            <kbd v-if="!collapsed" class="ml-auto text-xs text-on-surface-muted">Ctrl+K</kbd>
-          </button>
+          <TextField as="button" :icon="IconSearch" class="w-full shrink-0 mb-3"
+            :label="collapsed ? '' : 'Search'" :hotkey="collapsed ? '' : 'Ctrl+K'" @click="openSearch" />
         </HoverTip>
 
         <HoverTip v-for="item in items" :key="item.to" :text="item.label" :disabled="!collapsed">

@@ -3,8 +3,13 @@ import { computed } from 'vue'
 
 const props = defineProps({
   variant: { type: String, default: 'outline' }, // 'primary' | 'outline' | 'destructive' | 'ghost'
-  size: { type: String, default: 'md' },         // 'md' | 'icon' | 'xs'
+  size: { type: String, default: 'md' },         // 'md' | 'sm' | 'icon'
+  // Toggles (tools rail, preview split) read as pressed rather than hovered, so
+  // the active tint replaces the variant instead of layering on it.
+  active: { type: Boolean, default: false },
 })
+
+const ACTIVE = 'text-accent bg-accent-soft'
 
 const VARIANTS = {
   primary: 'bg-accent-strong text-white enabled:hover:bg-accent-strong-hover shadow-sm',
@@ -13,14 +18,16 @@ const VARIANTS = {
   ghost: 'text-on-surface-muted enabled:hover:bg-surface-alt enabled:hover:text-on-surface',
 }
 
+// sm is the text button that fits a h-10 panel header; icon is every icon-only
+// action in the app - one padding value, so headers and toolbars agree.
 const SIZES = {
   md: 'gap-1.5 px-2.5 py-1.5 text-sm',
+  sm: 'gap-1 px-2 py-1 text-xs',
   icon: 'p-1.5',
-  xs: 'p-1',
 }
 
 const classes = computed(() =>
-  `flex items-center rounded-md disabled:opacity-40 ${VARIANTS[props.variant]} ${SIZES[props.size]}`,
+  `flex items-center rounded-md disabled:opacity-40 ${props.active ? ACTIVE : VARIANTS[props.variant]} ${SIZES[props.size]}`,
 )
 </script>
 

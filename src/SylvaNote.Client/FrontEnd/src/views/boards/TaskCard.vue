@@ -9,6 +9,7 @@ import { ContextMenuRoot, ContextMenuTrigger, ContextMenuPortal, ContextMenuCont
 import MarkdownPreview from '../../components/MarkdownPreview.vue'
 import { useSettingsStore } from '../../stores/settingsStore.js'
 import { formatTimestamp } from '../../utils/dateFormat.js'
+import { MENU_ITEM_CLASS as menuItemClass } from '../../utils/menu.js'
 
 const props = defineProps({
   task: { type: Object, required: true },
@@ -21,8 +22,6 @@ const card = ref(null)
 const dropEdge = ref(null)
 const dragging = ref(false)
 let cleanup = null
-
-const menuItemClass = 'flex items-center gap-2 px-2.5 py-1.5 text-sm rounded-md cursor-default select-none outline-none data-highlighted:bg-surface-alt'
 
 // A trimmed slice of the body is enough for the card - the clamp below hides
 // anything past a few lines anyway, and short input keeps markdown-it cheap.

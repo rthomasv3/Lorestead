@@ -6,6 +6,7 @@ import { getAbout, getLog } from '../services/systemService'
 import SelectMenu from '../components/SelectMenu.vue'
 import Toggle from '../components/Toggle.vue'
 import Button from '../components/Button.vue'
+import TextField from '../components/TextField.vue'
 
 const store = useSettingsStore()
 const sync = useSyncStore()
@@ -227,18 +228,16 @@ onMounted(async () => {
 
           <div class="flex items-center gap-3">
             <span class="text-sm text-on-surface-muted w-40 shrink-0">History retention</span>
-            <input v-model="historyRetention" type="number" min="10" max="100"
-              class="w-24 text-sm bg-transparent border border-border rounded-md px-2 py-1.5 focus:outline-none focus:border-accent"
+            <TextField v-model="historyRetention" type="number" min="10" max="100" class="w-24"
               @input="debounced('history', saveHistoryRetention)" />
-            <span class="text-xs text-on-surface-muted">versions kept per item (10-100)</span>
+            <span class="text-xs text-on-surface-muted">Versions kept per item (10-100)</span>
           </div>
 
           <div class="flex items-center gap-3">
             <span class="text-sm text-on-surface-muted w-40 shrink-0">Trash retention</span>
-            <input v-model="trashRetentionDays" type="number" min="1" max="365"
-              class="w-24 text-sm bg-transparent border border-border rounded-md px-2 py-1.5 focus:outline-none focus:border-accent"
+            <TextField v-model="trashRetentionDays" type="number" min="1" max="365" class="w-24"
               @input="debounced('trash', saveTrashRetention)" />
-            <span class="text-xs text-on-surface-muted">days before deleted items purge</span>
+            <span class="text-xs text-on-surface-muted">Days before deleted items purge</span>
           </div>
 
           <div class="flex items-center gap-3">
@@ -261,14 +260,14 @@ onMounted(async () => {
             <span class="text-sm text-on-surface-muted w-40 shrink-0">Check for updates</span>
             <Toggle :model-value="store.application.autoCheckUpdates"
               @update:model-value="store.saveApplication({ autoCheckUpdates: $event })" />
-            <span class="text-xs text-on-surface-muted">check automatically at startup</span>
+            <span class="text-xs text-on-surface-muted">Check automatically at startup</span>
           </div>
 
           <div class="flex items-center gap-3">
             <span class="text-sm text-on-surface-muted w-40 shrink-0">Auto-update</span>
             <Toggle :model-value="store.application.autoUpdate"
               @update:model-value="store.saveApplication({ autoUpdate: $event })" />
-            <span class="text-xs text-on-surface-muted">pre-download and apply on restart</span>
+            <span class="text-xs text-on-surface-muted">Pre-download and apply on restart</span>
           </div>
 
           <div class="flex items-center gap-3">
@@ -286,16 +285,14 @@ onMounted(async () => {
 
           <div class="flex items-center gap-3">
             <span class="text-sm text-on-surface-muted w-40 shrink-0">Font size</span>
-            <input v-model="fontSize" type="number" min="8" max="32"
-              class="w-24 text-sm bg-transparent border border-border rounded-md px-2 py-1.5 focus:outline-none focus:border-accent"
+            <TextField v-model="fontSize" type="number" min="8" max="32" class="w-24"
               @input="debounced('fontSize', saveFontSize)" />
           </div>
 
           <div class="flex items-center gap-3">
             <span class="text-sm text-on-surface-muted w-40 shrink-0">Font family</span>
-            <input v-model="fontFamily" type="text" spellcheck="false" placeholder="System monospace"
-              class="w-64 text-sm bg-transparent border border-border rounded-md px-2 py-1.5 focus:outline-none focus:border-accent"
-              @input="debounced('fontFamily', saveFontFamily)" />
+            <TextField v-model="fontFamily" type="text" spellcheck="false" placeholder="System monospace"
+              class="w-64" @input="debounced('fontFamily', saveFontFamily)" />
           </div>
 
           <div class="flex items-center gap-3">
@@ -318,10 +315,9 @@ onMounted(async () => {
 
           <div class="flex items-center gap-3">
             <span class="text-sm text-on-surface-muted w-40 shrink-0">Autosave debounce</span>
-            <input v-model="autosaveDebounceMs" type="number" min="100" max="10000" step="100"
-              class="w-24 text-sm bg-transparent border border-border rounded-md px-2 py-1.5 focus:outline-none focus:border-accent"
+            <TextField v-model="autosaveDebounceMs" type="number" min="100" max="10000" step="100" class="w-24"
               @input="debounced('autosave', saveAutosaveDebounce)" />
-            <span class="text-xs text-on-surface-muted">ms after typing stops (Ctrl+S saves immediately)</span>
+            <span class="text-xs text-on-surface-muted">Milliseconds after typing stops (Ctrl+S saves immediately)</span>
           </div>
 
           <div class="flex items-start gap-3">
@@ -337,7 +333,7 @@ onMounted(async () => {
         </div>
 
         <div class="flex flex-col gap-3">
-          <h2 id="settings-sync" class="text-sm font-semibold">Sync Server</h2>
+          <h2 id="settings-sync" class="text-sm font-semibold">Sync server</h2>
 
           <div class="flex items-center gap-3">
             <span class="text-sm text-on-surface-muted w-40 shrink-0">Status</span>
@@ -347,9 +343,9 @@ onMounted(async () => {
 
           <div class="flex items-center gap-3">
             <span class="text-sm text-on-surface-muted w-40 shrink-0">Server URL</span>
-            <input v-model="syncServerUrl" type="text" spellcheck="false" placeholder="https://sync.example.com"
-              class="w-80 text-sm bg-transparent border border-border rounded-md px-2 py-1.5 focus:outline-none focus:border-accent"
-              @blur="commitSyncServerUrl" @keydown.enter.prevent="$event.target.blur()" />
+            <TextField v-model="syncServerUrl" type="text" spellcheck="false"
+              placeholder="https://sync.example.com" class="w-80" @blur="commitSyncServerUrl"
+              @keydown.enter.prevent="$event.target.blur()" />
           </div>
 
           <div class="flex items-center gap-3">
@@ -359,10 +355,9 @@ onMounted(async () => {
               <Button @click="startTokenReplace">Replace</Button>
               <Button @click="sync.removeToken()">Remove</Button>
             </template>
-            <input v-else ref="tokenInputEl" v-model="syncToken" type="password" spellcheck="false"
-              placeholder="Paste the server token"
-              class="w-80 text-sm bg-transparent border border-border rounded-md px-2 py-1.5 focus:outline-none focus:border-accent"
-              @blur="commitSyncToken" @keydown.enter.prevent="$event.target.blur()" @keydown.esc="cancelTokenEdit" />
+            <TextField v-else ref="tokenInputEl" v-model="syncToken" type="password" spellcheck="false"
+              placeholder="Paste the server token" class="w-80" @blur="commitSyncToken"
+              @keydown.enter.prevent="$event.target.blur()" @keydown.esc="cancelTokenEdit" />
           </div>
 
           <div class="flex items-center gap-3">

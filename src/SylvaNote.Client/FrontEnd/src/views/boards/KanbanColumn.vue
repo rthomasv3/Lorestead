@@ -7,6 +7,7 @@ import { pointerOutsideOfPreview } from '@atlaskit/pragmatic-drag-and-drop/eleme
 import { attachClosestEdge, extractClosestEdge } from '@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge'
 import { DropdownMenuRoot, DropdownMenuTrigger, DropdownMenuPortal, DropdownMenuContent, DropdownMenuItem } from 'reka-ui'
 import TaskCard from './TaskCard.vue'
+import { MENU_ITEM_CLASS as menuItemClass } from '../../utils/menu.js'
 
 const props = defineProps({
   column: { type: Object, required: true },
@@ -27,8 +28,6 @@ const dropEdge = ref(null)
 const areaOver = ref(false)
 const dragging = ref(false)
 let cleanup = null
-
-const menuItemClass = 'flex items-center gap-2 px-2.5 py-1.5 text-sm rounded-md cursor-default select-none outline-none data-highlighted:bg-surface-alt'
 
 watch(() => props.renaming, async (value) => {
   if (value) {
@@ -124,7 +123,8 @@ onUnmounted(() => {
           @blur="commitRename" @keydown.enter="$event.target.blur()" @keydown.esc.stop="emit('rename-done')"
           @click.stop @dblclick.stop />
         <template v-else>
-          <span class="flex-1 min-w-0 truncate text-sm font-medium" @dblclick="emit('request-rename')">
+          <span class="flex-1 min-w-0 truncate text-sm font-medium border-b border-transparent"
+            @dblclick="emit('request-rename')">
             {{ column.name || 'Untitled list' }}
           </span>
           <span class="text-xs text-on-surface-muted/70 shrink-0">{{ tasks.length || '' }}</span>
@@ -154,7 +154,7 @@ onUnmounted(() => {
       <!-- pt-1 leaves room for the first card's above-indicator, which renders
            4px above the card and would otherwise be clipped by the scroll area. -->
       <div ref="cardsArea" class="flex-1 min-h-6 overflow-y-auto px-2 pt-1 pb-1 flex flex-col gap-1.5"
-        :class="areaOver && tasks.length === 0 ? 'bg-accent/5' : ''">
+        :class="areaOver && tasks.length === 0 ? 'bg-drop-target' : ''">
         <TaskCard v-for="task in tasks" :key="task.id" :task="task" @open="emit('open-task', task)"
           @request-delete="emit('request-delete-task', task)"
           @drop="(payload) => emit('task-drop', { ...payload, columnId: column.id })" />

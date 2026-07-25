@@ -7,6 +7,7 @@ import MarkdownEditor from '../../components/MarkdownEditor.vue'
 import MarkdownPreview from '../../components/MarkdownPreview.vue'
 import AttachmentCard from '../../components/AttachmentCard.vue'
 import AttachmentPreviewDialog from '../../components/AttachmentPreviewDialog.vue'
+import Button from '../../components/Button.vue'
 import ConfirmDialog from '../../components/ConfirmDialog.vue'
 import * as attachmentService from '../../services/attachmentService.js'
 import { createImageThumbnail } from '../../utils/thumbnails.js'
@@ -350,7 +351,7 @@ async function openLinkedNote(id) {
 const updatedLabel = computed(() => {
   const iso = updatedAt.value || task.value?.createdAt
   const app = settingsStore.application
-  return iso ? formatTimestamp(iso, app.dateFormat, app.timeFormat) : ''
+  return iso ? `Last updated ${formatTimestamp(iso, app.dateFormat, app.timeFormat)}` : ''
 })
 
 function onDialogKeydown(e) {
@@ -389,16 +390,15 @@ function onDialogKeydown(e) {
                  reading and editing never resizes the dialog. -->
             <div v-if="!editingBody" ref="readingArea"
               class="h-64 overflow-y-auto rounded-md border cursor-text px-2.5 py-2"
-              :class="attachDragOver ? 'border-accent bg-accent/5' : 'border-border/60 hover:border-border'"
+              :class="attachDragOver ? 'border-accent bg-drop-target' : 'border-border/60 hover:border-border'"
               @click="enterEdit">
               <MarkdownPreview v-if="body.trim()" :markdown="body" />
               <p v-else class="text-sm text-on-surface-muted/60">Click to add a description...</p>
             </div>
             <div v-else class="h-64 rounded-md border border-border flex flex-col" @focusout="onEditorFocusOut">
               <div class="flex items-center gap-0.5 px-1.5 h-9 shrink-0 border-b border-border flex-wrap">
-                <button v-for="action in toolbarActions" :key="action.name" :title="action.title" tabindex="-1"
-                  class="p-1.5 rounded text-on-surface-muted hover:text-on-surface hover:bg-surface-alt"
-                  @click="runToolbar(action.name)">
+                <Button v-for="action in toolbarActions" :key="action.name" variant="ghost" size="icon"
+                  :title="action.title" tabindex="-1" @click="runToolbar(action.name)">
                   <i-lucide-bold v-if="action.name === 'bold'" class="size-4" />
                   <i-lucide-italic v-else-if="action.name === 'italic'" class="size-4" />
                   <i-lucide-underline v-else-if="action.name === 'underline'" class="size-4" />
@@ -412,13 +412,12 @@ function onDialogKeydown(e) {
                   <i-lucide-square-code v-else-if="action.name === 'codeBlock'" class="size-4" />
                   <i-lucide-text-quote v-else-if="action.name === 'quote'" class="size-4" />
                   <i-lucide-table v-else class="size-4" />
-                </button>
+                </Button>
                 <div class="flex-1" />
-                <button title="Save" tabindex="-1"
-                  class="p-1.5 rounded text-on-surface-muted hover:text-on-surface hover:bg-surface-alt"
+                <Button variant="ghost" size="icon" title="Save" tabindex="-1"
                   @click="editingBody = false; flush()">
                   <i-lucide-save class="size-4" />
-                </button>
+                </Button>
               </div>
               <div class="flex-1 min-h-0">
                 <MarkdownEditor ref="editorRef" :model-value="body" :attachments="attachments"
@@ -436,7 +435,7 @@ function onDialogKeydown(e) {
               </button>
               <input ref="fileInput" type="file" multiple class="hidden" @change="onPick" />
             </div>
-            <div class="flex flex-col gap-1.5 rounded-md" :class="dragOver ? 'bg-accent/5' : ''"
+            <div class="flex flex-col gap-1.5 rounded-md" :class="dragOver ? 'bg-drop-target' : ''"
               @dragover.prevent="dragOver = true" @dragleave="dragOver = false" @drop.prevent="onDrop">
               <AttachmentCard v-for="attachment in attachments" :key="attachment.id" :attachment="attachment"
                 @rename="(filename) => renameAttachment(attachment.id, filename)"
@@ -449,7 +448,7 @@ function onDialogKeydown(e) {
           </div>
 
           <div>
-            <div class="text-sm font-medium text-on-surface-muted mb-1.5 ml-1">Linked Notes</div>
+            <div class="text-sm font-medium text-on-surface-muted mb-1.5 ml-1">Linked notes</div>
             <div class="relative">
               <div
                 class="flex flex-wrap items-center gap-1.5 rounded-md border border-border px-2 py-1.5 min-h-9 focus-within:border-accent">
@@ -481,8 +480,8 @@ function onDialogKeydown(e) {
 
         <div v-if="task"
           class="flex items-center justify-between px-6 h-8 shrink-0 border-t border-border text-xs text-on-surface-muted">
-          <span>{{ dirty ? 'unsaved' : 'saved' }}</span>
-          <span>last updated {{ updatedLabel }}</span>
+          <span class="truncate">{{ updatedLabel }}</span>
+          <span class="shrink-0">{{ dirty ? 'Unsaved' : 'Saved' }}</span>
         </div>
 
         <AttachmentPreviewDialog :open="previewAttachment !== null" :attachment="previewAttachment"

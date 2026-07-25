@@ -1,7 +1,11 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
-import { ContextMenuItem, DropdownMenuRoot, DropdownMenuTrigger, DropdownMenuPortal, DropdownMenuContent, DropdownMenuItem } from 'reka-ui'
+import { ContextMenuItem } from 'reka-ui'
 import Tree from '../../components/Tree.vue'
+import Button from '../../components/Button.vue'
+import TextField from '../../components/TextField.vue'
+import IconSearch from '~icons/lucide/search'
+import { MENU_ITEM_CLASS as menuItemClass } from '../../utils/menu.js'
 import { useNotesStore, TEMPLATES_ID, TRASH_ID } from '../../stores/notesStore.js'
 import { useSettingsStore } from '../../stores/settingsStore.js'
 
@@ -221,43 +225,25 @@ function onRestoreClick(item) {
   emit('request-restore', { item, nested: !!nestedInTrash })
 }
 
-const menuItemClass = 'flex items-center gap-2 px-2.5 py-1.5 text-sm rounded-md cursor-default select-none outline-none data-highlighted:bg-surface-alt'
-
 defineExpose({ treeRef, addNote })
 </script>
 
 <template>
   <div class="h-full flex flex-col min-h-0">
-    <div class="flex items-center gap-1.5 p-2 shrink-0">
-      <div class="flex-1 min-w-0 flex items-center gap-2 rounded-md border border-border bg-surface-alt px-2 h-8">
-        <i-lucide-search class="size-3.5 shrink-0 text-on-surface-muted" />
-        <input v-model="query" placeholder="Filter notes"
-          class="w-full bg-transparent text-sm outline-none placeholder:text-on-surface-muted/60" />
-      </div>
-      <div class="flex shrink-0 rounded-md border border-border overflow-hidden">
-        <button class="h-8 px-2 hover:bg-surface-alt text-on-surface-muted hover:text-on-surface" title="New note"
-          @click="addNote(null)">
-          <i-lucide-plus class="size-4" />
-        </button>
-        <DropdownMenuRoot>
-          <DropdownMenuTrigger
-            class="h-8 px-1 border-l border-border hover:bg-surface-alt text-on-surface-muted hover:text-on-surface">
-            <i-lucide-chevron-down class="size-3.5" />
-          </DropdownMenuTrigger>
-          <DropdownMenuPortal>
-            <DropdownMenuContent align="end" :side-offset="4"
-              class="bg-surface-elevated border border-border rounded-lg shadow-lg p-1 min-w-40 z-50">
-              <DropdownMenuItem :class="menuItemClass" @select="emit('request-template', { parentId: null })">
-                <i-lucide-layout-template class="size-4 text-on-surface-muted" />
-                From template
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenuPortal>
-        </DropdownMenuRoot>
-      </div>
+    <div class="flex items-center gap-1 px-2 h-10 shrink-0 border-b border-border">
+      <TextField v-model="query" size="small" :icon="IconSearch" placeholder="Filter notes" class="flex-1" />
+      <!-- Two plain icon buttons rather than a split control, matching the pair
+           that appears on tree row hover. -->
+      <Button variant="ghost" size="icon" title="New note" @click="addNote(null)">
+        <i-lucide-plus class="size-4" />
+      </Button>
+      <Button variant="ghost" size="icon" title="New note from template"
+        @click="emit('request-template', { parentId: null })">
+        <i-lucide-layout-template class="size-4" />
+      </Button>
     </div>
 
-    <div class="flex-1 min-h-0 overflow-y-auto overflow-x-auto pb-2">
+    <div class="flex-1 min-h-0 overflow-y-auto overflow-x-auto pt-1.5 pb-2">
       <Tree ref="treeRef" :items="visibleItems" :selected-id="notesStore.selectedId"
         :expanded-ids="notesStore.expandedIds" :can-drag="canDrag"
         :resolve-drop="resolveDrop" :can-rename="canRename" :context-menu-for="contextMenuFor" @select="onSelect"
@@ -269,7 +255,10 @@ defineExpose({ treeRef, addNote })
               :ref="(el) => el && el.focus()" @blur="onEditBlur(item, $event)" @keydown.enter="$event.target.blur()"
               @keydown.esc.stop="cancelEdit()" @click.stop />
             <template v-else>
-              <span class="truncate text-sm" :class="item.trashed ? 'text-on-surface-muted' : ''">
+              <!-- The transparent border matches the rename input's underline, so
+                   entering edit mode doesn't grow the row by a pixel. -->
+              <span class="truncate text-sm border-b border-transparent"
+                :class="item.trashed ? 'text-on-surface-muted' : ''">
                 {{ item.label }}</span>
               <span v-if="!item.trashed" class="ml-auto shrink-0 hidden group-hover:flex items-center gap-1" @click.stop
                 @dblclick.stop>
@@ -290,7 +279,8 @@ defineExpose({ treeRef, addNote })
             <i-lucide-layout-template v-if="item.type === 'templates-root'"
               class="size-4 shrink-0 text-on-surface-muted" />
             <i-lucide-trash-2 v-else class="size-4 shrink-0 text-on-surface-muted" />
-            <span class="truncate text-sm text-on-surface-muted">{{ item.label }}</span>
+            <!-- Templates/Trash never rename, but they share the row height. -->
+            <span class="truncate text-sm text-on-surface-muted border-b border-transparent">{{ item.label }}</span>
           </template>
         </template>
 
@@ -302,7 +292,7 @@ defineExpose({ treeRef, addNote })
             </ContextMenuItem>
             <ContextMenuItem :class="menuItemClass" @select="emit('request-purge', { item })">
               <i-lucide-trash-2 class="size-4 text-red-500" />
-              Delete Permanently
+              Delete permanently
             </ContextMenuItem>
           </template>
           <template v-else>
