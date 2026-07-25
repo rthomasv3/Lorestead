@@ -147,6 +147,7 @@ export const useBoardsStore = defineStore('boards', () => {
       summary.title = title
       summary.body = body
       summary.updatedAt = response.updatedAt
+      summary.linkedNoteCount = (noteIds ?? []).length
     }
     return response
   }

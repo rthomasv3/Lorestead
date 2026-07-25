@@ -277,6 +277,7 @@ export function installMockBackend() {
         .map((t) => ({
           id: t.id, columnId: t.columnId, title: t.title, body: t.body, position: t.position,
           attachmentCount: attachments.filter((a) => a.taskId === t.id && !a.deleted).length,
+          linkedNoteCount: (t.noteIds ?? []).length,
           createdAt: t.createdAt, updatedAt: t.updatedAt,
         })),
     }),

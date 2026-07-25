@@ -115,33 +115,37 @@ onUnmounted(() => {
   <ContextMenuRoot>
     <ContextMenuTrigger as-child>
       <div>
-      <div ref="card" class="relative">
-        <div v-if="dropEdge === 'top'" class="absolute -top-1 left-1 right-1 h-0.5 rounded bg-accent z-10" />
-        <div v-if="dropEdge === 'bottom'" class="absolute -bottom-1 left-1 right-1 h-0.5 rounded bg-accent z-10" />
-        <div
-          class="group rounded-md border border-border bg-surface-elevated px-2.5 py-2 cursor-pointer hover:border-accent/50 flex flex-col gap-1"
-          :class="dragging ? 'opacity-40' : ''" @click="emit('open')">
-          <div class="flex items-start gap-1.5">
-            <div class="flex-1 min-w-0 text-sm">{{ task.title || 'Untitled task' }}</div>
-            <button
-              class="opacity-0 group-hover:opacity-100 shrink-0 mt-0.5 text-on-surface-muted hover:text-red-500 transition-opacity"
-              title="Delete task" @click.stop="emit('request-delete')">
-              <i-lucide-trash-2 class="size-3.5" />
-            </button>
-          </div>
-          <div v-if="snippet"
-            class="max-h-16 overflow-hidden text-xs text-on-surface-muted pointer-events-none [&_.markdown-preview]:text-xs">
-            <MarkdownPreview :markdown="snippet" />
-          </div>
-          <div class="flex items-center gap-1 text-xs text-on-surface-muted/80">
-            <span v-if="task.attachmentCount > 0" class="flex items-center gap-0.5">
-              <i-lucide-paperclip class="size-3" />
-              {{ task.attachmentCount }}
-            </span>
-            <span class="ml-auto">{{ dateLabel }}</span>
+        <div ref="card" class="relative">
+          <div v-if="dropEdge === 'top'" class="absolute -top-1 left-1 right-1 h-0.5 rounded bg-accent z-10" />
+          <div v-if="dropEdge === 'bottom'" class="absolute -bottom-1 left-1 right-1 h-0.5 rounded bg-accent z-10" />
+          <div
+            class="group rounded-md border border-border bg-surface-elevated px-2.5 py-2 cursor-pointer hover:border-accent/50 flex flex-col gap-1"
+            :class="dragging ? 'opacity-40' : ''" @click="emit('open')">
+            <div class="flex items-start gap-1.5">
+              <div class="flex-1 min-w-0 text-sm">{{ task.title || 'Untitled task' }}</div>
+              <button
+                class="opacity-0 group-hover:opacity-100 shrink-0 mt-0.5 text-on-surface-muted hover:text-red-500 transition-opacity"
+                title="Delete task" @click.stop="emit('request-delete')">
+                <i-lucide-trash-2 class="size-3.5" />
+              </button>
+            </div>
+            <div v-if="snippet"
+              class="max-h-16 overflow-hidden text-xs text-on-surface-muted pointer-events-none [&_.markdown-preview]:text-xs">
+              <MarkdownPreview :markdown="snippet" />
+            </div>
+            <div class="flex items-center gap-2 text-xs text-on-surface-muted/80">
+              <span v-if="task.attachmentCount > 0" class="flex items-center gap-0.5">
+                <i-lucide-paperclip class="size-3" />
+                {{ task.attachmentCount }}
+              </span>
+              <span v-if="task.linkedNoteCount > 0" class="flex items-center gap-0.5">
+                <i-lucide-link class="size-3" />
+                {{ task.linkedNoteCount }}
+              </span>
+              <span class="ml-auto">{{ dateLabel }}</span>
+            </div>
           </div>
         </div>
-      </div>
       </div>
     </ContextMenuTrigger>
     <ContextMenuPortal>

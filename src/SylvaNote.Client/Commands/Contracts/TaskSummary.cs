@@ -10,6 +10,7 @@ public sealed class TaskSummary
     public string Body { get; set; }
     public string Position { get; set; }
     public int AttachmentCount { get; set; }
+    public int LinkedNoteCount { get; set; }
     public string CreatedAt { get; set; }
     public string UpdatedAt { get; set; }
 }

@@ -103,6 +103,32 @@ namespace SylvaNote.Core.DataAccess
 
         // Position uniqueness spans ALL tasks in the column - tombstoned rows share
         // the fractional keyspace even though they never render.
+        // One grouped query for the whole board (same shape as the attachment counts) -
+        // GetActiveForBoard deliberately leaves NoteIds null, so the cards cannot count
+        // links themselves without an N+1. Trashed notes are excluded: the count should
+        // match what the task dialog can actually show.
+        public Dictionary<string, int> CountNoteLinksForBoard(string boardId)
+        {
+            Dictionary<string, int> counts = new Dictionary<string, int>();
+            using SqliteConnection connection = _connectionManager.CreateConnection();
+            using SqliteCommand select = connection.CreateCommand();
+            select.CommandText = @"
+                SELECT tn.task_id, COUNT(*)
+                FROM task_note tn
+                JOIN task t ON t.id = tn.task_id
+                JOIN board_column bc ON bc.id = t.column_id
+                JOIN note n ON n.id = tn.note_id
+                WHERE bc.board_id = @board_id AND n.deleted = 0
+                GROUP BY tn.task_id";
+            select.Parameters.AddWithValue("@board_id", boardId);
+            using SqliteDataReader reader = select.ExecuteReader();
+            while (reader.Read())
+            {
+                counts[reader.GetString(0)] = reader.GetInt32(1);
+            }
+            return counts;
+        }
+
         public string GetMaxPosition(string columnId)
         {
             using SqliteConnection connection = _connectionManager.CreateConnection();

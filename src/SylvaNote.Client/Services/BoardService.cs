@@ -71,6 +71,7 @@ public sealed class BoardService : IBoardService
     {
         List<BoardColumn> columns = _repositories.Columns.GetActiveForBoard(request.Id);
         Dictionary<string, int> counts = _repositories.Attachments.CountByTaskForBoard(request.Id);
+        Dictionary<string, int> linkCounts = _repositories.Tasks.CountNoteLinksForBoard(request.Id);
         List<TaskSummary> tasks = new List<TaskSummary>();
         foreach (TaskItem task in _repositories.Tasks.GetActiveForBoard(request.Id))
         {
@@ -82,6 +83,7 @@ public sealed class BoardService : IBoardService
                 Body = task.Body,
                 Position = task.Position,
                 AttachmentCount = counts.TryGetValue(task.Id, out int count) ? count : 0,
+                LinkedNoteCount = linkCounts.TryGetValue(task.Id, out int linkCount) ? linkCount : 0,
                 CreatedAt = task.CreatedAt,
                 UpdatedAt = task.UpdatedAt,
             });
