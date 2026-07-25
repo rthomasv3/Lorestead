@@ -188,6 +188,45 @@ namespace SylvaNote.IntegrationTests
         }
 
         [Fact]
+        public void InstantiateTemplate_CopiesAttachmentsWithBlobAndThumbnail()
+        {
+            using TestDb db = new TestDb();
+            Note templateRoot = Items.Note("Letterhead template");
+            templateRoot.Type = NoteType.Template;
+            Note templateChild = Items.Note("Section", parentId: templateRoot.Id);
+            templateChild.Type = NoteType.Template;
+            db.Notes.Save(templateRoot);
+            db.Notes.Save(templateChild);
+
+            Attachment logo = Items.Attachment(noteId: templateRoot.Id, filename: "logo.png");
+            db.Attachments.Save(logo);
+            db.Attachments.SaveBlob(logo.Id, new byte[] { 9, 8, 7 });
+            db.Attachments.SaveThumbnail(logo.Id, new byte[] { 1, 2 });
+
+            Attachment childFile = Items.Attachment(noteId: templateChild.Id, filename: "notes.txt");
+            db.Attachments.Save(childFile);
+            db.Attachments.SaveBlob(childFile.Id, new byte[] { 4 });
+
+            string newRootId = db.Notes.InstantiateTemplate(templateRoot.Id, "New Project", null, "m");
+
+            Attachment copied = Assert.Single(db.Attachments.GetForNote(newRootId));
+            Assert.NotEqual(logo.Id, copied.Id);
+            Assert.Equal("logo.png", copied.Filename);
+            Assert.Equal(3, copied.SizeBytes);
+            Assert.Equal(new byte[] { 9, 8, 7 }, db.Attachments.GetBlob(copied.Id));
+            Assert.Equal(new byte[] { 1, 2 }, db.Attachments.GetThumbnail(copied.Id));
+
+            // Descendants of the template carry their attachments too.
+            Note newChild = db.Notes.GetAll().Single(n => n.ParentId == newRootId);
+            Attachment copiedChildFile = Assert.Single(db.Attachments.GetForNote(newChild.Id));
+            Assert.Equal("notes.txt", copiedChildFile.Filename);
+            Assert.Equal(new byte[] { 4 }, db.Attachments.GetBlob(copiedChildFile.Id));
+
+            // The template keeps its own attachment, untouched.
+            Assert.Equal(logo.Id, Assert.Single(db.Attachments.GetForNote(templateRoot.Id)).Id);
+        }
+
+        [Fact]
         public void SearchNotes_IncludeTrashed_FindsTombstonedNotes()
         {
             using TestDb db = new TestDb();

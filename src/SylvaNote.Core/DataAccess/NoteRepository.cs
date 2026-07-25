@@ -274,6 +274,7 @@ namespace SylvaNote.Core.DataAccess
                     UpsertWithin(connection, transaction, copy);
                     NoteLinkRebuilder.RebuildForNoteWithin(connection, transaction, copy.Id, copy.Body);
                     AppendNoteChangeWithin(connection, transaction, copy, now);
+                    CopyAttachmentsWithin(connection, transaction, note.Id, copy.Id, now);
                 }
 
                 newRootId = idMap[templateId];
@@ -281,6 +282,73 @@ namespace SylvaNote.Core.DataAccess
 
             transaction.Commit();
             return newRootId;
+        }
+
+        // A template's attachments come with the copy: the user attached them on
+        // purpose, and a body that embeds one would otherwise point at nothing. The
+        // thumbnail is copied too - the image is byte-identical, so regenerating it
+        // would decode the blob only to store the same bytes again.
+        private void CopyAttachmentsWithin(SqliteConnection connection, SqliteTransaction transaction, string sourceNoteId, string targetNoteId, string now)
+        {
+            // Read fully before writing - a reader held open over the same connection
+            // while inserting is asking for trouble.
+            List<Attachment> sources = new List<Attachment>();
+            using (SqliteCommand select = connection.CreateCommand())
+            {
+                select.CommandText = "SELECT id, filename, mime_type, size_bytes FROM attachment WHERE note_id = @note_id AND deleted = 0";
+                select.Parameters.AddWithValue("@note_id", sourceNoteId);
+                using SqliteDataReader reader = select.ExecuteReader();
+                while (reader.Read())
+                {
+                    sources.Add(new Attachment
+                    {
+                        Id = reader.GetString(0),
+                        Filename = reader.GetString(1),
+                        MimeType = reader.GetString(2),
+                        SizeBytes = reader.GetInt64(3),
+                    });
+                }
+            }
+
+            foreach (Attachment source in sources)
+            {
+                Attachment copy = new Attachment
+                {
+                    Id = Guid.CreateVersion7().ToString(),
+                    NoteId = targetNoteId,
+                    Filename = source.Filename,
+                    MimeType = source.MimeType,
+                    SizeBytes = source.SizeBytes,
+                    Deleted = false,
+                    CreatedAt = now,
+                    UpdatedAt = now,
+                };
+                AttachmentRepository.UpsertWithin(connection, transaction, copy);
+                CopyBlobRowWithin(connection, "attachment_blob", source.Id, copy.Id);
+                CopyBlobRowWithin(connection, "attachment_thumbnail", source.Id, copy.Id);
+
+                ChangeLogRepository.AppendWithin(connection, transaction, new ChangeLogEntry
+                {
+                    ItemType = ItemTypes.Attachment,
+                    ItemId = copy.Id,
+                    Op = ChangeOps.Upsert,
+                    Payload = PayloadJson.Serialize(copy),
+                    BaseSeq = ChangeLogRepository.MaxSeqForItemWithin(connection, transaction, ItemTypes.Attachment, copy.Id),
+                    DeviceId = _deviceId,
+                    ChangedAt = now,
+                });
+            }
+        }
+
+        // INSERT..SELECT so the bytes never leave SQLite. A missing source row (no
+        // thumbnail yet) simply copies nothing.
+        private static void CopyBlobRowWithin(SqliteConnection connection, string table, string sourceId, string targetId)
+        {
+            using SqliteCommand copy = connection.CreateCommand();
+            copy.CommandText = $"INSERT INTO {table} (attachment_id, data) SELECT @target, data FROM {table} WHERE attachment_id = @source";
+            copy.Parameters.AddWithValue("@target", targetId);
+            copy.Parameters.AddWithValue("@source", sourceId);
+            copy.ExecuteNonQuery();
         }
 
         private void RestoreSubtreeWithin(SqliteConnection connection, SqliteTransaction transaction, string id, string parentId, string position, bool placeExplicitly)
