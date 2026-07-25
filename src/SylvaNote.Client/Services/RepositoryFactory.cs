@@ -15,6 +15,7 @@ public sealed class RepositoryFactory
 {
     private readonly ConnectionManager _connectionManager;
     private SearchRepository _search;
+    private ChangeLogRepository _changeLog;
     private string _deviceId;
 
     public RepositoryFactory(ConnectionManager connectionManager)
@@ -56,6 +57,19 @@ public sealed class RepositoryFactory
                 _search = new SearchRepository(_connectionManager);
             }
             return _search;
+        }
+    }
+
+    // Cached like Search: no device id, no retention - nothing that goes stale.
+    public ChangeLogRepository ChangeLog
+    {
+        get
+        {
+            if (_changeLog == null)
+            {
+                _changeLog = new ChangeLogRepository(_connectionManager);
+            }
+            return _changeLog;
         }
     }
 

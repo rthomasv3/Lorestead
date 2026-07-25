@@ -5,6 +5,7 @@ using SylvaNote.Client.Services.Abstractions;
 using SylvaNote.Core.DataAccess;
 using SylvaNote.Core.Entities;
 using SylvaNote.Core.Ordering;
+using SylvaNote.Core.Sync;
 
 namespace SylvaNote.Client.Services;
 
@@ -47,6 +48,30 @@ public sealed class NoteService : INoteService
             Attachments = _repositories.Attachments.GetForNote(request.Id),
             Backlinks = _repositories.Notes.GetBacklinkSources(request.Id),
         };
+    }
+
+    // Every retained version at once, payloads included: the cards show added and
+    // removed character counts against the previous version, which the frontend
+    // computes with the same diff machinery as the detail view (decisions.md). That
+    // needs each version's body and its predecessor's, so a per-card fetch could not
+    // build the list at all.
+    public GetNoteHistoryResponse GetHistory(GetNoteHistoryRequest request)
+    {
+        List<NoteVersion> versions = new List<NoteVersion>();
+        foreach (ItemVersion version in _repositories.ChangeLog.GetVersionsForItem(ItemTypes.Note, request.NoteId))
+        {
+            Note payload = PayloadJson.Deserialize<Note>(version.Payload);
+            versions.Add(new NoteVersion
+            {
+                Id = version.Id,
+                ChangedAt = version.ChangedAt,
+                DeviceId = version.DeviceId,
+                SupersededConcurrent = version.SupersededConcurrent,
+                Title = payload?.Title ?? string.Empty,
+                Body = payload?.Body ?? string.Empty,
+            });
+        }
+        return new GetNoteHistoryResponse { Versions = versions };
     }
 
     public CreateNoteResponse Create(CreateNoteRequest request)

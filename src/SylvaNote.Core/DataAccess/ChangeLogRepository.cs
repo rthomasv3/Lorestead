@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using Microsoft.Data.Sqlite;
 using SylvaNote.Core.Entities;
+using SylvaNote.Core.Sync;
 
 namespace SylvaNote.Core.DataAccess
 {
@@ -247,6 +248,38 @@ namespace SylvaNote.Core.DataAccess
         {
             using SqliteConnection connection = _connectionManager.CreateConnection();
             PruneItemVersionsWithin(connection, null, itemType, itemId, keep);
+        }
+
+        // The history feature's read. Newest first by authored time, matching the
+        // order retention prunes in, so the list and the cap agree about which
+        // version is oldest. Upserts only: a purge entry has no payload to show, and
+        // a purge takes the item's history with it anyway.
+        public List<ItemVersion> GetVersionsForItem(string itemType, string itemId)
+        {
+            List<ItemVersion> versions = new List<ItemVersion>();
+            using SqliteConnection connection = _connectionManager.CreateConnection();
+            using SqliteCommand select = connection.CreateCommand();
+            select.CommandText = @"
+                SELECT id, changed_at, device_id, superseded_concurrent, payload
+                FROM change_log
+                WHERE item_type = @item_type AND item_id = @item_id AND op = @op
+                ORDER BY changed_at DESC, id DESC";
+            select.Parameters.AddWithValue("@item_type", itemType);
+            select.Parameters.AddWithValue("@item_id", itemId);
+            select.Parameters.AddWithValue("@op", ChangeOps.Upsert);
+            using SqliteDataReader reader = select.ExecuteReader();
+            while (reader.Read())
+            {
+                versions.Add(new ItemVersion
+                {
+                    Id = reader.GetInt64(0),
+                    ChangedAt = reader.GetString(1),
+                    DeviceId = reader.GetString(2),
+                    SupersededConcurrent = reader.GetInt64(3) != 0,
+                    Payload = reader.GetString(4),
+                });
+            }
+            return versions;
         }
 
         public List<ChangeLogEntry> GetForItem(string itemType, string itemId)

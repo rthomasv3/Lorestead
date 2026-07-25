@@ -17,6 +17,7 @@ export const useNotesStore = defineStore('notes', () => {
   const currentNote = ref(null)
   const currentAttachments = ref([])
   const currentBacklinks = ref([])
+  const currentHistory = ref([])
   // Tree expansion lives here (not in the Tree component) so it survives route
   // changes - the view unmounts on navigation but the store does not.
   const expandedIds = ref(new Set())
@@ -195,6 +196,24 @@ export const useNotesStore = defineStore('notes', () => {
     return response.results ?? []
   }
 
+  // History is fetched only when its panel opens (payloads are the bulk of the
+  // response, and the panel is a toggle), then dropped when it closes.
+  async function loadHistory() {
+    const id = selectedId.value
+    if (!id) {
+      currentHistory.value = []
+      return
+    }
+    const response = await noteService.getNoteHistory({ noteId: id })
+    if (selectedId.value === id) {
+      currentHistory.value = response.versions ?? []
+    }
+  }
+
+  function clearHistory() {
+    currentHistory.value = []
+  }
+
   // Backlinks are derived from other items' bodies, so they change without this
   // note changing - refreshed alongside attachments on every notes:changed.
   async function refreshBacklinks() {
@@ -351,6 +370,7 @@ export const useNotesStore = defineStore('notes', () => {
     currentNote,
     currentAttachments,
     currentBacklinks,
+    currentHistory,
     expandedIds,
     treeItems,
     templateRootSummaries,
@@ -369,6 +389,8 @@ export const useNotesStore = defineStore('notes', () => {
     search,
     refreshAttachments,
     refreshBacklinks,
+    loadHistory,
+    clearHistory,
     addAttachment,
     renameAttachment,
     removeAttachment,

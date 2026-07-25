@@ -6,6 +6,7 @@ public interface INoteService
 {
     GetNotesResponse GetNotes();
     GetNoteResponse GetNote(GetNoteRequest request);
+    GetNoteHistoryResponse GetHistory(GetNoteHistoryRequest request);
     CreateNoteResponse Create(CreateNoteRequest request);
     SaveNoteResponse SaveBody(SaveNoteRequest request);
     RenameNoteResponse Rename(RenameNoteRequest request);

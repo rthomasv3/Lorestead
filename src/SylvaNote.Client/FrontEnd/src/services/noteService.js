@@ -8,6 +8,10 @@ export async function getNote(request) {
   return invoke('getNote', { request })
 }
 
+export async function getNoteHistory(request) {
+  return invoke('getNoteHistory', { request })
+}
+
 export async function createNote(request) {
   return invoke('createNote', { request })
 }

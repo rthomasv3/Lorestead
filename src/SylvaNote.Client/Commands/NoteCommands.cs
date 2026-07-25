@@ -10,6 +10,7 @@ internal static class NoteCommands
     {
         builder.AddFunction("getNotes", (INoteService notes) => notes.GetNotes());
         builder.AddFunction("getNote", (GetNoteRequest request, INoteService notes) => notes.GetNote(request));
+        builder.AddFunction("getNoteHistory", (GetNoteHistoryRequest request, INoteService notes) => notes.GetHistory(request));
         builder.AddFunction("createNote", (CreateNoteRequest request, INoteService notes) => notes.Create(request));
         builder.AddFunction("saveNote", (SaveNoteRequest request, INoteService notes) => notes.SaveBody(request));
         builder.AddFunction("renameNote", (RenameNoteRequest request, INoteService notes) => notes.Rename(request));

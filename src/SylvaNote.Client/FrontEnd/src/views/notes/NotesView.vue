@@ -5,6 +5,7 @@ import HoverTip from '../../components/HoverTip.vue'
 import NotesTreePanel from './NotesTreePanel.vue'
 import AttachmentsPanel from './AttachmentsPanel.vue'
 import BacklinksPanel from './BacklinksPanel.vue'
+import HistoryPanel from './HistoryPanel.vue'
 import ToolPanelShell from '../../components/ToolPanelShell.vue'
 import NewFromTemplateDialog from './NewFromTemplateDialog.vue'
 import MarkdownEditor from '../../components/MarkdownEditor.vue'
@@ -206,7 +207,20 @@ function runToolbar(name) {
 
 function toggleTool(name) {
   toolOpen.value = toolOpen.value === name ? null : name
+  // History carries every retained version's payload, so it is fetched on open and
+  // dropped on close rather than riding along with the note (decisions.md).
+  if (toolOpen.value === 'history') notesStore.loadHistory()
+  else notesStore.clearHistory()
 }
+
+// Switching notes must not leave the previous note's versions on screen, and every
+// save appends one - so track the summary's updatedAt, which is what saveBody and
+// an incoming agent edit both touch (currentNote is not re-fetched on save).
+watch(
+  () => [notesStore.selectedId, notesStore.byId.get(notesStore.selectedId)?.updatedAt],
+  () => {
+    if (toolOpen.value === 'history') notesStore.loadHistory()
+  })
 
 onMounted(() => {
   if (!notesStore.loaded) notesStore.load()
@@ -296,6 +310,10 @@ onMounted(() => {
             <BacklinksPanel />
           </ToolPanelShell>
 
+          <ToolPanelShell :open="toolOpen === 'history'" storage-key="SylvaNote-history-panel-width">
+            <HistoryPanel :current-body="body" />
+          </ToolPanelShell>
+
           <TooltipProvider :delay-duration="300">
             <div class="w-11 shrink-0 border-l border-border bg-surface flex flex-col items-center py-2 gap-1">
               <HoverTip text="Attachments" side="left">
@@ -318,6 +336,13 @@ onMounted(() => {
                     class="absolute -top-0.5 -right-0.5 min-w-4 h-4 px-0.5 rounded-full bg-accent-strong text-white text-[10px] leading-4 text-center">
                     {{ notesStore.currentBacklinks.length }}
                   </span>
+                </button>
+              </HoverTip>
+              <HoverTip text="History" side="left">
+                <button class="relative p-2 rounded-md"
+                  :class="toolOpen === 'history' ? 'text-accent bg-accent-soft' : 'text-on-surface-muted hover:text-on-surface hover:bg-surface-alt'"
+                  @click="toggleTool('history')">
+                  <i-lucide-history class="size-4.5" />
                 </button>
               </HoverTip>
             </div>
