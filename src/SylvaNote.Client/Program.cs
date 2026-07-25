@@ -22,7 +22,7 @@ internal class Program
         // and this host's provider is plain SQLite (bundle_e_sqlite3).
         SQLitePCL.Batteries_V2.Init();
 
-        Config config = Config.Create("SylvaNote");
+        Config config = Config.Create();
         FileLoggingService logger = new FileLoggingService(config);
         ConnectionManager connectionManager = new ConnectionManager();
 

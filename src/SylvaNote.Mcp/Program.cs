@@ -19,19 +19,15 @@ internal static class Program
         {
             SQLitePCL.Batteries_V2.Init();
 
-            // Must resolve the same file as the client's Config.Create("SylvaNote") -
-            // agent hosts spawn this binary with zero config and it shares the client
-            // DB through WAL (decisions.md multi-process rules). SYLVANOTE_DATA_DIR
-            // overrides for testing, mirroring the server's variable.
-            string dataDirectory = Environment.GetEnvironmentVariable("SYLVANOTE_DATA_DIR");
-            if (string.IsNullOrEmpty(dataDirectory))
-            {
-                dataDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SylvaNote");
-            }
+            // Same resolver the client uses, so agent edits land in the client's DB
+            // wherever this binary happens to be installed (decisions.md). Legacy
+            // migration is deliberately client-only - a spawned binary can see a
+            // virtualized AppData shadow instead of the real files.
+            string dataDirectory = LocalDataPaths.ResolveDataDirectory();
             Directory.CreateDirectory(dataDirectory);
 
             ConnectionManager connectionManager = new ConnectionManager();
-            connectionManager.Open(Path.Combine(dataDirectory, "sylvanote.db"), MigrationSets.Client());
+            connectionManager.Open(LocalDataPaths.GetDatabasePath(dataDirectory), MigrationSets.Client());
             SyncState state = new SyncStateRepository(connectionManager).EnsureInitialized();
 
             // The -mcp suffix marks agent edits in the change log while keeping the

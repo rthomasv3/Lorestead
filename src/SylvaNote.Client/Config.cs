@@ -1,5 +1,5 @@
-using System;
 using System.IO;
+using SylvaNote.Core.DataAccess;
 
 namespace SylvaNote.Client;
 
@@ -9,16 +9,17 @@ public class Config
     public string DbFilePath { get; set; }
     public string LogFilePath { get; set; }
 
-    public static Config Create(string appName)
+    public static Config Create()
     {
-        string dataDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), appName);
+        string dataDirectory = LocalDataPaths.ResolveDataDirectory();
+        LocalDataPaths.MigrateLegacyDatabase(dataDirectory);
         Directory.CreateDirectory(dataDirectory);
         Directory.CreateDirectory(Path.Combine(dataDirectory, "logs"));
 
         return new Config
         {
             DataDirectory = dataDirectory,
-            DbFilePath = Path.Combine(dataDirectory, "sylvanote.db"),
+            DbFilePath = LocalDataPaths.GetDatabasePath(dataDirectory),
             LogFilePath = Path.Combine(dataDirectory, "logs", "sylvanote.log"),
         };
     }
