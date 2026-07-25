@@ -1,4 +1,5 @@
 <script setup>
+import { useRouter } from 'vue-router'
 import { useSettingsStore } from './stores/settingsStore'
 import { useSyncStore } from './stores/syncStore'
 import { useNotesStore } from './stores/notesStore'
@@ -9,8 +10,20 @@ import SearchDialog from './components/SearchDialog.vue'
 useSettingsStore().init()
 useSyncStore().init()
 
+const router = useRouter()
 const notes = useNotesStore()
 const boards = useBoardsStore()
+
+// A note:// link clicked in any preview - notes editor or task dialog. Handled here
+// rather than in MarkdownPreview because the jump crosses routes, and it is the
+// same landing as a search result.
+window.addEventListener('note:navigate', async (event) => {
+  const id = event.detail?.id
+  if (!id) return
+  await router.push('/notes')
+  notes.reveal(id)
+  notes.select(id)
+})
 
 // Pulled remote changes land here; only already-loaded data refreshes. The open
 // note's body and the open task dialog are not touched from here - those views own

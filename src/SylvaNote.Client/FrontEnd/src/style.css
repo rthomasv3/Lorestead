@@ -236,6 +236,19 @@ button:not(:disabled),
     text-decoration: underline;
 }
 
+/* A note:// link whose target is purged or was never there. Inert, so it does not
+   get the pointer either. */
+.markdown-preview a.broken-link {
+    color: var(--color-on-surface-muted);
+    text-decoration: line-through;
+    text-decoration-color: var(--color-red-500);
+    cursor: default;
+}
+
+.markdown-preview a.broken-link:hover {
+    text-decoration: line-through;
+}
+
 .markdown-preview ul,
 .markdown-preview ol {
     padding-left: 1.6em;

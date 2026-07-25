@@ -100,8 +100,22 @@ async function onBoardsChanged() {
   }
 }
 
-onMounted(() => window.addEventListener('boards:changed', onBoardsChanged))
-onUnmounted(() => window.removeEventListener('boards:changed', onBoardsChanged))
+// A note:// link in the body jumps to the Notes page. Closing here rather than
+// letting the route change unmount us is what runs the close path's flush, so a
+// pending debounced edit is not lost on the way out.
+function onNoteNavigate() {
+  if (props.open) emit('update:open', false)
+}
+
+onMounted(() => {
+  window.addEventListener('boards:changed', onBoardsChanged)
+  window.addEventListener('note:navigate', onNoteNavigate)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('boards:changed', onBoardsChanged)
+  window.removeEventListener('note:navigate', onNoteNavigate)
+})
 
 // --- Save (title + body + links ride one debounce) ---
 

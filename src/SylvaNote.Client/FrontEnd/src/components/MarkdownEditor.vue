@@ -51,6 +51,14 @@ function settingsExtensions() {
     '.cm-activeLine': { backgroundColor: 'color-mix(in srgb, var(--color-on-surface) 5%, transparent)' },
     '.cm-activeLineGutter': { backgroundColor: 'transparent', color: 'var(--color-on-surface)' },
     '.cm-cursor': { borderLeftColor: 'var(--color-on-surface)' },
+    // Our own drop caret (see showDropCaret) - CodeMirror's dropCursor never fires
+    // under pragmatic-drag-and-drop, so this is hand-drawn.
+    '.cm-drop-caret': {
+      position: 'absolute',
+      width: '2px',
+      backgroundColor: 'var(--color-accent)',
+      pointerEvents: 'none',
+    },
     '.cm-selectionBackground, &.cm-focused .cm-selectionBackground': {
       backgroundColor: 'color-mix(in srgb, var(--color-accent) 25%, transparent) !important',
     },
@@ -129,24 +137,63 @@ function createView() {
 }
 
 let dropCleanup = null
+let dropCaret = null
+
+// CodeMirror's own dropCursor() cannot be used here: pragmatic-drag-and-drop parks
+// a "honey pot" div under the pointer for the whole drag, so every dragover targets
+// that element and CodeMirror's contentDOM listeners never fire. Drawing the caret
+// from the drop target's own onDrag is the only way to show where a drop will land.
+function showDropCaret(input) {
+  if (!view || props.readonly) return
+  const pos = view.posAtCoords({ x: input.clientX, y: input.clientY }, false)
+  const rect = pos == null ? null : view.coordsAtPos(pos)
+  if (!rect) {
+    hideDropCaret()
+    return
+  }
+  if (!dropCaret) {
+    dropCaret = view.scrollDOM.appendChild(document.createElement('div'))
+    dropCaret.className = 'cm-drop-caret'
+  }
+  const outer = view.scrollDOM.getBoundingClientRect()
+  dropCaret.style.left = `${rect.left - outer.left + view.scrollDOM.scrollLeft}px`
+  dropCaret.style.top = `${rect.top - outer.top + view.scrollDOM.scrollTop}px`
+  dropCaret.style.height = `${rect.bottom - rect.top}px`
+}
+
+function hideDropCaret() {
+  if (dropCaret) {
+    dropCaret.remove()
+    dropCaret = null
+  }
+}
 
 onMounted(() => {
   createView()
-  // Attachment cards dragged into the editor insert a link at the cursor -
-  // images use the embed form so they render inline in the preview.
+  // Attachment cards and tree notes dragged into the editor insert a link where the
+  // drop caret is pointing - images use the embed form so they render inline in the
+  // preview. The tree's own drop handler ignores this target (it looks for a
+  // resolved zone), so a note dropped here is not also moved.
   dropCleanup = dropTargetForElements({
     element: host.value,
-    canDrop: ({ source }) => !!source.data.attachmentId && !props.readonly,
-    onDrop: ({ source }) => {
-      const { attachmentId, filename, mimeType } = source.data
+    canDrop: ({ source }) => !props.readonly && (!!source.data.attachmentId || !!source.data.noteId),
+    onDrag: ({ location }) => showDropCaret(location.current.input),
+    onDragLeave: () => hideDropCaret(),
+    onDrop: ({ source, location }) => {
+      hideDropCaret()
+      const { attachmentId, filename, mimeType, noteId, label } = source.data
       const embed = (mimeType || '').startsWith('image/') ? '!' : ''
-      insertAtCursor(`${embed}[${filename}](attachment://${attachmentId})`)
+      const text = attachmentId
+        ? `${embed}[${filename}](attachment://${attachmentId})`
+        : `[${label || 'Untitled'}](note://${noteId})`
+      insertAtPoint(text, location.current.input)
     },
   })
 })
 
 onUnmounted(() => {
   if (dropCleanup) dropCleanup()
+  hideDropCaret()
   if (view) view.destroy()
 })
 
@@ -238,6 +285,20 @@ function insertLink() {
   view.dispatch({
     changes: { from: range.from, to: range.to, insert },
     selection: { anchor: urlStart, head: urlStart + 3 },
+  })
+  view.focus()
+}
+
+// Where the drop cursor was pointing, not where the selection happens to be - the
+// selection is wherever you last typed, which is rarely where you aimed the drag.
+// precise=false clamps to the nearest position, so dropping below the last line
+// lands at the end instead of nowhere.
+function insertAtPoint(text, input) {
+  if (!view || props.readonly) return
+  const at = view.posAtCoords({ x: input.clientX, y: input.clientY }, false) ?? view.state.selection.main.to
+  view.dispatch({
+    changes: { from: at, insert: text },
+    selection: { anchor: at + text.length },
   })
   view.focus()
 }

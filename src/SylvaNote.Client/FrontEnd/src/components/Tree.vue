@@ -347,7 +347,10 @@ function attachToRow(item, depth, parentId, cleanups) {
     cleanups.push(
       makeDraggable({
         element: el,
-        getInitialData: () => ({ id: item.id }),
+        // noteId/label ride along so drop targets outside the tree (the editor,
+        // which inserts a link) can identify a real note - the virtual
+        // Templates/Trash roots carry no noteId.
+        getInitialData: () => ({ id: item.id, noteId: item.noteId, label: item.label }),
         onGenerateDragPreview: ({ nativeSetDragImage }) => {
           setCustomNativeDragPreview({
             getOffset: pointerOutsideOfPreview({ x: '16px', y: '8px' }),
