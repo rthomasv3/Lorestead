@@ -9,11 +9,13 @@ namespace SylvaNote.Core.DataAccess
     {
         private readonly ConnectionManager _connectionManager;
         private readonly string _deviceId;
+        private readonly int _historyRetention;
 
-        public TaskRepository(ConnectionManager connectionManager, string deviceId)
+        public TaskRepository(ConnectionManager connectionManager, string deviceId, int historyRetention = 50)
         {
             _connectionManager = connectionManager;
             _deviceId = deviceId;
+            _historyRetention = historyRetention;
         }
 
         public void Save(TaskItem task)
@@ -32,7 +34,7 @@ namespace SylvaNote.Core.DataAccess
             ReplaceNoteLinksWithin(connection, transaction, task.Id, task.NoteIds);
             NoteLinkRebuilder.RebuildForTaskWithin(connection, transaction, task.Id, task.Body);
 
-            ChangeLogRepository.AppendWithin(connection, transaction, new ChangeLogEntry
+            ChangeLogRepository.AppendAndPruneWithin(connection, transaction, new ChangeLogEntry
             {
                 ItemType = ItemTypes.Task,
                 ItemId = task.Id,
@@ -41,7 +43,7 @@ namespace SylvaNote.Core.DataAccess
                 BaseSeq = ChangeLogRepository.MaxSeqForItemWithin(connection, transaction, ItemTypes.Task, task.Id),
                 DeviceId = _deviceId,
                 ChangedAt = now,
-            });
+            }, _historyRetention);
 
             transaction.Commit();
         }
@@ -74,7 +76,7 @@ namespace SylvaNote.Core.DataAccess
             using SqliteConnection connection = _connectionManager.CreateConnection();
             using SqliteTransaction transaction = connection.BeginTransaction();
 
-            TombstoneWithin(connection, transaction, id, _deviceId, Timestamps.UtcNowIso());
+            TombstoneWithin(connection, transaction, id, _deviceId, Timestamps.UtcNowIso(), _historyRetention);
 
             transaction.Commit();
         }
@@ -216,7 +218,7 @@ namespace SylvaNote.Core.DataAccess
 
         // Shared by the column/board delete cascades so every tombstone gets its own
         // outbox entry with the task's full state (including its note links).
-        public static void TombstoneWithin(SqliteConnection connection, SqliteTransaction transaction, string id, string deviceId, string now)
+        public static void TombstoneWithin(SqliteConnection connection, SqliteTransaction transaction, string id, string deviceId, string now, int historyRetention)
         {
             TaskItem task = GetWithin(connection, transaction, id);
             if (task != null && !task.Deleted)
@@ -225,7 +227,7 @@ namespace SylvaNote.Core.DataAccess
                 task.UpdatedAt = now;
                 task.NoteIds = GetNoteIds(connection, id);
                 UpsertWithin(connection, transaction, task);
-                ChangeLogRepository.AppendWithin(connection, transaction, new ChangeLogEntry
+                ChangeLogRepository.AppendAndPruneWithin(connection, transaction, new ChangeLogEntry
                 {
                     ItemType = ItemTypes.Task,
                     ItemId = task.Id,
@@ -234,7 +236,7 @@ namespace SylvaNote.Core.DataAccess
                     BaseSeq = ChangeLogRepository.MaxSeqForItemWithin(connection, transaction, ItemTypes.Task, task.Id),
                     DeviceId = deviceId,
                     ChangedAt = now,
-                });
+                }, historyRetention);
             }
         }
 

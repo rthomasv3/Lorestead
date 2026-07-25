@@ -9,11 +9,13 @@ namespace SylvaNote.Core.DataAccess
     {
         private readonly ConnectionManager _connectionManager;
         private readonly string _deviceId;
+        private readonly int _historyRetention;
 
-        public AttachmentRepository(ConnectionManager connectionManager, string deviceId)
+        public AttachmentRepository(ConnectionManager connectionManager, string deviceId, int historyRetention = 50)
         {
             _connectionManager = connectionManager;
             _deviceId = deviceId;
+            _historyRetention = historyRetention;
         }
 
         public void Save(Attachment attachment)
@@ -30,7 +32,7 @@ namespace SylvaNote.Core.DataAccess
 
             UpsertWithin(connection, transaction, attachment);
 
-            ChangeLogRepository.AppendWithin(connection, transaction, new ChangeLogEntry
+            ChangeLogRepository.AppendAndPruneWithin(connection, transaction, new ChangeLogEntry
             {
                 ItemType = ItemTypes.Attachment,
                 ItemId = attachment.Id,
@@ -39,7 +41,7 @@ namespace SylvaNote.Core.DataAccess
                 BaseSeq = ChangeLogRepository.MaxSeqForItemWithin(connection, transaction, ItemTypes.Attachment, attachment.Id),
                 DeviceId = _deviceId,
                 ChangedAt = now,
-            });
+            }, _historyRetention);
 
             transaction.Commit();
         }

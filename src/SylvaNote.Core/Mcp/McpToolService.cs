@@ -26,14 +26,14 @@ namespace SylvaNote.Core.Mcp
         private readonly AttachmentRepository _attachments;
         private readonly SearchRepository _search;
 
-        public McpToolService(ConnectionManager connectionManager, string deviceId, Func<Task> afterWrite = null)
+        public McpToolService(ConnectionManager connectionManager, string deviceId, Func<Task> afterWrite = null, int historyRetention = 50)
         {
             _afterWrite = afterWrite;
-            _notes = new NoteRepository(connectionManager, deviceId);
-            _boards = new BoardRepository(connectionManager, deviceId);
-            _columns = new BoardColumnRepository(connectionManager, deviceId);
-            _tasks = new TaskRepository(connectionManager, deviceId);
-            _attachments = new AttachmentRepository(connectionManager, deviceId);
+            _notes = new NoteRepository(connectionManager, deviceId, historyRetention);
+            _boards = new BoardRepository(connectionManager, deviceId, historyRetention);
+            _columns = new BoardColumnRepository(connectionManager, deviceId, historyRetention);
+            _tasks = new TaskRepository(connectionManager, deviceId, historyRetention);
+            _attachments = new AttachmentRepository(connectionManager, deviceId, historyRetention);
             _search = new SearchRepository(connectionManager);
         }
 
@@ -251,24 +251,18 @@ namespace SylvaNote.Core.Mcp
                 response.Attachments.Add(ToAttachmentInfo(attachment));
             }
 
-            foreach (NoteLink link in _notes.GetBacklinks(noteId))
+            // Both directions (body mentions and tasks' linked-notes lists), and it
+            // already drops trashed notes and deleted tasks - the rest of the contract
+            // never surfaces trashed items either.
+            foreach (NoteBacklink source in _notes.GetBacklinkSources(noteId))
             {
-                if (link.FromNoteId != null)
+                response.Backlinks.Add(new McpBacklink
                 {
-                    Note source = _notes.Get(link.FromNoteId);
-                    if (source != null)
-                    {
-                        response.Backlinks.Add(new McpBacklink { NoteId = source.Id, Title = source.Title });
-                    }
-                }
-                else if (link.FromTaskId != null)
-                {
-                    TaskItem source = _tasks.Get(link.FromTaskId);
-                    if (source != null)
-                    {
-                        response.Backlinks.Add(new McpBacklink { TaskId = source.Id, Title = source.Title });
-                    }
-                }
+                    NoteId = source.NoteId,
+                    TaskId = source.TaskId,
+                    Title = source.Title,
+                    Via = source.Via,
+                });
             }
 
             return response;

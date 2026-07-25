@@ -31,7 +31,7 @@ namespace SylvaNote.Core.Mcp
 
                 McpServerTool.Create((string noteId) =>
                     Run(() => PayloadJson.Serialize(tools.GetNote(noteId))),
-                    Options("get_note", "A note's full body and metadata, plus its attachment list and backlinks (notes and tasks that link to it).")),
+                    Options("get_note", "A note's full body and metadata, plus its attachment list and backlinks. A backlink's via says how the source reaches this note: body (its markdown links here), link (a task carrying it in its linked-notes list), or both.")),
 
                 McpServerTool.Create((string title, string body = null, string parentId = null) =>
                     RunAsync(async () => PayloadJson.Serialize(await tools.CreateNote(title, body, parentId))),

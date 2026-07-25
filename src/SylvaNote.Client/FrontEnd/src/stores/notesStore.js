@@ -16,6 +16,7 @@ export const useNotesStore = defineStore('notes', () => {
   const selectedId = ref(null)
   const currentNote = ref(null)
   const currentAttachments = ref([])
+  const currentBacklinks = ref([])
   // Tree expansion lives here (not in the Tree component) so it survives route
   // changes - the view unmounts on navigation but the store does not.
   const expandedIds = ref(new Set())
@@ -114,6 +115,7 @@ export const useNotesStore = defineStore('notes', () => {
     if (!id) {
       currentNote.value = null
       currentAttachments.value = []
+      currentBacklinks.value = []
     } else {
       // The previous note stays visible until the new one arrives - clearing first
       // would flash the empty state on every click, including reselects.
@@ -121,6 +123,7 @@ export const useNotesStore = defineStore('notes', () => {
       if (selectedId.value === id) {
         currentNote.value = response.note
         currentAttachments.value = response.attachments ?? []
+        currentBacklinks.value = response.backlinks ?? []
       }
     }
   }
@@ -190,6 +193,18 @@ export const useNotesStore = defineStore('notes', () => {
   async function search(query, { includeTrashed = true } = {}) {
     const response = await noteService.searchNotes({ query, includeTrashed })
     return response.results ?? []
+  }
+
+  // Backlinks are derived from other items' bodies, so they change without this
+  // note changing - refreshed alongside attachments on every notes:changed.
+  async function refreshBacklinks() {
+    if (selectedId.value) {
+      const id = selectedId.value
+      const response = await noteService.getNote({ id })
+      if (selectedId.value === id) {
+        currentBacklinks.value = response.backlinks ?? []
+      }
+    }
   }
 
   // --- Attachments (for the selected note) ---
@@ -335,6 +350,7 @@ export const useNotesStore = defineStore('notes', () => {
     selectedId,
     currentNote,
     currentAttachments,
+    currentBacklinks,
     expandedIds,
     treeItems,
     templateRootSummaries,
@@ -352,6 +368,7 @@ export const useNotesStore = defineStore('notes', () => {
     createFromTemplate,
     search,
     refreshAttachments,
+    refreshBacklinks,
     addAttachment,
     renameAttachment,
     removeAttachment,

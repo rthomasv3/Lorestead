@@ -31,8 +31,13 @@ internal static class Program
             SyncState state = new SyncStateRepository(connectionManager).EnsureInitialized();
 
             // The -mcp suffix marks agent edits in the change log while keeping the
-            // originating device recognizable (features/mcp.md).
-            McpToolService tools = new McpToolService(connectionManager, state.DeviceId + "-mcp");
+            // originating device recognizable (features/mcp.md). Retention comes from
+            // the shared DB so agent writes cap history exactly as the client's do.
+            ApplicationSettings settings = new SettingsRepository(connectionManager).GetApplication();
+            McpToolService tools = new McpToolService(
+                connectionManager,
+                state.DeviceId + "-mcp",
+                historyRetention: settings.HistoryRetention);
 
             await using McpServer server = McpServer.Create(
                 new StdioServerTransport("SylvaNote"),

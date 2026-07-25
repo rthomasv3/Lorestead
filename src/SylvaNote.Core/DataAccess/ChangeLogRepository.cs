@@ -138,20 +138,44 @@ namespace SylvaNote.Core.DataAccess
             return update.ExecuteNonQuery() > 0;
         }
 
-        // Per-item history cap. Only stamped entries are ever pruned - a pending
-        // (seq NULL) entry is an un-uploaded edit and must survive at any age.
+        // Per-item history cap, ordered by authored time because LWW already treats
+        // changed_at as the ordering authority (decisions.md). Not by seq (a serverless
+        // install never stamps one, so nothing was ever eligible and history grew
+        // unbounded) and not by id (that is local *arrival* order - a sync pull inserts
+        // older remote entries with the highest ids, which would evict newer local
+        // versions).
+        //
+        // The one survivor is the newest pending entry: deleting it drops an edit from
+        // the outbox, and a local edit can legitimately sort older than a pulled remote
+        // one. Older pending entries are redundant - payloads are full, not deltas, so
+        // the newest entry already describes the item. Protecting it can leave keep + 1
+        // rows; the cap is approximate by one, deliberately.
         public static void PruneItemVersionsWithin(SqliteConnection connection, SqliteTransaction transaction, string itemType, string itemId, int keep)
         {
             using SqliteCommand delete = connection.CreateCommand();
             delete.CommandText = @"
-                DELETE FROM change_log WHERE id IN (
+                DELETE FROM change_log
+                WHERE id IN (
                     SELECT id FROM change_log
-                    WHERE item_type = @item_type AND item_id = @item_id AND seq IS NOT NULL
-                    ORDER BY seq DESC LIMIT -1 OFFSET @keep)";
+                    WHERE item_type = @item_type AND item_id = @item_id
+                    ORDER BY changed_at DESC, id DESC LIMIT -1 OFFSET @keep)
+                  AND id IS NOT (
+                    SELECT id FROM change_log
+                    WHERE item_type = @item_type AND item_id = @item_id AND seq IS NULL
+                    ORDER BY changed_at DESC, id DESC LIMIT 1)";
             delete.Parameters.AddWithValue("@item_type", itemType);
             delete.Parameters.AddWithValue("@item_id", itemId);
             delete.Parameters.AddWithValue("@keep", keep);
             delete.ExecuteNonQuery();
+        }
+
+        // The local write path: repositories append and cap in one transaction. Without
+        // this the cap only ever ran from the sync paths, which a serverless install
+        // never reaches.
+        public static void AppendAndPruneWithin(SqliteConnection connection, SqliteTransaction transaction, ChangeLogEntry entry, int historyRetention)
+        {
+            AppendWithin(connection, transaction, entry);
+            PruneItemVersionsWithin(connection, transaction, entry.ItemType, entry.ItemId, historyRetention);
         }
 
         // Purge entries have no item history to cap, so they age out by changed_at.

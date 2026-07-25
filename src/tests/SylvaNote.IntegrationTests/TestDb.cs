@@ -21,21 +21,21 @@ namespace SylvaNote.IntegrationTests
         public SyncStateRepository SyncState { get; }
         public SearchRepository Search { get; }
 
-        public TestDb()
-            : this(MigrationSets.Client())
+        public TestDb(int historyRetention = 50)
+            : this(MigrationSets.Client(), historyRetention)
         {
         }
 
-        public TestDb(IReadOnlyList<IMigration> migrations)
+        public TestDb(IReadOnlyList<IMigration> migrations, int historyRetention = 50)
         {
             ConnectionManager = new ConnectionManager();
             ConnectionManager.OpenInMemory($"testdb-{Guid.NewGuid():N}", migrations);
             DeviceId = Guid.CreateVersion7().ToString();
-            Notes = new NoteRepository(ConnectionManager, DeviceId);
-            Boards = new BoardRepository(ConnectionManager, DeviceId);
-            Columns = new BoardColumnRepository(ConnectionManager, DeviceId);
-            Tasks = new TaskRepository(ConnectionManager, DeviceId);
-            Attachments = new AttachmentRepository(ConnectionManager, DeviceId);
+            Notes = new NoteRepository(ConnectionManager, DeviceId, historyRetention);
+            Boards = new BoardRepository(ConnectionManager, DeviceId, historyRetention);
+            Columns = new BoardColumnRepository(ConnectionManager, DeviceId, historyRetention);
+            Tasks = new TaskRepository(ConnectionManager, DeviceId, historyRetention);
+            Attachments = new AttachmentRepository(ConnectionManager, DeviceId, historyRetention);
             ChangeLog = new ChangeLogRepository(ConnectionManager);
             Settings = new SettingsRepository(ConnectionManager);
             SyncState = new SyncStateRepository(ConnectionManager);

@@ -45,6 +45,7 @@ public sealed class NoteService : INoteService
         {
             Note = _repositories.Notes.Get(request.Id),
             Attachments = _repositories.Attachments.GetForNote(request.Id),
+            Backlinks = _repositories.Notes.GetBacklinkSources(request.Id),
         };
     }
 

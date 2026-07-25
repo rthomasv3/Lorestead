@@ -42,7 +42,7 @@ public static class ServerApp
         builder.Services.AddSingleton<ChangeLogRepository>();
         builder.Services.AddSingleton<ServerStateRepository>();
         builder.Services.AddSingleton(new ChangeIngestor(connectionManager, config.HistoryRetention));
-        builder.Services.AddSingleton(new AttachmentRepository(connectionManager, ServerDeviceId));
+        builder.Services.AddSingleton(new AttachmentRepository(connectionManager, ServerDeviceId, config.HistoryRetention));
 
         // Built by hand (not from DI) because the MCP tool set needs the broadcaster
         // and stamper before the container exists.
@@ -52,7 +52,8 @@ public static class ServerApp
         McpToolService mcpTools = new McpToolService(
             connectionManager,
             McpDeviceId,
-            async () => await broadcaster.Broadcast(stamper.StampPending()));
+            async () => await broadcaster.Broadcast(stamper.StampPending()),
+            config.HistoryRetention);
         builder.Services.AddMcpServer()
             .WithHttpTransport()
             .WithTools(McpToolRegistry.CreateTools(mcpTools));

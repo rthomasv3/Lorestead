@@ -66,6 +66,96 @@ namespace SylvaNote.IntegrationTests
         }
 
         [Fact]
+        public void BacklinkSourcesCarryTitlesSnippetsAndTaskContext()
+        {
+            using TestDb db = new TestDb();
+            Note target = Items.Note("Target");
+            db.Notes.Save(target);
+
+            Note fromNote = Items.Note("Source note", $"Context before [Target](note://{target.Id}) context after.");
+            db.Notes.Save(fromNote);
+
+            Board board = Items.Board("Roadmap");
+            db.Boards.Save(board);
+            BoardColumn column = Items.Column(board.Id, "Doing");
+            db.Columns.Save(column);
+            TaskItem fromTask = Items.Task(column.Id, "Source task", $"Do the thing in [Target](note://{target.Id}).");
+            db.Tasks.Save(fromTask);
+
+            List<NoteBacklink> backlinks = db.Notes.GetBacklinkSources(target.Id);
+            Assert.Equal(2, backlinks.Count);
+
+            NoteBacklink noteSource = Assert.Single(backlinks, b => b.NoteId != null);
+            Assert.Equal("Source note", noteSource.Title);
+            Assert.Equal("Context before Target context after.", noteSource.Snippet);
+
+            NoteBacklink taskSource = Assert.Single(backlinks, b => b.TaskId != null);
+            Assert.Equal("Source task", taskSource.Title);
+            Assert.Equal("Roadmap", taskSource.BoardName);
+            Assert.Equal("Doing", taskSource.ColumnName);
+            Assert.Equal(board.Id, taskSource.BoardId);
+        }
+
+        [Fact]
+        public void LinkedNotesBacklinkAndMergeWithBodyMentions()
+        {
+            using TestDb db = new TestDb();
+            Note target = Items.Note("Target");
+            db.Notes.Save(target);
+            Board board = Items.Board("Roadmap");
+            db.Boards.Save(board);
+            BoardColumn column = Items.Column(board.Id, "Doing");
+            db.Columns.Save(column);
+
+            // Linked only - no note:// anywhere in its body.
+            TaskItem linkedOnly = Items.Task(column.Id, "A linked only", "No links in here.",
+                new List<string> { target.Id });
+            db.Tasks.Save(linkedOnly);
+
+            // Both: linked list AND a body mention. One card, not two.
+            TaskItem both = Items.Task(column.Id, "B both", $"See [Target](note://{target.Id}).",
+                new List<string> { target.Id });
+            db.Tasks.Save(both);
+
+            List<NoteBacklink> backlinks = db.Notes.GetBacklinkSources(target.Id);
+            Assert.Equal(2, backlinks.Count);
+
+            NoteBacklink linkOnly = Assert.Single(backlinks, b => b.TaskId == linkedOnly.Id);
+            Assert.Equal(BacklinkVia.Link, linkOnly.Via);
+            Assert.Equal(string.Empty, linkOnly.Snippet);
+            Assert.Equal("Roadmap", linkOnly.BoardName);
+
+            NoteBacklink merged = Assert.Single(backlinks, b => b.TaskId == both.Id);
+            Assert.Equal(BacklinkVia.Both, merged.Via);
+            Assert.Equal("See Target.", merged.Snippet);
+        }
+
+        [Fact]
+        public void TrashedNotesAndDeletedTasksAreNotBacklinkSources()
+        {
+            using TestDb db = new TestDb();
+            Note target = Items.Note("Target");
+            db.Notes.Save(target);
+
+            Note fromNote = Items.Note("Trashed source", $"[Target](note://{target.Id})");
+            db.Notes.Save(fromNote);
+
+            Board board = Items.Board();
+            db.Boards.Save(board);
+            BoardColumn column = Items.Column(board.Id);
+            db.Columns.Save(column);
+            TaskItem fromTask = Items.Task(column.Id, "Deleted source", $"[Target](note://{target.Id})");
+            db.Tasks.Save(fromTask);
+
+            Assert.Equal(2, db.Notes.GetBacklinkSources(target.Id).Count);
+
+            db.Notes.TrashSubtree(fromNote.Id);
+            db.Tasks.Delete(fromTask.Id);
+
+            Assert.Empty(db.Notes.GetBacklinkSources(target.Id));
+        }
+
+        [Fact]
         public void TaskNoteLinksArePersistedAndSkipMissingTargets()
         {
             using TestDb db = new TestDb();

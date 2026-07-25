@@ -49,7 +49,11 @@ let saveTimer = null
 
 const MAX_SIZE = 100 * 1024 * 1024
 
-watch(() => props.open, async (value) => {
+// immediate matters: a jump from another route (search result, backlink card)
+// mounts BoardsView with the request already pending, so this dialog's first
+// render already has open=true and there is no false->true edge to catch. The
+// close branch checks `previous` so mounting with open=false stays inert.
+watch(() => props.open, async (value, previous) => {
   if (value && props.taskId) {
     task.value = null
     editingBody.value = false
@@ -71,11 +75,11 @@ watch(() => props.open, async (value) => {
         titleInput.value?.focus()
       }
     }
-  } else if (!value) {
+  } else if (!value && previous) {
     await flush()
     boardsStore.refreshBoard()
   }
-})
+}, { immediate: true })
 
 // An agent edit reaching the open dialog splits two ways. Attachments save through
 // their own commands, so they are never part of a pending edit and always refresh.

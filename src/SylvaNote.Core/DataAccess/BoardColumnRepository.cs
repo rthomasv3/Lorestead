@@ -9,11 +9,13 @@ namespace SylvaNote.Core.DataAccess
     {
         private readonly ConnectionManager _connectionManager;
         private readonly string _deviceId;
+        private readonly int _historyRetention;
 
-        public BoardColumnRepository(ConnectionManager connectionManager, string deviceId)
+        public BoardColumnRepository(ConnectionManager connectionManager, string deviceId, int historyRetention = 50)
         {
             _connectionManager = connectionManager;
             _deviceId = deviceId;
+            _historyRetention = historyRetention;
         }
 
         public void Save(BoardColumn column)
@@ -30,7 +32,7 @@ namespace SylvaNote.Core.DataAccess
 
             UpsertWithin(connection, transaction, column);
 
-            ChangeLogRepository.AppendWithin(connection, transaction, new ChangeLogEntry
+            ChangeLogRepository.AppendAndPruneWithin(connection, transaction, new ChangeLogEntry
             {
                 ItemType = ItemTypes.Column,
                 ItemId = column.Id,
@@ -39,7 +41,7 @@ namespace SylvaNote.Core.DataAccess
                 BaseSeq = ChangeLogRepository.MaxSeqForItemWithin(connection, transaction, ItemTypes.Column, column.Id),
                 DeviceId = _deviceId,
                 ChangedAt = now,
-            });
+            }, _historyRetention);
 
             transaction.Commit();
         }
@@ -66,7 +68,7 @@ namespace SylvaNote.Core.DataAccess
             using SqliteConnection connection = _connectionManager.CreateConnection();
             using SqliteTransaction transaction = connection.BeginTransaction();
 
-            TombstoneCascadeWithin(connection, transaction, id, _deviceId, Timestamps.UtcNowIso());
+            TombstoneCascadeWithin(connection, transaction, id, _deviceId, Timestamps.UtcNowIso(), _historyRetention);
 
             transaction.Commit();
         }
@@ -140,7 +142,7 @@ namespace SylvaNote.Core.DataAccess
             upsert.ExecuteNonQuery();
         }
 
-        public static void TombstoneCascadeWithin(SqliteConnection connection, SqliteTransaction transaction, string id, string deviceId, string now)
+        public static void TombstoneCascadeWithin(SqliteConnection connection, SqliteTransaction transaction, string id, string deviceId, string now, int historyRetention)
         {
             BoardColumn column = GetWithin(connection, transaction, id);
             if (column != null && !column.Deleted)
@@ -148,7 +150,7 @@ namespace SylvaNote.Core.DataAccess
                 column.Deleted = true;
                 column.UpdatedAt = now;
                 UpsertWithin(connection, transaction, column);
-                ChangeLogRepository.AppendWithin(connection, transaction, new ChangeLogEntry
+                ChangeLogRepository.AppendAndPruneWithin(connection, transaction, new ChangeLogEntry
                 {
                     ItemType = ItemTypes.Column,
                     ItemId = column.Id,
@@ -157,11 +159,11 @@ namespace SylvaNote.Core.DataAccess
                     BaseSeq = ChangeLogRepository.MaxSeqForItemWithin(connection, transaction, ItemTypes.Column, column.Id),
                     DeviceId = deviceId,
                     ChangedAt = now,
-                });
+                }, historyRetention);
 
                 foreach (string taskId in TaskRepository.ReadActiveIdsForColumnWithin(connection, transaction, id))
                 {
-                    TaskRepository.TombstoneWithin(connection, transaction, taskId, deviceId, now);
+                    TaskRepository.TombstoneWithin(connection, transaction, taskId, deviceId, now, historyRetention);
                 }
             }
         }

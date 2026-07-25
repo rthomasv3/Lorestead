@@ -19,6 +19,7 @@ window.addEventListener('notes:changed', () => {
   if (notes.loaded) {
     notes.load()
     notes.refreshAttachments()
+    notes.refreshBacklinks()
   }
 })
 window.addEventListener('boards:changed', () => {
@@ -26,6 +27,10 @@ window.addEventListener('boards:changed', () => {
     boards.load()
     boards.refreshBoard()
   }
+  // A task change can alter the open note's backlinks two ways - its linked-notes
+  // list (task_note) or a note:// mention in its body - and both publish
+  // boards:changed, never notes:changed.
+  notes.refreshBacklinks()
 })
 </script>
 

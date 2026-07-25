@@ -9,11 +9,13 @@ namespace SylvaNote.Core.DataAccess
     {
         private readonly ConnectionManager _connectionManager;
         private readonly string _deviceId;
+        private readonly int _historyRetention;
 
-        public BoardRepository(ConnectionManager connectionManager, string deviceId)
+        public BoardRepository(ConnectionManager connectionManager, string deviceId, int historyRetention = 50)
         {
             _connectionManager = connectionManager;
             _deviceId = deviceId;
+            _historyRetention = historyRetention;
         }
 
         public void Save(Board board)
@@ -30,7 +32,7 @@ namespace SylvaNote.Core.DataAccess
 
             UpsertWithin(connection, transaction, board);
 
-            ChangeLogRepository.AppendWithin(connection, transaction, new ChangeLogEntry
+            ChangeLogRepository.AppendAndPruneWithin(connection, transaction, new ChangeLogEntry
             {
                 ItemType = ItemTypes.Board,
                 ItemId = board.Id,
@@ -39,7 +41,7 @@ namespace SylvaNote.Core.DataAccess
                 BaseSeq = ChangeLogRepository.MaxSeqForItemWithin(connection, transaction, ItemTypes.Board, board.Id),
                 DeviceId = _deviceId,
                 ChangedAt = now,
-            });
+            }, _historyRetention);
 
             transaction.Commit();
         }
@@ -101,7 +103,7 @@ namespace SylvaNote.Core.DataAccess
                 board.Deleted = true;
                 board.UpdatedAt = now;
                 UpsertWithin(connection, transaction, board);
-                ChangeLogRepository.AppendWithin(connection, transaction, new ChangeLogEntry
+                ChangeLogRepository.AppendAndPruneWithin(connection, transaction, new ChangeLogEntry
                 {
                     ItemType = ItemTypes.Board,
                     ItemId = board.Id,
@@ -110,11 +112,11 @@ namespace SylvaNote.Core.DataAccess
                     BaseSeq = ChangeLogRepository.MaxSeqForItemWithin(connection, transaction, ItemTypes.Board, board.Id),
                     DeviceId = _deviceId,
                     ChangedAt = now,
-                });
+                }, _historyRetention);
 
                 foreach (string columnId in BoardColumnRepository.ReadActiveIdsForBoardWithin(connection, transaction, id))
                 {
-                    BoardColumnRepository.TombstoneCascadeWithin(connection, transaction, columnId, _deviceId, now);
+                    BoardColumnRepository.TombstoneCascadeWithin(connection, transaction, columnId, _deviceId, now, _historyRetention);
                 }
             }
 

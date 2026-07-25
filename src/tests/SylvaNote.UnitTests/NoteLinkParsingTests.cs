@@ -30,6 +30,42 @@ namespace SylvaNote.UnitTests
         }
 
         [Fact]
+        public void SnippetCentresOnTheLinkAndShowsItsText()
+        {
+            string body =
+                "Padding that runs well past the window on the left hand side of the link itself. " +
+                "Then [the target](note://0198c0de-0000-7000-8000-000000000001) sits here. " +
+                "And padding that runs well past the window on the right hand side too.";
+
+            string snippet = NoteLinkRebuilder.ContextSnippet(body, "0198c0de-0000-7000-8000-000000000001", radius: 20);
+
+            Assert.Contains("the target", snippet);
+            Assert.DoesNotContain("note://", snippet);
+            Assert.StartsWith("...", snippet);
+            Assert.EndsWith("...", snippet);
+        }
+
+        [Fact]
+        public void SnippetCollapsesWhitespaceAndKeepsShortBodiesWhole()
+        {
+            string body = "Line one\n\n   [target](note://0198c0de-0000-7000-8000-000000000001)   \nLine two";
+
+            string snippet = NoteLinkRebuilder.ContextSnippet(body, "0198c0de-0000-7000-8000-000000000001");
+
+            Assert.Equal("Line one target Line two", snippet);
+        }
+
+        [Fact]
+        public void SnippetHandlesBareUrlsAndAbsentTargets()
+        {
+            Assert.Contains("note://0198c0de-0000-7000-8000-000000000001",
+                NoteLinkRebuilder.ContextSnippet("A bare note://0198c0de-0000-7000-8000-000000000001 url",
+                    "0198c0de-0000-7000-8000-000000000001"));
+            Assert.Equal(string.Empty, NoteLinkRebuilder.ContextSnippet(null, "0198c0de-0000-7000-8000-000000000001"));
+            Assert.Equal(string.Empty, NoteLinkRebuilder.ContextSnippet("   ", "0198c0de-0000-7000-8000-000000000001"));
+        }
+
+        [Fact]
         public void TimestampsSortLexicographically()
         {
             string earlier = Timestamps.UtcNowIso();

@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using SylvaNote.Core.Entities;
@@ -232,9 +231,16 @@ namespace SylvaNote.IntegrationTests
             Assert.Equal("pic.png", attachment.Filename);
             Assert.Equal(3, attachment.SizeBytes);
 
-            Assert.Equal(2, note.Backlinks.Count);
-            Assert.Contains(note.Backlinks, b => b.NoteId != null && b.Title == "Linker");
-            Assert.Contains(note.Backlinks, b => b.TaskId == task.Id && b.Title == "Task linker");
+            // A task linked to the note without mentioning it also backlinks, marked
+            // via "link" instead of "body".
+            McpCreateResponse linkedTask = await _tools.CreateTask(column.Id, "Task holder", "no mention here",
+                new[] { target.Id });
+
+            note = _tools.GetNote(target.Id);
+            Assert.Equal(3, note.Backlinks.Count);
+            Assert.Contains(note.Backlinks, b => b.NoteId != null && b.Title == "Linker" && b.Via == BacklinkVia.Body);
+            Assert.Contains(note.Backlinks, b => b.TaskId == task.Id && b.Via == BacklinkVia.Body);
+            Assert.Contains(note.Backlinks, b => b.TaskId == linkedTask.Id && b.Via == BacklinkVia.Link);
         }
 
         [Fact]

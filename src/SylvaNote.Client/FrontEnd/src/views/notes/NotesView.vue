@@ -4,6 +4,7 @@ import { SplitterGroup, SplitterPanel, SplitterResizeHandle, DialogRoot, DialogP
 import HoverTip from '../../components/HoverTip.vue'
 import NotesTreePanel from './NotesTreePanel.vue'
 import AttachmentsPanel from './AttachmentsPanel.vue'
+import BacklinksPanel from './BacklinksPanel.vue'
 import ToolPanelShell from '../../components/ToolPanelShell.vue'
 import NewFromTemplateDialog from './NewFromTemplateDialog.vue'
 import MarkdownEditor from '../../components/MarkdownEditor.vue'
@@ -209,6 +210,11 @@ function toggleTool(name) {
 
 onMounted(() => {
   if (!notesStore.loaded) notesStore.load()
+  // Backlinks can be changed from the boards side - a task's linked-notes list or a
+  // note:// mention in its body - and a local edit publishes no event (the watcher
+  // only fires for foreign devices). The task dialog lives on the boards route, so
+  // coming back here is the moment that staleness becomes visible.
+  notesStore.refreshBacklinks()
 })
 </script>
 
@@ -286,6 +292,10 @@ onMounted(() => {
             <AttachmentsPanel />
           </ToolPanelShell>
 
+          <ToolPanelShell :open="toolOpen === 'backlinks'" storage-key="SylvaNote-backlinks-panel-width">
+            <BacklinksPanel />
+          </ToolPanelShell>
+
           <TooltipProvider :delay-duration="300">
             <div class="w-11 shrink-0 border-l border-border bg-surface flex flex-col items-center py-2 gap-1">
               <HoverTip text="Attachments" side="left">
@@ -296,6 +306,17 @@ onMounted(() => {
                   <span v-if="notesStore.currentAttachments.length > 0"
                     class="absolute -top-0.5 -right-0.5 min-w-4 h-4 px-0.5 rounded-full bg-accent-strong text-white text-[10px] leading-4 text-center">
                     {{ notesStore.currentAttachments.length }}
+                  </span>
+                </button>
+              </HoverTip>
+              <HoverTip text="Backlinks" side="left">
+                <button class="relative p-2 rounded-md"
+                  :class="toolOpen === 'backlinks' ? 'text-accent bg-accent-soft' : 'text-on-surface-muted hover:text-on-surface hover:bg-surface-alt'"
+                  @click="toggleTool('backlinks')">
+                  <i-lucide-link class="size-4.5" />
+                  <span v-if="notesStore.currentBacklinks.length > 0"
+                    class="absolute -top-0.5 -right-0.5 min-w-4 h-4 px-0.5 rounded-full bg-accent-strong text-white text-[10px] leading-4 text-center">
+                    {{ notesStore.currentBacklinks.length }}
                   </span>
                 </button>
               </HoverTip>

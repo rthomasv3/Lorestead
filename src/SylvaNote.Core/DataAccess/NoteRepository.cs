@@ -11,11 +11,13 @@ namespace SylvaNote.Core.DataAccess
     {
         private readonly ConnectionManager _connectionManager;
         private readonly string _deviceId;
+        private readonly int _historyRetention;
 
-        public NoteRepository(ConnectionManager connectionManager, string deviceId)
+        public NoteRepository(ConnectionManager connectionManager, string deviceId, int historyRetention = 50)
         {
             _connectionManager = connectionManager;
             _deviceId = deviceId;
+            _historyRetention = historyRetention;
         }
 
         public void Save(Note note)
@@ -33,7 +35,7 @@ namespace SylvaNote.Core.DataAccess
             UpsertWithin(connection, transaction, note);
             NoteLinkRebuilder.RebuildForNoteWithin(connection, transaction, note.Id, note.Body);
 
-            ChangeLogRepository.AppendWithin(connection, transaction, new ChangeLogEntry
+            ChangeLogRepository.AppendAndPruneWithin(connection, transaction, new ChangeLogEntry
             {
                 ItemType = ItemTypes.Note,
                 ItemId = note.Id,
@@ -42,7 +44,7 @@ namespace SylvaNote.Core.DataAccess
                 BaseSeq = ChangeLogRepository.MaxSeqForItemWithin(connection, transaction, ItemTypes.Note, note.Id),
                 DeviceId = _deviceId,
                 ChangedAt = now,
-            });
+            }, _historyRetention);
 
             transaction.Commit();
         }
@@ -94,6 +96,107 @@ namespace SylvaNote.Core.DataAccess
                 });
             }
             return links;
+        }
+
+        // Everything that points at this note, from both directions: bodies that
+        // mention it (note_link, derived by parsing) and tasks that carry it in their
+        // linked-notes list (task_note, authored). A task doing both is one card, not
+        // two. Trashed notes and deleted tasks/columns/boards are excluded - a source
+        // in the trash is not a live reference.
+        public List<NoteBacklink> GetBacklinkSources(string noteId)
+        {
+            List<NoteBacklink> backlinks = new List<NoteBacklink>();
+            List<NoteBacklink> taskSources = new List<NoteBacklink>();
+            Dictionary<string, NoteBacklink> taskSourcesById = new Dictionary<string, NoteBacklink>();
+            using SqliteConnection connection = _connectionManager.CreateConnection();
+
+            using (SqliteCommand fromNotes = connection.CreateCommand())
+            {
+                fromNotes.CommandText = @"
+                    SELECT n.id, n.title, n.body
+                    FROM note_link nl
+                    JOIN note n ON n.id = nl.from_note_id
+                    WHERE nl.to_note_id = @id AND n.deleted = 0
+                    ORDER BY n.title";
+                fromNotes.Parameters.AddWithValue("@id", noteId);
+                using SqliteDataReader reader = fromNotes.ExecuteReader();
+                while (reader.Read())
+                {
+                    backlinks.Add(new NoteBacklink
+                    {
+                        NoteId = reader.GetString(0),
+                        Title = reader.GetString(1),
+                        Snippet = NoteLinkRebuilder.ContextSnippet(reader.GetString(2), noteId),
+                        Via = BacklinkVia.Body,
+                    });
+                }
+            }
+
+            using (SqliteCommand fromTaskBodies = connection.CreateCommand())
+            {
+                fromTaskBodies.CommandText = @"
+                    SELECT t.id, t.title, t.body, bc.name, b.id, b.name
+                    FROM note_link nl
+                    JOIN task t ON t.id = nl.from_task_id
+                    JOIN board_column bc ON bc.id = t.column_id
+                    JOIN board b ON b.id = bc.board_id
+                    WHERE nl.to_note_id = @id AND t.deleted = 0 AND bc.deleted = 0 AND b.deleted = 0";
+                fromTaskBodies.Parameters.AddWithValue("@id", noteId);
+                using SqliteDataReader reader = fromTaskBodies.ExecuteReader();
+                while (reader.Read())
+                {
+                    NoteBacklink source = ReadTaskSource(reader);
+                    source.Snippet = NoteLinkRebuilder.ContextSnippet(reader.GetString(2), noteId);
+                    source.Via = BacklinkVia.Body;
+                    taskSources.Add(source);
+                    taskSourcesById[source.TaskId] = source;
+                }
+            }
+
+            using (SqliteCommand linkedTasks = connection.CreateCommand())
+            {
+                linkedTasks.CommandText = @"
+                    SELECT t.id, t.title, t.body, bc.name, b.id, b.name
+                    FROM task_note tn
+                    JOIN task t ON t.id = tn.task_id
+                    JOIN board_column bc ON bc.id = t.column_id
+                    JOIN board b ON b.id = bc.board_id
+                    WHERE tn.note_id = @id AND t.deleted = 0 AND bc.deleted = 0 AND b.deleted = 0";
+                linkedTasks.Parameters.AddWithValue("@id", noteId);
+                using SqliteDataReader reader = linkedTasks.ExecuteReader();
+                while (reader.Read())
+                {
+                    string taskId = reader.GetString(0);
+                    if (taskSourcesById.TryGetValue(taskId, out NoteBacklink mentioned))
+                    {
+                        mentioned.Via = BacklinkVia.Both;
+                    }
+                    else
+                    {
+                        NoteBacklink source = ReadTaskSource(reader);
+                        source.Via = BacklinkVia.Link;
+                        taskSources.Add(source);
+                        taskSourcesById[taskId] = source;
+                    }
+                }
+            }
+
+            taskSources.Sort((left, right) => string.CompareOrdinal(left.Title, right.Title));
+            backlinks.AddRange(taskSources);
+            return backlinks;
+        }
+
+        private static NoteBacklink ReadTaskSource(SqliteDataReader reader)
+        {
+            return new NoteBacklink
+            {
+                TaskId = reader.GetString(0),
+                Title = reader.GetString(1),
+                Snippet = string.Empty,
+                ColumnName = reader.GetString(3),
+                BoardId = reader.GetString(4),
+                BoardName = reader.GetString(5),
+            };
         }
 
         // Position uniqueness is checked against ALL children of a parent - trashed and
@@ -327,7 +430,7 @@ namespace SylvaNote.Core.DataAccess
                 CopyBlobRowWithin(connection, "attachment_blob", source.Id, copy.Id);
                 CopyBlobRowWithin(connection, "attachment_thumbnail", source.Id, copy.Id);
 
-                ChangeLogRepository.AppendWithin(connection, transaction, new ChangeLogEntry
+                ChangeLogRepository.AppendAndPruneWithin(connection, transaction, new ChangeLogEntry
                 {
                     ItemType = ItemTypes.Attachment,
                     ItemId = copy.Id,
@@ -336,7 +439,7 @@ namespace SylvaNote.Core.DataAccess
                     BaseSeq = ChangeLogRepository.MaxSeqForItemWithin(connection, transaction, ItemTypes.Attachment, copy.Id),
                     DeviceId = _deviceId,
                     ChangedAt = now,
-                });
+                }, _historyRetention);
             }
         }
 
@@ -423,7 +526,7 @@ namespace SylvaNote.Core.DataAccess
 
         private void AppendNoteChangeWithin(SqliteConnection connection, SqliteTransaction transaction, Note note, string now)
         {
-            ChangeLogRepository.AppendWithin(connection, transaction, new ChangeLogEntry
+            ChangeLogRepository.AppendAndPruneWithin(connection, transaction, new ChangeLogEntry
             {
                 ItemType = ItemTypes.Note,
                 ItemId = note.Id,
@@ -432,7 +535,7 @@ namespace SylvaNote.Core.DataAccess
                 BaseSeq = ChangeLogRepository.MaxSeqForItemWithin(connection, transaction, ItemTypes.Note, note.Id),
                 DeviceId = _deviceId,
                 ChangedAt = now,
-            });
+            }, _historyRetention);
         }
 
         private static Note GetWithin(SqliteConnection connection, SqliteTransaction transaction, string id)

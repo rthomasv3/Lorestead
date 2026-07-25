@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.Text;
 using System.Text.RegularExpressions;
 using Microsoft.Data.Sqlite;
 
@@ -9,9 +11,20 @@ namespace SylvaNote.Core.DataAccess
     // links render broken in the body; the index only tracks resolvable targets.
     public static class NoteLinkRebuilder
     {
+        private const string Ellipsis = "...";
+        private const int DefaultSnippetRadius = 60;
+
         private static readonly Regex LinkPattern = new Regex(
             @"note://([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})",
             RegexOptions.CultureInvariant);
+
+        // The same link, with its markdown wrapper, so a snippet can show the link
+        // text a reader would actually see rather than a raw uuid.
+        private static readonly Regex MarkdownLinkPattern = new Regex(
+            @"!?\[([^\]]*)\]\(note://([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})\)",
+            RegexOptions.CultureInvariant);
+
+        private static readonly Regex WhitespaceRuns = new Regex(@"\s+", RegexOptions.CultureInvariant);
 
         public static void RebuildForNoteWithin(SqliteConnection connection, SqliteTransaction transaction, string noteId, string body)
         {
@@ -38,6 +51,63 @@ namespace SylvaNote.Core.DataAccess
                 }
             }
             return targets;
+        }
+
+        // Text around the first link to targetNoteId, for a backlink card. Markdown
+        // links collapse to their link text so the snippet reads as prose; whitespace
+        // collapses first so the window is measured in visible characters.
+        public static string ContextSnippet(string body, string targetNoteId, int radius = DefaultSnippetRadius)
+        {
+            string snippet = string.Empty;
+
+            if (!string.IsNullOrWhiteSpace(body) && !string.IsNullOrEmpty(targetNoteId))
+            {
+                string collapsed = WhitespaceRuns.Replace(body, " ").Trim();
+                StringBuilder flattened = new StringBuilder();
+                int targetStart = -1;
+                int targetEnd = 0;
+                int cursor = 0;
+
+                foreach (Match match in MarkdownLinkPattern.Matches(collapsed))
+                {
+                    flattened.Append(collapsed, cursor, match.Index - cursor);
+                    string text = match.Groups[1].Value;
+                    if (targetStart < 0 && string.Equals(match.Groups[2].Value, targetNoteId, StringComparison.OrdinalIgnoreCase))
+                    {
+                        targetStart = flattened.Length;
+                        targetEnd = targetStart + text.Length;
+                    }
+                    flattened.Append(text);
+                    cursor = match.Index + match.Length;
+                }
+                flattened.Append(collapsed, cursor, collapsed.Length - cursor);
+
+                string flat = flattened.ToString();
+                if (targetStart < 0)
+                {
+                    // A bare note:// url, not wrapped in markdown - centre on the url.
+                    string bare = "note://" + targetNoteId;
+                    targetStart = flat.IndexOf(bare, StringComparison.OrdinalIgnoreCase);
+                    targetEnd = targetStart < 0 ? 0 : targetStart + bare.Length;
+                }
+
+                snippet = targetStart < 0 ? Head(flat, radius * 2) : Window(flat, targetStart, targetEnd, radius);
+            }
+
+            return snippet;
+        }
+
+        private static string Window(string text, int start, int end, int radius)
+        {
+            int from = Math.Max(0, start - radius);
+            int to = Math.Min(text.Length, end + radius);
+            string window = text.Substring(from, to - from);
+            return (from > 0 ? Ellipsis : string.Empty) + window + (to < text.Length ? Ellipsis : string.Empty);
+        }
+
+        private static string Head(string text, int length)
+        {
+            return text.Length <= length ? text : text.Substring(0, length) + Ellipsis;
         }
 
         private static void Rebuild(SqliteConnection connection, string fromColumn, string fromId, string body)
