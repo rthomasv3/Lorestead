@@ -250,6 +250,11 @@ export const useNotesStore = defineStore('notes', () => {
   // moves on demand (preview, body embeds, download stays fully backend-side).
   const thumbnailUrls = new Map()
 
+  // Bumped whenever a cached thumbnail url is dropped. The cache is a plain Map, so
+  // cards have nothing reactive to watch otherwise - after a backfill they would keep
+  // showing the type icon until the component remounted.
+  const thumbnailVersion = ref(0)
+
   async function getAttachmentThumbnailUrl(id) {
     if (!thumbnailUrls.has(id)) {
       const promise = attachmentService.getAttachmentThumbnail({ id }).then((data) => {
@@ -275,6 +280,7 @@ export const useNotesStore = defineStore('notes', () => {
       thumbnailUrls.delete(id)
       cached.then((url) => url && URL.revokeObjectURL(url)).catch(() => {})
     }
+    thumbnailVersion.value++
   }
 
   // Expands everything on the way to a note - ancestor notes plus the Templates/
@@ -352,6 +358,7 @@ export const useNotesStore = defineStore('notes', () => {
     getAttachmentUrl,
     getAttachmentThumbnailUrl,
     storeAttachmentThumbnail,
+    thumbnailVersion,
     reveal,
     pathOf,
   }

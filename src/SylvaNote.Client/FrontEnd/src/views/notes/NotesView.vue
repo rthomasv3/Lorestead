@@ -49,6 +49,19 @@ watch(currentNote, async (note) => {
   clearTimeout(saveTimer)
 }, { immediate: true })
 
+// An agent edit to the open note (data_version watcher) reloads it only while the
+// editor is clean. Mid-edit the pending autosave is the later write under LWW, so
+// the buffer already holds the version that wins - there is nothing stale to show,
+// and replacing the document would throw away what is being typed.
+function onNotesChanged() {
+  if (!dirty.value && editingNoteId) {
+    notesStore.select(editingNoteId)
+  }
+}
+
+onMounted(() => window.addEventListener('notes:changed', onNotesChanged))
+onUnmounted(() => window.removeEventListener('notes:changed', onNotesChanged))
+
 function onBodyChange(value) {
   if (readonly.value || !editingNoteId) return
   body.value = value

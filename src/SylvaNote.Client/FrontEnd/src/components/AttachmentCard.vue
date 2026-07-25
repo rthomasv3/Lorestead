@@ -26,7 +26,9 @@ let dragCleanup = null
 
 // Only the small thumbnail crosses the bridge for the card; images without one
 // (synced from elsewhere) fall back to the type icon until first full view.
-watch(() => props.attachment.id, async (id) => {
+// thumbnailVersion is in the source so a backfill (preview of an image that arrived
+// from sync or MCP without one) repaints the card instead of waiting for a remount.
+watch(() => [props.attachment.id, notesStore.thumbnailVersion], async ([id]) => {
   thumbnailUrl.value = null
   if ((props.attachment.mimeType || '').startsWith('image/')) {
     const url = await notesStore.getAttachmentThumbnailUrl(id)

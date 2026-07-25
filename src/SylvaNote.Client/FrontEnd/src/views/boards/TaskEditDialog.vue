@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch, nextTick, onUnmounted } from 'vue'
+import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { dropTargetForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter'
 import { useRouter } from 'vue-router'
 import { DialogRoot, DialogPortal, DialogOverlay, DialogContent, DialogTitle, VisuallyHidden } from 'reka-ui'
@@ -76,6 +76,28 @@ watch(() => props.open, async (value) => {
     boardsStore.refreshBoard()
   }
 })
+
+// An agent edit reaching the open dialog splits two ways. Attachments save through
+// their own commands, so they are never part of a pending edit and always refresh.
+// Title, body and links ride the save debounce below, so they refresh only while
+// clean - mid-edit the pending save is the later write under LWW.
+async function onBoardsChanged() {
+  if (props.open && task.value) {
+    const response = await boardsStore.getTask(task.value.id)
+    attachments.value = response.attachments ?? []
+    if (!dirty.value) {
+      title.value = response.task?.title ?? ''
+      body.value = response.task?.body ?? ''
+      noteIds.value = [...(response.task?.noteIds ?? [])]
+      updatedAt.value = response.task?.updatedAt ?? ''
+      await nextTick()
+      resizeTitle()
+    }
+  }
+}
+
+onMounted(() => window.addEventListener('boards:changed', onBoardsChanged))
+onUnmounted(() => window.removeEventListener('boards:changed', onBoardsChanged))
 
 // --- Save (title + body + links ride one debounce) ---
 
