@@ -8,7 +8,9 @@ namespace SylvaNote.Core.Mcp.Contracts
     {
         public string Id { get; set; }
         public string BoardId { get; set; }
+        public string BoardName { get; set; }
         public string ColumnId { get; set; }
+        public string ColumnName { get; set; }
         public string Title { get; set; }
         public string Body { get; set; }
         public string CreatedAt { get; set; }

@@ -17,13 +17,17 @@ namespace SylvaNote.Core.Mcp
         {
             return new McpServerTool[]
             {
-                McpServerTool.Create((string query) =>
-                    Run(() => PayloadJson.Serialize(tools.Search(query))),
-                    Options("search", "Search notes and tasks by full text and boards by name. Returns ids, titles, breadcrumbs, and snippets only - use get_note or get_task for full content.")),
+                McpServerTool.Create((string query, int limit = 20, string type = "all") =>
+                    Run(() => PayloadJson.Serialize(tools.Search(query, limit, type))),
+                    Options("search", "Search notes and tasks by full text and boards by name. Returns ids, titles, breadcrumbs, updatedAt, and snippets only - use get_note or get_task for full content. limit caps each category separately; type is all, notes, tasks, or boards.")),
 
-                McpServerTool.Create(() =>
-                    Run(() => PayloadJson.Serialize(tools.ListNoteTree())),
-                    Options("list_note_tree", "The note tree as ids, titles, and hierarchy only. Trashed notes and templates are excluded.")),
+                McpServerTool.Create((string parentId = null, int depth = 0) =>
+                    Run(() => PayloadJson.Serialize(tools.ListNoteTree(parentId, depth))),
+                    Options("list_note_tree", "The note tree as ids, titles, updatedAt, and hierarchy only. Trashed notes and templates are excluded. parentId returns just that note's children (and their descendants); depth caps how many levels come back, 0 for all.")),
+
+                McpServerTool.Create((int limit = 20, string type = "all") =>
+                    Run(() => PayloadJson.Serialize(tools.ListRecent(limit, type))),
+                    Options("list_recent", "Most recently updated notes and tasks as one list, newest first. type is all, notes, or tasks. Use this to see what changed without needing a search query.")),
 
                 McpServerTool.Create((string noteId) =>
                     Run(() => PayloadJson.Serialize(tools.GetNote(noteId))),
@@ -51,11 +55,11 @@ namespace SylvaNote.Core.Mcp
 
                 McpServerTool.Create((string taskId) =>
                     Run(() => PayloadJson.Serialize(tools.GetTask(taskId))),
-                    Options("get_task", "A task's full body and metadata, plus its attachment list and linked notes.")),
+                    Options("get_task", "A task's full body and metadata (including its board and column names, not just ids), plus its attachment list and linked notes.")),
 
-                McpServerTool.Create((string columnId, string title, string body = null, string noteIds = null) =>
+                McpServerTool.Create((string columnId, string title, string body = null, string[] noteIds = null) =>
                     RunAsync(async () => PayloadJson.Serialize(await tools.CreateTask(columnId, title, body, noteIds))),
-                    Options("create_task", "Create a task in a column. noteIds is an optional comma-separated list of note ids to link.")),
+                    Options("create_task", "Create a task in a column. noteIds is an optional list of note ids to link.")),
 
                 McpServerTool.Create((string taskId, string title = null, string body = null) =>
                     RunAsync(async () => PayloadJson.Serialize(await tools.UpdateTask(taskId, title, body))),
@@ -63,7 +67,7 @@ namespace SylvaNote.Core.Mcp
 
                 McpServerTool.Create((string taskId, string columnId, int index = -1) =>
                     RunAsync(async () => PayloadJson.Serialize(await tools.MoveTask(taskId, columnId, index))),
-                    Options("move_task", "Move a task to a column at a zero-based index among its tasks. Omit index to place it last.")),
+                    Options("move_task", "Move a task to a column at a zero-based index among its tasks. Omit index to place it last. Returns the column and the index it actually landed at, which differs from the request when the index is clamped.")),
 
                 McpServerTool.Create((string taskId, string noteId) =>
                     RunAsync(async () => PayloadJson.Serialize(await tools.LinkNoteToTask(taskId, noteId))),

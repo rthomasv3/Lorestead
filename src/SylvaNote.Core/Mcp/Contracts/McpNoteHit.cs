@@ -9,5 +9,6 @@ namespace SylvaNote.Core.Mcp.Contracts
         public string Title { get; set; }
         public string Breadcrumb { get; set; }
         public string Snippet { get; set; }
+        public string UpdatedAt { get; set; }
     }
 }

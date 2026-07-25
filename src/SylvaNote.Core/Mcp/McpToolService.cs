@@ -16,6 +16,7 @@ namespace SylvaNote.Core.Mcp
     public sealed class McpToolService
     {
         private const long MaxAttachmentBytes = 100L * 1024 * 1024;
+        private const int DefaultSearchLimit = 20;
 
         private readonly Func<Task> _afterWrite;
         private readonly NoteRepository _notes;
@@ -36,45 +37,73 @@ namespace SylvaNote.Core.Mcp
             _search = new SearchRepository(connectionManager);
         }
 
-        public McpSearchResponse Search(string query)
+        // limit caps each category separately (FTS ranks are not comparable across
+        // notes/tasks/boards, so there is no meaningful way to merge and then trim).
+        public McpSearchResponse Search(string query, int limit, string type)
         {
+            string scope = (type ?? "all").Trim().ToLowerInvariant();
+            if (scope != "all" && scope != "notes" && scope != "tasks" && scope != "boards")
+            {
+                throw new InvalidOperationException("type must be one of: all, notes, tasks, boards.");
+            }
+
+            int cap = limit > 0 ? limit : DefaultSearchLimit;
             McpSearchResponse response = new McpSearchResponse();
-            Dictionary<string, Note> notesById = GetNotesById();
 
-            foreach (SearchResult hit in _search.SearchNotes(query))
+            if (scope == "all" || scope == "notes")
             {
-                response.Notes.Add(new McpNoteHit
+                Dictionary<string, Note> notesById = GetNotesById();
+                foreach (SearchResult hit in _search.SearchNotes(query, false, cap))
                 {
-                    Id = hit.Id,
-                    Title = hit.Title,
-                    Breadcrumb = BuildBreadcrumb(notesById, hit.Id),
-                    Snippet = hit.Snippet,
-                });
+                    notesById.TryGetValue(hit.Id, out Note note);
+                    response.Notes.Add(new McpNoteHit
+                    {
+                        Id = hit.Id,
+                        Title = hit.Title,
+                        Breadcrumb = BuildBreadcrumb(notesById, hit.Id),
+                        Snippet = hit.Snippet,
+                        UpdatedAt = note?.UpdatedAt,
+                    });
+                }
             }
 
-            foreach (TaskSearchResult hit in _search.SearchTasksWithContext(query))
+            if (scope == "all" || scope == "tasks")
             {
-                response.Tasks.Add(new McpTaskHit
+                foreach (TaskSearchResult hit in _search.SearchTasksWithContext(query, cap))
                 {
-                    Id = hit.Id,
-                    Title = hit.Title,
-                    Breadcrumb = $"{hit.BoardName} › {hit.ColumnName}",
-                    Snippet = hit.Snippet,
-                });
+                    response.Tasks.Add(new McpTaskHit
+                    {
+                        Id = hit.Id,
+                        Title = hit.Title,
+                        Breadcrumb = $"{hit.BoardName} › {hit.ColumnName}",
+                        Snippet = hit.Snippet,
+                        UpdatedAt = hit.UpdatedAt,
+                    });
+                }
             }
 
-            foreach (SearchResult hit in _search.SearchBoards(query))
+            if (scope == "all" || scope == "boards")
             {
-                response.Boards.Add(new McpBoardHit { Id = hit.Id, Name = hit.Title });
+                foreach (SearchResult hit in _search.SearchBoards(query, cap))
+                {
+                    response.Boards.Add(new McpBoardHit { Id = hit.Id, Name = hit.Title });
+                }
             }
 
             return response;
         }
 
-        public McpNoteTreeResponse ListNoteTree()
+        // parentId returns that note's children as the top level (symmetric with the
+        // root listing); depth 0 means every level. Both exist so an agent can walk a
+        // large tree in pieces instead of pulling all of it into context.
+        public McpNoteTreeResponse ListNoteTree(string parentId, int depth)
         {
-            McpNoteTreeResponse response = new McpNoteTreeResponse();
-            Dictionary<string, McpTreeNode> nodes = new Dictionary<string, McpTreeNode>();
+            if (!string.IsNullOrEmpty(parentId))
+            {
+                RequireActiveNote(parentId);
+            }
+
+            HashSet<string> activeIds = new HashSet<string>();
             List<Note> active = new List<Note>();
 
             foreach (Note note in _notes.GetAll())
@@ -82,19 +111,121 @@ namespace SylvaNote.Core.Mcp
                 if (!note.Deleted && note.Type == NoteType.Normal)
                 {
                     active.Add(note);
-                    nodes[note.Id] = new McpTreeNode { Id = note.Id, Title = note.Title };
+                    activeIds.Add(note.Id);
                 }
             }
 
+            Dictionary<string, List<Note>> childrenByParent = new Dictionary<string, List<Note>>();
             foreach (Note note in active)
             {
-                if (note.ParentId != null && nodes.TryGetValue(note.ParentId, out McpTreeNode parent))
+                // A note whose parent is trashed or a template surfaces at the root
+                // rather than disappearing.
+                string key = note.ParentId != null && activeIds.Contains(note.ParentId) ? note.ParentId : string.Empty;
+                if (!childrenByParent.TryGetValue(key, out List<Note> siblings))
                 {
-                    parent.Children.Add(nodes[note.Id]);
+                    siblings = new List<Note>();
+                    childrenByParent[key] = siblings;
                 }
-                else
+                siblings.Add(note);
+            }
+
+            McpNoteTreeResponse response = new McpNoteTreeResponse();
+            if (childrenByParent.TryGetValue(parentId ?? string.Empty, out List<Note> roots))
+            {
+                AppendTreeLevel(response.Notes, roots, childrenByParent, depth);
+            }
+
+            return response;
+        }
+
+        private static void AppendTreeLevel(
+            List<McpTreeNode> target,
+            List<Note> notes,
+            Dictionary<string, List<Note>> childrenByParent,
+            int remainingDepth)
+        {
+            foreach (Note note in notes)
+            {
+                McpTreeNode node = new McpTreeNode { Id = note.Id, Title = note.Title, UpdatedAt = note.UpdatedAt };
+                target.Add(node);
+
+                if (remainingDepth != 1 && childrenByParent.TryGetValue(note.Id, out List<Note> children))
                 {
-                    response.Notes.Add(nodes[note.Id]);
+                    AppendTreeLevel(node.Children, children, childrenByParent, remainingDepth > 0 ? remainingDepth - 1 : 0);
+                }
+            }
+        }
+
+        // Notes and tasks share one time-ordered list: without this there is no
+        // browse-by-time path at all (search needs a query), so "what changed
+        // recently" would mean fetching every item to read its timestamp.
+        public McpRecentResponse ListRecent(int limit, string type)
+        {
+            string scope = (type ?? "all").Trim().ToLowerInvariant();
+            if (scope != "all" && scope != "notes" && scope != "tasks")
+            {
+                throw new InvalidOperationException("type must be one of: all, notes, tasks.");
+            }
+
+            int cap = limit > 0 ? limit : 20;
+            List<McpRecentItem> items = new List<McpRecentItem>();
+
+            if (scope != "tasks")
+            {
+                Dictionary<string, Note> notesById = GetNotesById();
+                foreach (Note note in notesById.Values)
+                {
+                    if (!note.Deleted && note.Type == NoteType.Normal)
+                    {
+                        items.Add(new McpRecentItem
+                        {
+                            Type = "note",
+                            Id = note.Id,
+                            Title = note.Title,
+                            Breadcrumb = BuildBreadcrumb(notesById, note.Id),
+                            UpdatedAt = note.UpdatedAt,
+                        });
+                    }
+                }
+            }
+
+            if (scope != "notes")
+            {
+                foreach (Board board in _boards.GetActive())
+                {
+                    Dictionary<string, string> columnNames = new Dictionary<string, string>();
+                    foreach (BoardColumn column in _columns.GetActiveForBoard(board.Id))
+                    {
+                        columnNames[column.Id] = column.Name;
+                    }
+
+                    foreach (TaskItem task in _tasks.GetActiveForBoard(board.Id))
+                    {
+                        if (columnNames.TryGetValue(task.ColumnId, out string columnName))
+                        {
+                            items.Add(new McpRecentItem
+                            {
+                                Type = "task",
+                                Id = task.Id,
+                                Title = task.Title,
+                                Breadcrumb = $"{board.Name} › {columnName}",
+                                UpdatedAt = task.UpdatedAt,
+                            });
+                        }
+                    }
+                }
+            }
+
+            // Timestamps are fixed-format ISO-8601 UTC from Timestamps.Now, so an
+            // ordinal string sort is a chronological sort - no parsing needed.
+            items.Sort((left, right) => string.CompareOrdinal(right.UpdatedAt, left.UpdatedAt));
+
+            McpRecentResponse response = new McpRecentResponse();
+            foreach (McpRecentItem item in items)
+            {
+                if (response.Items.Count < cap)
+                {
+                    response.Items.Add(item);
                 }
             }
 
@@ -225,7 +356,7 @@ namespace SylvaNote.Core.Mcp
             {
                 if (columnsById.TryGetValue(task.ColumnId, out McpColumnTasks columnTasks))
                 {
-                    columnTasks.Tasks.Add(new McpTaskSummary { Id = task.Id, Title = task.Title });
+                    columnTasks.Tasks.Add(new McpTaskSummary { Id = task.Id, Title = task.Title, UpdatedAt = task.UpdatedAt });
                 }
             }
 
@@ -236,11 +367,17 @@ namespace SylvaNote.Core.Mcp
         {
             TaskItem task = RequireTask(taskId);
             BoardColumn column = _columns.Get(task.ColumnId);
+
+            // Names as well as ids: without them "move this to Done" costs an extra
+            // list_boards round trip just to map a column name onto its id.
+            Board board = column?.BoardId == null ? null : _boards.Get(column.BoardId);
             McpTaskResponse response = new McpTaskResponse
             {
                 Id = task.Id,
                 BoardId = column?.BoardId,
+                BoardName = board?.Name,
                 ColumnId = task.ColumnId,
+                ColumnName = column?.Name,
                 Title = task.Title,
                 Body = task.Body,
                 CreatedAt = task.CreatedAt,
@@ -264,7 +401,7 @@ namespace SylvaNote.Core.Mcp
             return response;
         }
 
-        public async Task<McpCreateResponse> CreateTask(string columnId, string title, string body, string noteIds)
+        public async Task<McpCreateResponse> CreateTask(string columnId, string title, string body, string[] noteIds)
         {
             RequireColumn(columnId);
             TaskItem task = new TaskItem
@@ -274,7 +411,7 @@ namespace SylvaNote.Core.Mcp
                 Title = title ?? string.Empty,
                 Body = body ?? string.Empty,
                 Position = FractionalIndex.Between(_tasks.GetMaxPosition(columnId), null),
-                NoteIds = ParseNoteIds(noteIds),
+                NoteIds = ResolveNoteIds(noteIds),
             };
             _tasks.Save(task);
             await NotifyWrite();
@@ -297,7 +434,7 @@ namespace SylvaNote.Core.Mcp
             return new McpSaveResponse { UpdatedAt = task.UpdatedAt };
         }
 
-        public async Task<McpSaveResponse> MoveTask(string taskId, string columnId, int index)
+        public async Task<McpMoveResponse> MoveTask(string taskId, string columnId, int index)
         {
             TaskItem task = RequireTask(taskId);
             RequireColumn(columnId);
@@ -324,7 +461,7 @@ namespace SylvaNote.Core.Mcp
             task.Position = position;
             _tasks.Save(task);
             await NotifyWrite();
-            return new McpSaveResponse { UpdatedAt = task.UpdatedAt };
+            return new McpMoveResponse { UpdatedAt = task.UpdatedAt, ColumnId = columnId, Index = slot };
         }
 
         public async Task<McpSaveResponse> LinkNoteToTask(string taskId, string noteId)
@@ -363,7 +500,7 @@ namespace SylvaNote.Core.Mcp
             {
                 if (note.ParentId == null || !templateIds.Contains(note.ParentId))
                 {
-                    response.Templates.Add(new McpTemplateSummary { Id = note.Id, Title = note.Title });
+                    response.Templates.Add(new McpTemplateSummary { Id = note.Id, Title = note.Title, UpdatedAt = note.UpdatedAt });
                 }
             }
 
@@ -521,12 +658,14 @@ namespace SylvaNote.Core.Mcp
             };
         }
 
-        private List<string> ParseNoteIds(string noteIds)
+        // Trims and de-duplicates because agents still send sloppy arrays (blank
+        // entries, the same id twice).
+        private List<string> ResolveNoteIds(string[] noteIds)
         {
             List<string> ids = new List<string>();
-            foreach (string part in (noteIds ?? string.Empty).Split(','))
+            foreach (string entry in noteIds ?? Array.Empty<string>())
             {
-                string id = part.Trim();
+                string id = (entry ?? string.Empty).Trim();
                 if (id.Length > 0 && !ids.Contains(id))
                 {
                     RequireActiveNote(id);

@@ -36,7 +36,7 @@ namespace SylvaNote.IntegrationTests
             McpCreateResponse parent = await _tools.CreateNote("Parent", "parent body", null);
             McpCreateResponse child = await _tools.CreateNote("Child", "child body", parent.Id);
 
-            McpNoteTreeResponse tree = _tools.ListNoteTree();
+            McpNoteTreeResponse tree = _tools.ListNoteTree(null, 0);
             McpTreeNode root = Assert.Single(tree.Notes);
             Assert.Equal("Parent", root.Title);
             Assert.Equal("Child", Assert.Single(root.Children).Title);
@@ -104,8 +104,32 @@ namespace SylvaNote.IntegrationTests
             _db.Notes.TrashSubtree(trashed.Id);
             await _tools.CreateTemplate("Template", "template body");
 
-            McpNoteTreeResponse tree = _tools.ListNoteTree();
+            McpNoteTreeResponse tree = _tools.ListNoteTree(null, 0);
             Assert.Equal(kept.Id, Assert.Single(tree.Notes).Id);
+        }
+
+        [Fact]
+        public async Task ListNoteTreeScopesToASubtreeAndDepth()
+        {
+            McpCreateResponse root = await _tools.CreateNote("Root", null, null);
+            McpCreateResponse child = await _tools.CreateNote("Child", null, root.Id);
+            McpCreateResponse grandchild = await _tools.CreateNote("Grandchild", null, child.Id);
+            await _tools.CreateNote("Unrelated", null, null);
+
+            McpNoteTreeResponse subtree = _tools.ListNoteTree(root.Id, 0);
+            McpTreeNode childNode = Assert.Single(subtree.Notes);
+            Assert.Equal(child.Id, childNode.Id);
+            Assert.Equal(grandchild.Id, Assert.Single(childNode.Children).Id);
+
+            McpNoteTreeResponse oneLevel = _tools.ListNoteTree(root.Id, 1);
+            Assert.Empty(Assert.Single(oneLevel.Notes).Children);
+
+            McpNoteTreeResponse depthFromRoot = _tools.ListNoteTree(null, 1);
+            Assert.Equal(2, depthFromRoot.Notes.Count);
+            Assert.All(depthFromRoot.Notes, node => Assert.Empty(node.Children));
+
+            Assert.Empty(_tools.ListNoteTree(grandchild.Id, 0).Notes);
+            Assert.Throws<InvalidOperationException>(() => _tools.ListNoteTree("no-such-note", 0));
         }
 
         [Fact]
@@ -120,15 +144,47 @@ namespace SylvaNote.IntegrationTests
             _db.Columns.Save(column);
             await _tools.CreateTask(column.Id, "Ship flywheel", "the flywheel task", null);
 
-            McpSearchResponse results = _tools.Search("flywheel");
+            McpSearchResponse results = _tools.Search("flywheel", 20, "all");
             McpNoteHit noteHit = Assert.Single(results.Notes);
             Assert.Equal("Projects", noteHit.Breadcrumb);
             Assert.Contains("flywheel", noteHit.Snippet);
+            Assert.False(string.IsNullOrEmpty(noteHit.UpdatedAt));
             McpTaskHit taskHit = Assert.Single(results.Tasks);
             Assert.Equal("Roadmap › Doing", taskHit.Breadcrumb);
+            Assert.False(string.IsNullOrEmpty(taskHit.UpdatedAt));
 
-            McpSearchResponse boards = _tools.Search("roadmap");
+            McpSearchResponse boards = _tools.Search("roadmap", 20, "all");
             Assert.Equal(board.Id, Assert.Single(boards.Boards).Id);
+        }
+
+        [Fact]
+        public async Task SearchHonoursLimitAndTypeScope()
+        {
+            await _tools.CreateNote("Alpha one", "shared marker", null);
+            await _tools.CreateNote("Alpha two", "shared marker", null);
+            Board board = Items.Board("Marker board");
+            _db.Boards.Save(board);
+            BoardColumn column = Items.Column(board.Id, "Doing");
+            _db.Columns.Save(column);
+            await _tools.CreateTask(column.Id, "Marker task", "shared marker", null);
+
+            Assert.Equal(2, _tools.Search("marker", 20, "all").Notes.Count);
+            Assert.Single(_tools.Search("marker", 1, "all").Notes);
+
+            McpSearchResponse notesOnly = _tools.Search("marker", 20, "notes");
+            Assert.NotEmpty(notesOnly.Notes);
+            Assert.Empty(notesOnly.Tasks);
+            Assert.Empty(notesOnly.Boards);
+
+            McpSearchResponse tasksOnly = _tools.Search("marker", 20, "tasks");
+            Assert.Empty(tasksOnly.Notes);
+            Assert.NotEmpty(tasksOnly.Tasks);
+
+            McpSearchResponse boardsOnly = _tools.Search("marker", 20, "boards");
+            Assert.Empty(boardsOnly.Notes);
+            Assert.NotEmpty(boardsOnly.Boards);
+
+            Assert.Throws<InvalidOperationException>(() => _tools.Search("marker", 20, "bogus"));
         }
 
         [Fact]
@@ -173,22 +229,48 @@ namespace SylvaNote.IntegrationTests
             Assert.Equal(new[] { "Todo", "Done" }, summary.Columns.Select(c => c.Name).ToArray());
 
             McpCreateResponse note = await _tools.CreateNote("Spec", null, null);
-            McpCreateResponse first = await _tools.CreateTask(todo.Id, "First", "body", note.Id);
+            McpCreateResponse first = await _tools.CreateTask(todo.Id, "First", "body", new[] { note.Id });
             McpCreateResponse second = await _tools.CreateTask(todo.Id, "Second", null, null);
 
             McpTaskResponse task = _tools.GetTask(first.Id);
             Assert.Equal(board.Id, task.BoardId);
+            Assert.Equal("Personal", task.BoardName);
+            Assert.Equal(todo.Id, task.ColumnId);
+            Assert.Equal("Todo", task.ColumnName);
             Assert.Equal("Spec", Assert.Single(task.LinkedNotes).Title);
 
             // Move "Second" to the front of Todo, then "First" to Done.
-            await _tools.MoveTask(second.Id, todo.Id, 0);
-            await _tools.MoveTask(first.Id, done.Id, -1);
+            McpMoveResponse toFront = await _tools.MoveTask(second.Id, todo.Id, 0);
+            Assert.Equal(todo.Id, toFront.ColumnId);
+            Assert.Equal(0, toFront.Index);
+
+            McpMoveResponse toDone = await _tools.MoveTask(first.Id, done.Id, -1);
+            Assert.Equal(done.Id, toDone.ColumnId);
+            Assert.Equal(0, toDone.Index);
 
             McpBoardResponse detail = _tools.GetBoard(board.Id);
             McpColumnTasks todoTasks = detail.Columns.First(c => c.Id == todo.Id);
             McpColumnTasks doneTasks = detail.Columns.First(c => c.Id == done.Id);
             Assert.Equal("Second", Assert.Single(todoTasks.Tasks).Title);
             Assert.Equal("First", Assert.Single(doneTasks.Tasks).Title);
+        }
+
+        [Fact]
+        public async Task MoveTaskReportsTheClampedIndex()
+        {
+            Board board = Items.Board();
+            _db.Boards.Save(board);
+            BoardColumn column = Items.Column(board.Id, "Todo");
+            _db.Columns.Save(column);
+            await _tools.CreateTask(column.Id, "First", null, null);
+            await _tools.CreateTask(column.Id, "Second", null, null);
+            McpCreateResponse third = await _tools.CreateTask(column.Id, "Third", null, null);
+
+            // Asking for index 99 in a column of three lands at the end, not at 99.
+            McpMoveResponse moved = await _tools.MoveTask(third.Id, column.Id, 99);
+            Assert.Equal(column.Id, moved.ColumnId);
+            Assert.Equal(2, moved.Index);
+            Assert.False(string.IsNullOrEmpty(moved.UpdatedAt));
         }
 
         [Fact]
@@ -200,13 +282,78 @@ namespace SylvaNote.IntegrationTests
             _db.Columns.Save(column);
             McpCreateResponse noteA = await _tools.CreateNote("A", null, null);
             McpCreateResponse noteB = await _tools.CreateNote("B", null, null);
-            McpCreateResponse task = await _tools.CreateTask(column.Id, "Task", null, noteA.Id);
+            McpCreateResponse task = await _tools.CreateTask(column.Id, "Task", null, new[] { noteA.Id });
 
             await _tools.LinkNoteToTask(task.Id, noteB.Id);
             await _tools.LinkNoteToTask(task.Id, noteB.Id);
 
             McpTaskResponse detail = _tools.GetTask(task.Id);
             Assert.Equal(2, detail.LinkedNotes.Count);
+        }
+
+        [Fact]
+        public async Task CreateTaskLinksEveryNoteIdInTheArray()
+        {
+            Board board = Items.Board();
+            _db.Boards.Save(board);
+            BoardColumn column = Items.Column(board.Id);
+            _db.Columns.Save(column);
+            McpCreateResponse noteA = await _tools.CreateNote("A", null, null);
+            McpCreateResponse noteB = await _tools.CreateNote("B", null, null);
+
+            McpCreateResponse task = await _tools.CreateTask(
+                column.Id,
+                "Task",
+                null,
+                new[] { noteA.Id, noteB.Id, noteA.Id, "  ", null });
+
+            // Links read back ORDER BY note_id, and two UUIDv7 ids minted in the same
+            // millisecond sort randomly against each other - compare as a set.
+            McpTaskResponse detail = _tools.GetTask(task.Id);
+            Assert.Equal(
+                new[] { noteA.Id, noteB.Id }.OrderBy(id => id, StringComparer.Ordinal),
+                detail.LinkedNotes.Select(n => n.Id).OrderBy(id => id, StringComparer.Ordinal));
+        }
+
+        [Fact]
+        public async Task ListRecentMergesNotesAndTasksNewestFirst()
+        {
+            Board board = Items.Board();
+            _db.Boards.Save(board);
+            BoardColumn column = Items.Column(board.Id, "Todo");
+            _db.Columns.Save(column);
+
+            McpCreateResponse older = await _tools.CreateNote("Older note", null, null);
+            McpCreateResponse task = await _tools.CreateTask(column.Id, "A task", null, null);
+            McpCreateResponse newest = await _tools.CreateNote("Newest note", null, null);
+
+            McpRecentResponse recent = _tools.ListRecent(20, "all");
+
+            Assert.Equal(3, recent.Items.Count);
+            Assert.Equal(newest.Id, recent.Items[0].Id);
+            Assert.Equal("note", recent.Items[0].Type);
+            Assert.Contains(recent.Items, item => item.Id == older.Id);
+
+            McpRecentItem taskItem = Assert.Single(recent.Items, item => item.Type == "task");
+            Assert.Equal(task.Id, taskItem.Id);
+            Assert.Equal($"{board.Name} › Todo", taskItem.Breadcrumb);
+            Assert.False(string.IsNullOrEmpty(taskItem.UpdatedAt));
+        }
+
+        [Fact]
+        public async Task ListRecentHonoursLimitAndTypeScope()
+        {
+            Board board = Items.Board();
+            _db.Boards.Save(board);
+            BoardColumn column = Items.Column(board.Id, "Todo");
+            _db.Columns.Save(column);
+            await _tools.CreateNote("A note", null, null);
+            await _tools.CreateTask(column.Id, "A task", null, null);
+
+            Assert.Single(_tools.ListRecent(1, "all").Items);
+            Assert.All(_tools.ListRecent(20, "notes").Items, item => Assert.Equal("note", item.Type));
+            Assert.All(_tools.ListRecent(20, "tasks").Items, item => Assert.Equal("task", item.Type));
+            Assert.Throws<InvalidOperationException>(() => _tools.ListRecent(20, "bogus"));
         }
 
         [Fact]
@@ -230,7 +377,7 @@ namespace SylvaNote.IntegrationTests
             Assert.Equal(parent.Id, root.ParentId);
             Assert.NotEqual(template.Id, root.Id);
 
-            McpNoteTreeResponse tree = _tools.ListNoteTree();
+            McpNoteTreeResponse tree = _tools.ListNoteTree(null, 0);
             McpTreeNode meetings = tree.Notes.First(n => n.Id == parent.Id);
             McpTreeNode copy = Assert.Single(meetings.Children);
             Assert.Equal("Child section", Assert.Single(copy.Children).Title);

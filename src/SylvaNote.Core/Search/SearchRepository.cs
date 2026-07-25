@@ -14,24 +14,21 @@ namespace SylvaNote.Core.Search
             _connectionManager = connectionManager;
         }
 
-        public List<SearchResult> SearchNotes(string query)
+        // limit 0 means unlimited - the app's own search dialog wants every hit,
+        // agents cap it to keep results out of their context window.
+        public List<SearchResult> SearchNotes(string query, bool includeTrashed = false, int limit = 0)
         {
-            return Search(query, "note", "note_fts", includeTrashed: false);
+            return Search(query, "note", "note_fts", includeTrashed, limit);
         }
 
-        public List<SearchResult> SearchNotes(string query, bool includeTrashed)
+        public List<SearchResult> SearchTasks(string query, int limit = 0)
         {
-            return Search(query, "note", "note_fts", includeTrashed);
-        }
-
-        public List<SearchResult> SearchTasks(string query)
-        {
-            return Search(query, "task", "task_fts", includeTrashed: false);
+            return Search(query, "task", "task_fts", includeTrashed: false, limit);
         }
 
         // Task hits carry their board/column so the dialog can render the
         // `Board › List › Task` breadcrumb without loading every board.
-        public List<TaskSearchResult> SearchTasksWithContext(string query)
+        public List<TaskSearchResult> SearchTasksWithContext(string query, int limit = 0)
         {
             List<TaskSearchResult> results = new List<TaskSearchResult>();
             string match = BuildMatchQuery(query);
@@ -42,13 +39,13 @@ namespace SylvaNote.Core.Search
                 using SqliteCommand select = connection.CreateCommand();
                 select.CommandText = @"
                     SELECT task.id, task.title, snippet(task_fts, 1, '[', ']', '...', 12),
-                           bc.id, bc.name, b.id, b.name
+                           bc.id, bc.name, b.id, b.name, task.updated_at
                     FROM task_fts
                     JOIN task ON task.rowid = task_fts.rowid
                     JOIN board_column bc ON bc.id = task.column_id
                     JOIN board b ON b.id = bc.board_id
                     WHERE task_fts MATCH @query AND task.deleted = 0 AND bc.deleted = 0 AND b.deleted = 0
-                    ORDER BY rank";
+                    ORDER BY rank" + LimitClause(limit);
                 select.Parameters.AddWithValue("@query", match);
                 using SqliteDataReader reader = select.ExecuteReader();
                 while (reader.Read())
@@ -62,6 +59,7 @@ namespace SylvaNote.Core.Search
                         ColumnName = reader.GetString(4),
                         BoardId = reader.GetString(5),
                         BoardName = reader.GetString(6),
+                        UpdatedAt = reader.GetString(7),
                     });
                 }
             }
@@ -70,7 +68,7 @@ namespace SylvaNote.Core.Search
 
         // Boards are a handful of named rows - plain substring match, no FTS
         // (features/search.md). LIKE wildcards in the query are escaped.
-        public List<SearchResult> SearchBoards(string query)
+        public List<SearchResult> SearchBoards(string query, int limit = 0)
         {
             List<SearchResult> results = new List<SearchResult>();
             string trimmed = (query ?? string.Empty).Trim();
@@ -83,7 +81,7 @@ namespace SylvaNote.Core.Search
                 select.CommandText = @"
                     SELECT id, name FROM board
                     WHERE deleted = 0 AND name LIKE @pattern ESCAPE '\'
-                    ORDER BY name";
+                    ORDER BY name" + LimitClause(limit);
                 select.Parameters.AddWithValue("@pattern", "%" + escaped + "%");
                 using SqliteDataReader reader = select.ExecuteReader();
                 while (reader.Read())
@@ -99,7 +97,7 @@ namespace SylvaNote.Core.Search
             return results;
         }
 
-        private List<SearchResult> Search(string query, string table, string ftsTable, bool includeTrashed)
+        private List<SearchResult> Search(string query, string table, string ftsTable, bool includeTrashed, int limit)
         {
             List<SearchResult> results = new List<SearchResult>();
             string match = BuildMatchQuery(query);
@@ -114,7 +112,7 @@ namespace SylvaNote.Core.Search
                     FROM {ftsTable}
                     JOIN {table} ON {table}.rowid = {ftsTable}.rowid
                     WHERE {ftsTable} MATCH @query{deletedFilter}
-                    ORDER BY rank";
+                    ORDER BY rank{LimitClause(limit)}";
                 select.Parameters.AddWithValue("@query", match);
                 using SqliteDataReader reader = select.ExecuteReader();
                 while (reader.Read())
@@ -128,6 +126,13 @@ namespace SylvaNote.Core.Search
                 }
             }
             return results;
+        }
+
+        // Inlined rather than bound: the value is an int, so it cannot carry an
+        // injection, and 0 has to drop the clause entirely rather than bind a value.
+        private static string LimitClause(int limit)
+        {
+            return limit > 0 ? " LIMIT " + limit : string.Empty;
         }
 
         // User text goes in as quoted prefix tokens ("term"*) so FTS5 query syntax

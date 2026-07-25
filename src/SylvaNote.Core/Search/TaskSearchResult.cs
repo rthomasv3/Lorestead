@@ -9,5 +9,6 @@ namespace SylvaNote.Core.Search
         public string ColumnName { get; set; }
         public string BoardId { get; set; }
         public string BoardName { get; set; }
+        public string UpdatedAt { get; set; }
     }
 }

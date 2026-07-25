@@ -17,7 +17,7 @@ namespace SylvaNote.IntegrationTests
     {
         private static readonly string[] ExpectedTools =
         {
-            "search", "list_note_tree", "get_note", "create_note", "update_note",
+            "search", "list_note_tree", "list_recent", "get_note", "create_note", "update_note",
             "append_to_note", "list_boards", "get_board", "get_task", "create_task",
             "update_task", "move_task", "link_note_to_task", "list_templates",
             "create_template", "create_note_from_template", "get_attachment", "add_attachment",
