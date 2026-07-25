@@ -23,8 +23,11 @@ namespace SylvaNote.IntegrationTests
         [Fact]
         public async Task StdioBinaryServesTheFullToolSet()
         {
+            // Not a skip: the csproj takes a build-ordering-only reference on
+            // SylvaNote.Mcp, so a missing binary means that broke, not that the
+            // developer forgot to build it.
             string exe = FindBinary();
-            Assert.SkipWhen(exe == null, "SylvaNote.Mcp.exe has not been built.");
+            Assert.True(exe != null, "SylvaNote.Mcp.exe was not built - check the build-ordering ProjectReference in the test csproj.");
 
             string dataDir = Path.Combine(Path.GetTempPath(), $"sylvanote-mcp-stdio-{Guid.NewGuid():N}");
             try

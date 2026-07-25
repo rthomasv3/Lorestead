@@ -20,6 +20,13 @@
   <ItemGroup>
     <ProjectReference Include="..\..\SylvaNote.Core\SylvaNote.Core.csproj" />
     <ProjectReference Include="..\..\SylvaNote.Server\SylvaNote.Server.csproj" />
+    <!-- Build ordering only: McpStdioTests spawns this binary by path, so it has to
+         be current, but its assembly must stay out of this graph - bundle_e_sqlite3
+         would fight the server's bundle_e_sqlcipher over batteries_v2 (TestSetup).
+         Without this the test silently ran whatever exe was last built by hand. -->
+    <ProjectReference Include="..\..\SylvaNote.Mcp\SylvaNote.Mcp.csproj"
+                      ReferenceOutputAssembly="false"
+                      ExcludeAssets="all" />
   </ItemGroup>
 
   <ItemGroup>
