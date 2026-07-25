@@ -267,7 +267,7 @@ onMounted(() => {
           <SplitterGroup direction="horizontal" class="flex-1 min-h-0">
             <SplitterPanel :min-size="25">
               <MarkdownEditor ref="editorRef" :model-value="body" :readonly="readonly"
-                @update:model-value="onBodyChange" @save="flush" />
+                :attachments="notesStore.currentAttachments" @update:model-value="onBodyChange" @save="flush" />
             </SplitterPanel>
             <template v-if="previewOpen">
               <SplitterResizeHandle class="w-px bg-border hover:bg-accent/50 transition-colors" />

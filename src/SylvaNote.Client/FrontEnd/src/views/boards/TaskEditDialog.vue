@@ -421,7 +421,8 @@ function onDialogKeydown(e) {
                 </button>
               </div>
               <div class="flex-1 min-h-0">
-                <MarkdownEditor ref="editorRef" :model-value="body" @update:model-value="onBodyChange" @save="flush" />
+                <MarkdownEditor ref="editorRef" :model-value="body" :attachments="attachments"
+                  @update:model-value="onBodyChange" @save="flush" />
               </div>
             </div>
           </div>

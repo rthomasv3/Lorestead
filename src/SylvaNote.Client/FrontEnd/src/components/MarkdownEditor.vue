@@ -5,17 +5,23 @@ import { EditorState, EditorSelection, Compartment, RangeSetBuilder } from '@cod
 import { defaultKeymap, history, historyKeymap } from '@codemirror/commands'
 import { markdown } from '@codemirror/lang-markdown'
 import { syntaxHighlighting, defaultHighlightStyle, syntaxTree } from '@codemirror/language'
+import { autocompletion, acceptCompletion } from '@codemirror/autocomplete'
 import { dropTargetForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter'
 import { useSettingsStore } from '../stores/settingsStore.js'
+import { useNotesStore } from '../stores/notesStore.js'
 
 const props = defineProps({
   modelValue: { type: String, default: '' },
   readonly: { type: Boolean, default: false },
+  // The editing item's own attachments, for the `[[` autocomplete. Per-item
+  // ownership keeps this list short, which is why it can be offered in full.
+  attachments: { type: Array, default: () => [] },
 })
 
 const emit = defineEmits(['update:modelValue', 'save'])
 
 const settingsStore = useSettingsStore()
+const notesStore = useNotesStore()
 const host = ref(null)
 
 let view = null
@@ -63,7 +69,89 @@ function settingsExtensions() {
       backgroundColor: 'color-mix(in srgb, var(--color-accent) 25%, transparent) !important',
     },
   }))
+  // The `[[` popup. Must be theme, not baseTheme: base themes are deliberately
+  // lower priority than built-in styling, so the autocomplete package's own
+  // selection colour would win.
+  extensions.push(EditorView.theme({
+    '.cm-tooltip.cm-tooltip-autocomplete': {
+      border: '1px solid var(--color-border)',
+      borderRadius: '6px',
+      backgroundColor: 'var(--color-surface-elevated)',
+      boxShadow: '0 8px 24px rgb(0 0 0 / 0.18)',
+      overflow: 'hidden',
+    },
+    '.cm-tooltip-autocomplete > ul': {
+      fontFamily: 'inherit',
+      maxHeight: '16em',
+    },
+    '.cm-tooltip-autocomplete > ul > li': {
+      padding: '4px 10px',
+      color: 'var(--color-on-surface)',
+    },
+    '.cm-tooltip-autocomplete > ul > li[aria-selected]': {
+      backgroundColor: 'var(--color-accent-soft)',
+      color: 'var(--color-on-surface)',
+    },
+    '.cm-tooltip-autocomplete > ul > completion-section': {
+      padding: '3px 10px',
+      color: 'var(--color-on-surface-muted)',
+      borderBottom: '1px solid var(--color-border)',
+      fontSize: '0.85em',
+    },
+    '.cm-completionDetail': {
+      color: 'var(--color-on-surface-muted)',
+      fontStyle: 'normal',
+      fontSize: '0.85em',
+      marginLeft: '0.75em',
+    },
+  }))
   return extensions
+}
+
+// One `[[` gesture links anything - notes and this item's attachments in a single
+// list (features/links.md). The match runs to the cursor, so what you type after
+// `[[` filters both sections; picking replaces the `[[` and the query with the
+// finished markdown. Typing something with no match and moving on just leaves the
+// `[[` as literal text.
+const LINK_TRIGGER = /\[\[[^\]\n]*/
+
+function linkCompletions(context) {
+  const typed = context.matchBefore(LINK_TRIGGER)
+  if (!typed || props.readonly) return null
+
+  const query = typed.text.slice(2).trim().toLowerCase()
+  const options = []
+
+  for (const attachment of props.attachments) {
+    const filename = attachment.filename || 'Attachment'
+    if (query && !filename.toLowerCase().includes(query)) continue
+    // Images embed so they render inline in the preview - same rule as a dragged
+    // attachment card.
+    const embed = (attachment.mimeType || '').startsWith('image/') ? '!' : ''
+    options.push({
+      label: filename,
+      detail: 'attachment',
+      section: 'Attachments',
+      apply: `${embed}[${filename}](attachment://${attachment.id})`,
+    })
+  }
+
+  // Same lookup as the task dialog's linked-notes input: active notes by title.
+  for (const note of notesStore.summaries) {
+    if (note.deleted) continue
+    const title = note.title || 'Untitled'
+    if (query && !title.toLowerCase().includes(query)) continue
+    options.push({
+      label: title,
+      detail: 'note',
+      section: 'Notes',
+      apply: `[${title}](note://${note.id})`,
+    })
+  }
+
+  // filter: false because the matched text starts with `[[`, which would never
+  // match a bare title - the filtering above is the real one.
+  return { from: typed.from, options, filter: false }
 }
 
 // The markdown parser tags *text* and _text_ as the same Emphasis node, but the
@@ -114,10 +202,15 @@ function createView() {
               return true
             },
           },
+          // Tab accepts the `[[` completion. acceptCompletion returns false when
+          // no popup is open, so Tab keeps its normal behaviour the rest of the
+          // time (Enter is bound by the autocomplete keymap already).
+          { key: 'Tab', run: acceptCompletion },
           ...defaultKeymap,
           ...historyKeymap,
         ]),
         markdown(),
+        autocompletion({ override: [linkCompletions], icons: false }),
         syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
         underscoreEmphasis,
         EditorView.lineWrapping,
