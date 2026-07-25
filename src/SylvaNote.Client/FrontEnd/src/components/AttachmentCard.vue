@@ -12,6 +12,7 @@ import * as attachmentService from '../services/attachmentService.js'
 
 const props = defineProps({
   attachment: { type: Object, required: true },
+  readonly: { type: Boolean, default: false },
 })
 
 const emit = defineEmits(['rename', 'delete', 'preview'])
@@ -51,6 +52,7 @@ const sizeLabel = computed(() => {
 })
 
 async function startRename() {
+  if (props.readonly) return
   editing.value = true
   await nextTick()
   editInput.value?.focus()
@@ -115,11 +117,11 @@ onUnmounted(() => {
         title="Download attachment" @click.stop="attachmentService.downloadAttachment({ id: attachment.id })">
         <i-lucide-download class="size-4" />
       </button>
-      <button class="p-1 rounded text-on-surface-muted hover:text-on-surface hover:bg-on-surface/10"
+      <button v-if="!readonly" class="p-1 rounded text-on-surface-muted hover:text-on-surface hover:bg-on-surface/10"
         title="Rename attachment" @click.stop="startRename">
         <i-lucide-pencil class="size-4" />
       </button>
-      <button class="p-1 rounded text-on-surface-muted hover:text-red-500" title="Delete attachment"
+      <button v-if="!readonly" class="p-1 rounded text-on-surface-muted hover:text-red-500" title="Delete attachment"
         @click.stop="emit('delete')">
         <i-lucide-trash-2 class="size-4" />
       </button>

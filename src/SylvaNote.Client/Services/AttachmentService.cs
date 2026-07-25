@@ -32,6 +32,7 @@ public sealed class AttachmentService : IAttachmentService
 
     public AddAttachmentResponse Add(AddAttachmentRequest request)
     {
+        RequireActiveOwner(request.NoteId, request.TaskId);
         byte[] data = Convert.FromBase64String(request.DataBase64 ?? string.Empty);
         if (data.LongLength > MaxSizeBytes)
         {
@@ -93,6 +94,7 @@ public sealed class AttachmentService : IAttachmentService
     {
         AttachmentRepository attachments = _repositories.Attachments;
         Attachment attachment = GetRequired(attachments, request.Id);
+        RequireActiveOwner(attachment.NoteId, attachment.TaskId);
         attachment.Filename = request.Filename ?? string.Empty;
         attachments.Save(attachment);
         _sync.NotifyLocalChange();
@@ -105,6 +107,7 @@ public sealed class AttachmentService : IAttachmentService
     {
         AttachmentRepository attachments = _repositories.Attachments;
         Attachment attachment = GetRequired(attachments, request.Id);
+        RequireActiveOwner(attachment.NoteId, attachment.TaskId);
         attachment.Deleted = true;
         attachments.Save(attachment);
         _sync.NotifyLocalChange();
@@ -122,6 +125,29 @@ public sealed class AttachmentService : IAttachmentService
             MimeType = attachment.MimeType,
             DataBase64 = data != null ? Convert.ToBase64String(data) : string.Empty,
         };
+    }
+
+    // A trashed note is read-only, and that has to include its attachments. The panel
+    // hides the controls; this is the enforcement (the MCP tools guard the same way).
+    // Reads stay open - downloading from a trashed note is fine.
+    private void RequireActiveOwner(string noteId, string taskId)
+    {
+        if (!string.IsNullOrEmpty(noteId))
+        {
+            Note note = _repositories.Notes.Get(noteId);
+            if (note == null || note.Deleted)
+            {
+                throw new InvalidOperationException("Cannot change attachments on a trashed note.");
+            }
+        }
+        else if (!string.IsNullOrEmpty(taskId))
+        {
+            TaskItem task = _repositories.Tasks.Get(taskId);
+            if (task == null || task.Deleted)
+            {
+                throw new InvalidOperationException("Cannot change attachments on a deleted task.");
+            }
+        }
     }
 
     private static Attachment GetRequired(AttachmentRepository attachments, string id)

@@ -96,6 +96,31 @@ namespace SylvaNote.IntegrationTests
             Assert.Contains("trash", ex.Message);
         }
 
+        // A trashed note stays readable by id (flagged deleted) but refuses every write,
+        // so an agent can tell "gone" from "in the trash" and gets a clear reason.
+        [Fact]
+        public async Task TrashedNotesAreReadableButRefuseEveryWrite()
+        {
+            McpCreateResponse note = await _tools.CreateNote("Doomed", "body", null);
+            string data = Convert.ToBase64String(new byte[] { 1, 2, 3 });
+            _db.Notes.TrashSubtree(note.Id);
+
+            McpNoteResponse read = _tools.GetNote(note.Id);
+            Assert.True(read.Deleted);
+            Assert.Equal("body", read.Body);
+            Assert.DoesNotContain(_tools.ListRecent(20, "notes").Items, item => item.Id == note.Id);
+            Assert.Empty(_tools.Search("Doomed", 20, "notes").Notes);
+
+            Assert.Contains("trash", (await Assert.ThrowsAsync<InvalidOperationException>(
+                () => _tools.UpdateNote(note.Id, "New title", null))).Message);
+            Assert.Contains("trash", (await Assert.ThrowsAsync<InvalidOperationException>(
+                () => _tools.AddAttachment("pic.png", "image/png", data, note.Id, null))).Message);
+            Assert.Contains("trash", (await Assert.ThrowsAsync<InvalidOperationException>(
+                () => _tools.CreateNote("Child", null, note.Id))).Message);
+            Assert.Contains("trash", (await Assert.ThrowsAsync<InvalidOperationException>(
+                () => _tools.CreateNoteFromTemplate(note.Id, "Copy", null))).Message);
+        }
+
         [Fact]
         public async Task TreeExcludesTrashedNotesAndTemplates()
         {
