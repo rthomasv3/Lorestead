@@ -378,7 +378,12 @@ function onDialogKeydown(e) {
           <textarea ref="titleInput" :value="title" rows="1" placeholder="Untitled task"
             class="flex-1 min-w-0 resize-none overflow-hidden bg-transparent text-lg font-semibold outline-none rounded-md border border-transparent hover:cursor-text focus:border-border px-2 py-1"
             @input="onTitleInput" @keydown.enter.prevent="$event.target.blur()" />
-          <Button variant="ghost" size="icon" class="mt-1" title="Close" @click="emit('update:open', false)">
+          <!-- Out of the tab order so Tab from the title reaches the description
+               instead of the one control that throws the dialog away. Esc is the
+               keyboard close, same as every other dialog; the toolbar and save
+               buttons below opt out for the same reason. -->
+          <Button variant="ghost" size="icon" class="mt-1" title="Close" tabindex="-1"
+            @click="emit('update:open', false)">
             <i-lucide-x class="size-4" />
           </Button>
         </div>
@@ -388,14 +393,18 @@ function onDialogKeydown(e) {
             <div class="text-sm font-medium text-on-surface-muted mb-1.5 ml-1">Description</div>
             <!-- Both modes render at the same fixed height so switching between
                  reading and editing never resizes the dialog. -->
-            <div v-if="!editingBody" ref="readingArea"
-              class="h-64 overflow-y-auto rounded-md border cursor-text px-2.5 py-2"
+            <!-- A tab stop that hands straight over to the editor: Tab from the
+                 title puts the caret in the body, which is the whole point of the
+                 stop. Reading mode is never what focus rests on. -->
+            <div v-if="!editingBody" ref="readingArea" tabindex="0"
+              class="h-64 overflow-y-auto rounded-md border cursor-text px-2.5 py-2 outline-none"
               :class="attachDragOver ? 'border-accent bg-drop-target' : 'border-border/60 hover:border-border'"
-              @click="enterEdit">
+              @click="enterEdit" @focus="enterEdit">
               <MarkdownPreview v-if="body.trim()" :markdown="body" />
               <p v-else class="text-sm text-on-surface-muted/60">Click to add a description...</p>
             </div>
-            <div v-else class="h-64 rounded-md border border-border flex flex-col" @focusout="onEditorFocusOut">
+            <div v-else class="h-64 rounded-md border border-border focus-within:border-accent flex flex-col"
+              @focusout="onEditorFocusOut">
               <div class="flex items-center gap-0.5 px-1.5 h-9 shrink-0 border-b border-border flex-wrap">
                 <Button v-for="action in toolbarActions" :key="action.name" variant="ghost" size="icon"
                   :title="action.title" tabindex="-1" @click="runToolbar(action.name)">

@@ -62,7 +62,7 @@ function onTaskDrop({ taskId, targetTaskId, edge, columnId }) {
       <button
         class="w-64 shrink-0 flex items-center justify-center gap-1.5 h-9 rounded-lg border border-border text-sm text-on-surface-muted hover:text-on-surface hover:bg-surface-alt"
         @click="addColumn">
-        <i-lucide-plus class="size-4" />
+        <i-lucide-plus class="size-4 -ml-3" />
         Add list
       </button>
     </div>

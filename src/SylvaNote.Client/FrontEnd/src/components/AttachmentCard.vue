@@ -119,7 +119,10 @@ onUnmounted(() => {
         {{ attachment.filename }}</div>
       <div class="text-xs text-on-surface-muted">{{ sizeLabel }}</div>
     </div>
-    <span class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+    <!-- focus-within, or these stay invisible while tabbed onto: they are in the
+         tab order whether they are painted or not. -->
+    <span
+      class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity shrink-0">
       <Button variant="ghost" size="icon" title="Download attachment"
         @click.stop="attachmentService.downloadAttachment({ id: attachment.id })">
         <i-lucide-download class="size-4" />
