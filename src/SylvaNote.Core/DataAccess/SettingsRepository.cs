@@ -87,7 +87,7 @@ namespace SylvaNote.Core.DataAccess
             select.CommandText = @"
                 SELECT font_size, font_family, spellcheck_enabled, show_line_count, highlight_active_line,
                        autosave_debounce_ms, md_tables, md_task_lists, md_strikethrough, md_autolinks,
-                       md_footnotes, md_code_highlighting, md_highlight
+                       md_footnotes, md_code_highlighting, md_highlight, remember_cursor_position
                 FROM editor_settings LIMIT 1";
             using SqliteDataReader reader = select.ExecuteReader();
             if (reader.Read())
@@ -107,6 +107,7 @@ namespace SylvaNote.Core.DataAccess
                     MdFootnotes = reader.GetInt64(10) != 0,
                     MdCodeHighlighting = reader.GetInt64(11) != 0,
                     MdHighlight = reader.GetInt64(12) != 0,
+                    RememberCursorPosition = reader.GetInt64(13) != 0,
                 };
             }
             return settings;
@@ -123,7 +124,8 @@ namespace SylvaNote.Core.DataAccess
                     autosave_debounce_ms = @autosave_debounce_ms, md_tables = @md_tables,
                     md_task_lists = @md_task_lists, md_strikethrough = @md_strikethrough,
                     md_autolinks = @md_autolinks, md_footnotes = @md_footnotes,
-                    md_code_highlighting = @md_code_highlighting, md_highlight = @md_highlight";
+                    md_code_highlighting = @md_code_highlighting, md_highlight = @md_highlight,
+                    remember_cursor_position = @remember_cursor_position";
             update.Parameters.AddWithValue("@font_size", settings.FontSize);
             update.Parameters.AddWithValue("@font_family", settings.FontFamily ?? string.Empty);
             update.Parameters.AddWithValue("@spellcheck_enabled", settings.SpellcheckEnabled ? 1 : 0);
@@ -137,6 +139,7 @@ namespace SylvaNote.Core.DataAccess
             update.Parameters.AddWithValue("@md_footnotes", settings.MdFootnotes ? 1 : 0);
             update.Parameters.AddWithValue("@md_code_highlighting", settings.MdCodeHighlighting ? 1 : 0);
             update.Parameters.AddWithValue("@md_highlight", settings.MdHighlight ? 1 : 0);
+            update.Parameters.AddWithValue("@remember_cursor_position", settings.RememberCursorPosition ? 1 : 0);
             update.ExecuteNonQuery();
         }
     }

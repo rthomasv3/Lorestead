@@ -315,6 +315,13 @@ onMounted(async () => {
           </div>
 
           <div class="flex items-center gap-3">
+            <span class="text-sm text-on-surface-muted w-40 shrink-0">Remember cursor position</span>
+            <Toggle :model-value="store.editor.rememberCursorPosition"
+              @update:model-value="store.saveEditor({ rememberCursorPosition: $event })" />
+            <span class="text-xs text-on-surface-muted">Reopen a note where you left off</span>
+          </div>
+
+          <div class="flex items-center gap-3">
             <span class="text-sm text-on-surface-muted w-40 shrink-0">Autosave debounce</span>
             <TextField v-model="autosaveDebounceMs" type="number" min="100" max="10000" step="100" class="w-24"
               @input="debounced('autosave', saveAutosaveDebounce)" />

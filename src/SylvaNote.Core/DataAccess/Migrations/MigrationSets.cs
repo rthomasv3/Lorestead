@@ -30,6 +30,7 @@ namespace SylvaNote.Core.DataAccess.Migrations
                 new Db001_CoreSchema(),
                 new Db002_ClientState(),
                 new Db003_AttachmentThumbnail(),
+                new Db005_RememberCursorPosition(),
             };
         }
     }

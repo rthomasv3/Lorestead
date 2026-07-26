@@ -51,6 +51,7 @@ public sealed class SettingsService : ISettingsService
         settings.ShowLineCount = request.ShowLineCount;
         settings.HighlightActiveLine = request.HighlightActiveLine;
         settings.AutosaveDebounceMs = request.AutosaveDebounceMs;
+        settings.RememberCursorPosition = request.RememberCursorPosition;
         settings.MdTables = request.MdTables;
         settings.MdTaskLists = request.MdTaskLists;
         settings.MdStrikethrough = request.MdStrikethrough;

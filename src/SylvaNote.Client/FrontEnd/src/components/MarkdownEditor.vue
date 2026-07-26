@@ -9,6 +9,7 @@ import { autocompletion, acceptCompletion } from '@codemirror/autocomplete'
 import { dropTargetForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter'
 import { useSettingsStore } from '../stores/settingsStore.js'
 import { useNotesStore } from '../stores/notesStore.js'
+import { getCursor, setCursor, flushCursors } from '../utils/cursorPositions.js'
 
 const props = defineProps({
   modelValue: { type: String, default: '' },
@@ -16,6 +17,14 @@ const props = defineProps({
   // The editing item's own attachments, for the `[[` autocomplete. Per-item
   // ownership keeps this list short, which is why it can be offered in full.
   attachments: { type: Array, default: () => [] },
+  // Which document the buffer currently holds. Without it the editor cannot tell
+  // "you opened something else" from "what you have open was rewritten under
+  // you", and those two want opposite things from the caret.
+  documentKey: { type: String, default: '' },
+  // Whether this editor takes part in remembered positions. The notes editor
+  // does; the task dialog does not, because the entries are garbage-collected
+  // against the note index and a task id would be swept on the next load.
+  rememberCursor: { type: Boolean, default: false },
 })
 
 const emit = defineEmits(['update:modelValue', 'save'])
@@ -26,10 +35,29 @@ const host = ref(null)
 
 let view = null
 let syncingFromProp = false
+// The document the buffer is currently showing, so a prop change can be read as
+// a switch or a rewrite. Tracked separately from the prop because both it and
+// modelValue land in the same update.
+let appliedKey = props.documentKey
 const configurable = new Compartment()
 const readonlyCompartment = new Compartment()
 
 const editorSettings = computed(() => settingsStore.editor)
+
+function remembering() {
+  return props.rememberCursor && props.documentKey !== '' && editorSettings.value.rememberCursorPosition
+}
+
+// Clamped: the remembered offset is from a previous version of the text, and an
+// agent (or another device) can have made it shorter since.
+function openingAnchor(key, length) {
+  let anchor = 0
+  if (props.rememberCursor && key !== '' && editorSettings.value.rememberCursorPosition) {
+    const stored = getCursor(key)
+    anchor = stored === null ? 0 : Math.min(stored, length)
+  }
+  return anchor
+}
 
 function settingsExtensions() {
   const editor = editorSettings.value
@@ -188,10 +216,12 @@ const underscoreEmphasis = ViewPlugin.fromClass(class {
 }, { decorations: (plugin) => plugin.decorations })
 
 function createView() {
+  const anchor = openingAnchor(props.documentKey, props.modelValue.length)
   view = new EditorView({
     parent: host.value,
     state: EditorState.create({
       doc: props.modelValue,
+      selection: { anchor },
       extensions: [
         history(),
         keymap.of([
@@ -223,10 +253,20 @@ function createView() {
           if (update.docChanged && !syncingFromProp) {
             emit('update:modelValue', update.state.doc.toString())
           }
+          // Recorded as it moves, not on save: a note you opened and scrolled
+          // through without editing should still remember where you were.
+          if ((update.selectionSet || update.docChanged) && !syncingFromProp && remembering()) {
+            setCursor(props.documentKey, update.state.selection.main.head)
+          }
         }),
       ],
     }),
   })
+  // A restored offset is real but off-screen until something scrolls to it, and
+  // EditorState.create has no way to ask for that.
+  if (anchor > 0) {
+    view.dispatch({ selection: { anchor }, scrollIntoView: true })
+  }
 }
 
 let dropCleanup = null
@@ -288,20 +328,36 @@ onUnmounted(() => {
   if (dropCleanup) dropCleanup()
   hideDropCaret()
   if (view) view.destroy()
+  // The position store writes on a debounce; a note closed inside that window
+  // would otherwise lose the last move.
+  flushCursors()
 })
 
-watch(() => props.modelValue, (value) => {
-  if (view && value !== view.state.doc.toString()) {
-    syncingFromProp = true
-    // Cursor goes to the start on note switch (remember-cursor-position is a
-    // Phase 8 setting).
-    view.dispatch({
-      changes: { from: 0, to: view.state.doc.length, insert: value },
-      selection: { anchor: 0 },
-      scrollIntoView: true,
-    })
-    syncingFromProp = false
-  }
+// Both props land in the same update, so they are watched as one source: which
+// of them changed is the whole question.
+watch(() => [props.documentKey, props.modelValue], ([key, value]) => {
+  if (!view) return
+  const openedAnother = key !== appliedKey
+  const textChanged = value !== view.state.doc.toString()
+  if (!openedAnother && !textChanged) return
+
+  // Holding the caret when the open document is rewritten under you - an agent
+  // edit landing on it, a version restored from history - is unconditional. The
+  // setting governs reopening, not being edited around: turning it off means
+  // "don't put me back where I was", never "throw me to the top mid-sentence".
+  // Clamped, because the incoming text can be shorter than the old offset.
+  const anchor = openedAnother
+    ? openingAnchor(key, value.length)
+    : Math.min(view.state.selection.main.head, value.length)
+
+  syncingFromProp = true
+  view.dispatch({
+    changes: textChanged ? { from: 0, to: view.state.doc.length, insert: value } : undefined,
+    selection: { anchor },
+    scrollIntoView: true,
+  })
+  syncingFromProp = false
+  appliedKey = key
 })
 
 watch(() => props.readonly, (value) => {

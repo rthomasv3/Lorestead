@@ -36,7 +36,9 @@ namespace SylvaNote.IntegrationTests
             Assert.Contains("task_fts_delete", triggers);
             Assert.Contains("task_fts_update", triggers);
 
-            Assert.Equal(3, GetSchemaVersion(db));
+            Assert.Contains("remember_cursor_position", GetColumnNames(db, "editor_settings"));
+
+            Assert.Equal(5, GetSchemaVersion(db));
         }
 
         [Fact]
@@ -74,7 +76,7 @@ namespace SylvaNote.IntegrationTests
                 migrator.Add(migration);
             }
             migrator.Run(connection);
-            Assert.Equal(3, GetSchemaVersion(db));
+            Assert.Equal(5, GetSchemaVersion(db));
         }
 
         private static List<string> GetSchemaNames(TestDb db, string type)
@@ -88,6 +90,20 @@ namespace SylvaNote.IntegrationTests
             while (reader.Read())
             {
                 names.Add(reader.GetString(0));
+            }
+            return names;
+        }
+
+        private static List<string> GetColumnNames(TestDb db, string table)
+        {
+            List<string> names = new List<string>();
+            using SqliteConnection connection = db.ConnectionManager.CreateConnection();
+            using SqliteCommand select = connection.CreateCommand();
+            select.CommandText = $"PRAGMA table_info({table})";
+            using SqliteDataReader reader = select.ExecuteReader();
+            while (reader.Read())
+            {
+                names.Add(reader.GetString(1));
             }
             return names;
         }

@@ -419,8 +419,12 @@ function onDialogKeydown(e) {
                 </Button>
               </div>
               <div class="flex-1 min-h-0">
+                <!-- document-key without remember-cursor: an agent editing this
+                     task under you shouldn't move the caret, but the position
+                     store is garbage-collected against the note index, so a task
+                     id would be swept on the next load. -->
                 <MarkdownEditor ref="editorRef" :model-value="body" :attachments="attachments"
-                  @update:model-value="onBodyChange" @save="flush" />
+                  :document-key="taskId ?? ''" @update:model-value="onBodyChange" @save="flush" />
               </div>
             </div>
           </div>

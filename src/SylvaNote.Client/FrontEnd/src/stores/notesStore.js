@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import * as noteService from '../services/noteService.js'
 import * as attachmentService from '../services/attachmentService.js'
+import { pruneCursors } from '../utils/cursorPositions.js'
 
 export const TEMPLATES_ID = '__templates'
 export const TRASH_ID = '__trash'
@@ -109,6 +110,10 @@ export const useNotesStore = defineStore('notes', () => {
     const response = await noteService.getNotes()
     summaries.value = response.notes ?? []
     loaded.value = true
+    // This index is the exact set of notes that still exist, so it is also the
+    // garbage collector for remembered cursor positions - a purged note drops
+    // out at the moment the database would have cascaded it away.
+    pruneCursors(summaries.value.map((summary) => summary.id))
   }
 
   async function select(id) {

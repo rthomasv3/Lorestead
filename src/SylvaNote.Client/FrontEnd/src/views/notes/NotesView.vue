@@ -41,15 +41,19 @@ const readonly = computed(() => !!currentNote.value?.deleted)
 const body = ref('')
 const dirty = ref(false)
 let saveTimer = null
-let editingNoteId = null
+// Reactive because it is also the editor's document key: the id of the text
+// actually in the buffer, which lags the store's selection by one fetch. Keyed
+// on selectedId instead, opening a note reads as "new document" while the old
+// note's text is still loaded, and the remembered offset gets clamped to that.
+const editingNoteId = ref(null)
 
 // immediate: the store keeps the selection across route changes, so on remount the
 // editor must hydrate from the already-loaded note, not wait for a change.
 watch(currentNote, async (note) => {
-  if (editingNoteId && editingNoteId !== note?.id) {
-    await flushFor(editingNoteId)
+  if (editingNoteId.value && editingNoteId.value !== note?.id) {
+    await flushFor(editingNoteId.value)
   }
-  editingNoteId = note?.id ?? null
+  editingNoteId.value = note?.id ?? null
   body.value = note?.body ?? ''
   dirty.value = false
   clearTimeout(saveTimer)
@@ -60,8 +64,8 @@ watch(currentNote, async (note) => {
 // the buffer already holds the version that wins - there is nothing stale to show,
 // and replacing the document would throw away what is being typed.
 function onNotesChanged() {
-  if (!dirty.value && editingNoteId) {
-    notesStore.select(editingNoteId)
+  if (!dirty.value && editingNoteId.value) {
+    notesStore.select(editingNoteId.value)
   }
 }
 
@@ -69,7 +73,7 @@ onMounted(() => window.addEventListener('notes:changed', onNotesChanged))
 onUnmounted(() => window.removeEventListener('notes:changed', onNotesChanged))
 
 function onBodyChange(value) {
-  if (readonly.value || !editingNoteId) return
+  if (readonly.value || !editingNoteId.value) return
   body.value = value
   dirty.value = true
   clearTimeout(saveTimer)
@@ -86,7 +90,7 @@ async function flushFor(noteId) {
 }
 
 function flush() {
-  return flushFor(editingNoteId)
+  return flushFor(editingNoteId.value)
 }
 
 // data.md: an empty title auto-fills from the body's first line; edits to the title
@@ -214,7 +218,7 @@ function runToolbar(name) {
 // would overwrite the restored text the moment it fired. The store's re-select then
 // swaps the buffer through the currentNote watch below (decisions.md).
 async function onRestoreVersion(version) {
-  if (readonly.value || !editingNoteId || !version) return
+  if (readonly.value || !editingNoteId.value || !version) return
   clearTimeout(saveTimer)
   dirty.value = false
   await notesStore.restoreVersion(version.id)
@@ -296,7 +300,8 @@ onMounted(() => {
               <SplitterGroup direction="horizontal" class="flex-1 min-h-0">
                 <SplitterPanel :min-size="25">
                   <MarkdownEditor ref="editorRef" :model-value="body" :readonly="readonly"
-                    :attachments="notesStore.currentAttachments" @update:model-value="onBodyChange" @save="flush" />
+                    :attachments="notesStore.currentAttachments" :document-key="editingNoteId ?? ''"
+                    remember-cursor @update:model-value="onBodyChange" @save="flush" />
                 </SplitterPanel>
                 <template v-if="previewOpen">
                   <SplitterResizeHandle class="w-px bg-border hover:bg-accent/50 transition-colors" />

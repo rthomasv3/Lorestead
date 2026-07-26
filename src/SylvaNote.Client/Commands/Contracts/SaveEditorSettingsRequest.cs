@@ -8,6 +8,7 @@ public sealed class SaveEditorSettingsRequest
     public bool ShowLineCount { get; set; }
     public bool HighlightActiveLine { get; set; }
     public int AutosaveDebounceMs { get; set; }
+    public bool RememberCursorPosition { get; set; }
     public bool MdTables { get; set; }
     public bool MdTaskLists { get; set; }
     public bool MdStrikethrough { get; set; }

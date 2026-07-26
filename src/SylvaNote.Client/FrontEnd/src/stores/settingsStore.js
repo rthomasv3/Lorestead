@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { getSettings, saveApplicationSettings, saveEditorSettings } from '../services/settingsService'
+import { clearCursors } from '../utils/cursorPositions.js'
 
 export const THEMES = ['system', 'light', 'dark']
 export const ACCENTS = ['indigo', 'violet', 'blue', 'cyan', 'emerald', 'rose']
@@ -33,6 +34,7 @@ const EDITOR_DEFAULTS = {
   showLineCount: true,
   highlightActiveLine: true,
   autosaveDebounceMs: 1000,
+  rememberCursorPosition: true,
   mdTables: true,
   mdTaskLists: true,
   mdStrikethrough: true,
@@ -83,6 +85,7 @@ function toEditorRequest(editor) {
     showLineCount: editor.showLineCount,
     highlightActiveLine: editor.highlightActiveLine,
     autosaveDebounceMs: editor.autosaveDebounceMs,
+    rememberCursorPosition: editor.rememberCursorPosition,
     mdTables: editor.mdTables,
     mdTaskLists: editor.mdTaskLists,
     mdStrikethrough: editor.mdStrikethrough,
@@ -136,6 +139,11 @@ export const useSettingsStore = defineStore('settings', () => {
   }
 
   async function saveEditor(patch) {
+    // Off means "don't remember", not "remember but ignore" - the positions go
+    // with the setting.
+    if (patch.rememberCursorPosition === false) {
+      clearCursors()
+    }
     editor.value = { ...editor.value, ...patch }
     try {
       const result = await saveEditorSettings(toEditorRequest(editor.value))
