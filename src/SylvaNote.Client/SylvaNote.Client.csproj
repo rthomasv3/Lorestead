@@ -31,6 +31,8 @@
     <FrontEndSource Include="$(FrontEndDir)/index.html" />
     <FrontEndSource Include="$(FrontEndDir)/package.json" />
     <FrontEndSource Include="$(FrontEndDir)/vite.config.*" />
+    <!-- The in-app logo is aliased out of the shared icon dir, so it is a front-end input too. -->
+    <FrontEndSource Include="$(MSBuildProjectDirectory)/../../icon/icon.svg" />
   </ItemGroup>
 
   <Target Name="EnsureFrontEndBuilt" Condition="'$(Configuration)' == 'Release'" Inputs="@(FrontEndSource)" Outputs="$(FrontEndDist)/index.html">

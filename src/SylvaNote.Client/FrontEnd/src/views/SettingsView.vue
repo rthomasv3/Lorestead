@@ -7,6 +7,7 @@ import SelectMenu from '../components/SelectMenu.vue'
 import Toggle from '../components/Toggle.vue'
 import Button from '../components/Button.vue'
 import TextField from '../components/TextField.vue'
+import AppLogo from '../components/AppLogo.vue'
 
 const store = useSettingsStore()
 const sync = useSyncStore()
@@ -372,7 +373,7 @@ onMounted(async () => {
         <div class="flex flex-col gap-3">
           <h2 id="settings-about" class="text-sm font-semibold">About</h2>
           <div class="flex items-center gap-3">
-            <i-lucide-trees class="size-8 text-accent shrink-0" />
+            <AppLogo class="size-10" />
             <div class="flex flex-col">
               <span class="text-sm font-medium">{{ about?.appName ?? 'SylvaNote' }}</span>
               <span class="text-xs text-on-surface-muted">Version {{ about?.version ?? '...' }} - MIT License</span>

@@ -1,9 +1,10 @@
 <script setup>
 import { computed } from 'vue'
-import { CONTROL_ACTIVE, CONTROL_GHOST } from '../utils/controlStates.js'
+import { CONTROL_ACTIVE, CONTROL_GHOST, CONTROL_GHOST_DANGER } from '../utils/controlStates.js'
 
 const props = defineProps({
-  variant: { type: String, default: 'outline' }, // 'primary' | 'outline' | 'destructive' | 'ghost'
+  // 'primary' | 'outline' | 'destructive' | 'ghost' | 'ghost-danger'
+  variant: { type: String, default: 'outline' },
   size: { type: String, default: 'md' },         // 'md' | 'sm' | 'icon'
   // Toggles (tools rail, preview split) read as pressed rather than hovered, so
   // the active tint replaces the variant instead of layering on it.
@@ -14,9 +15,13 @@ const ACTIVE = CONTROL_ACTIVE
 
 const VARIANTS = {
   primary: 'bg-accent-strong text-white enabled:hover:bg-accent-strong-hover shadow-sm',
-  outline: 'border border-border enabled:hover:bg-surface-alt',
+  // Half the ghost's wash: the border already marks the target, so the same
+  // strength would read as pressed. Alpha for the same reason ghost uses it -
+  // outline buttons also appear inside dialogs, which are an elevated plane.
+  outline: 'border border-border enabled:hover:bg-on-surface/5',
   destructive: 'bg-red-600 enabled:hover:bg-red-700 text-white',
   ghost: CONTROL_GHOST,
+  'ghost-danger': CONTROL_GHOST_DANGER,
 }
 
 // sm is the text button that fits a h-10 panel header; icon is every icon-only

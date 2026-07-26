@@ -7,6 +7,7 @@ import IconImage from '~icons/lucide/image'
 import IconFileText from '~icons/lucide/file-text'
 import IconFileArchive from '~icons/lucide/file-archive'
 import IconFile from '~icons/lucide/file'
+import Button from './Button.vue'
 import { useNotesStore } from '../stores/notesStore.js'
 import * as attachmentService from '../services/attachmentService.js'
 
@@ -119,18 +120,17 @@ onUnmounted(() => {
       <div class="text-xs text-on-surface-muted">{{ sizeLabel }}</div>
     </div>
     <span class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-      <button class="p-1 rounded text-on-surface-muted hover:text-on-surface hover:bg-on-surface/10"
-        title="Download attachment" @click.stop="attachmentService.downloadAttachment({ id: attachment.id })">
+      <Button variant="ghost" size="icon" title="Download attachment"
+        @click.stop="attachmentService.downloadAttachment({ id: attachment.id })">
         <i-lucide-download class="size-4" />
-      </button>
-      <button v-if="!readonly" class="p-1 rounded text-on-surface-muted hover:text-on-surface hover:bg-on-surface/10"
-        title="Rename attachment" @click.stop="startRename">
+      </Button>
+      <Button v-if="!readonly" variant="ghost" size="icon" title="Rename attachment" @click.stop="startRename">
         <i-lucide-pencil class="size-4" />
-      </button>
-      <button v-if="!readonly" class="p-1 rounded text-on-surface-muted hover:text-red-500" title="Delete attachment"
+      </Button>
+      <Button v-if="!readonly" variant="ghost-danger" size="icon" title="Delete attachment"
         @click.stop="emit('delete')">
         <i-lucide-trash-2 class="size-4" />
-      </button>
+      </Button>
     </span>
   </div>
 </template>

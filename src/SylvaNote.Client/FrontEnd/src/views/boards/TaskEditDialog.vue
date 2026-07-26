@@ -377,10 +377,9 @@ function onDialogKeydown(e) {
           <textarea ref="titleInput" :value="title" rows="1" placeholder="Untitled task"
             class="flex-1 min-w-0 resize-none overflow-hidden bg-transparent text-lg font-semibold outline-none rounded-md border border-transparent hover:cursor-text focus:border-border px-2 py-1"
             @input="onTitleInput" @keydown.enter.prevent="$event.target.blur()" />
-          <button class="p-1.5 mt-1 rounded text-on-surface-muted hover:text-on-surface hover:bg-surface-alt"
-            title="Close" @click="emit('update:open', false)">
+          <Button variant="ghost" size="icon" class="mt-1" title="Close" @click="emit('update:open', false)">
             <i-lucide-x class="size-4" />
-          </button>
+          </Button>
         </div>
 
         <div v-if="task" class="flex-1 min-h-0 overflow-y-auto px-5 pb-5 pt-3 flex flex-col gap-4">
@@ -467,9 +466,11 @@ function onDialogKeydown(e) {
               </div>
               <div v-if="linkInputFocused && linkSuggestions.length > 0"
                 class="absolute left-0 right-0 top-full mt-1 z-10 rounded-lg border border-border bg-surface-elevated shadow-lg p-1 max-h-48 overflow-y-auto">
+                <!-- Selection follows the mouse, so hovering a row selects it and
+                     there is no separate hover state to paint. -->
                 <button v-for="(note, index) in linkSuggestions" :key="note.id"
                   class="w-full text-left rounded-md px-2.5 py-1.5 text-sm truncate"
-                  :class="index === linkIndex ? 'bg-accent-soft' : 'hover:bg-surface-alt'"
+                  :class="index === linkIndex ? 'bg-accent-soft' : ''"
                   @mouseenter="linkIndex = index" @mousedown.prevent="addLink(note)">
                   {{ note.title || 'Untitled' }}
                 </button>
