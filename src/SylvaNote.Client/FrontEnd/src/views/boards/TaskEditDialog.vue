@@ -365,9 +365,9 @@ function onDialogKeydown(e) {
 <template>
   <DialogRoot :open="open" @update:open="emit('update:open', $event)">
     <DialogPortal>
-      <DialogOverlay class="fixed inset-0 bg-black/40 z-40" />
+      <DialogOverlay class="fixed inset-0 bg-black/40 z-40 dialog-fade" />
       <DialogContent
-        class="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-2xl max-h-[85vh] flex flex-col rounded-lg border border-border bg-surface-elevated shadow-xl overflow-hidden"
+        class="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-2xl max-h-[85vh] flex flex-col rounded-lg border border-border bg-surface-elevated shadow-xl overflow-hidden dialog-fade"
         @keydown="onDialogKeydown">
         <VisuallyHidden>
           <DialogTitle>Edit task</DialogTitle>

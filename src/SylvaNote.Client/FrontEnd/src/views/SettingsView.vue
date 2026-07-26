@@ -191,15 +191,15 @@ onMounted(async () => {
           <h2 id="settings-application" class="text-sm font-semibold">Application</h2>
 
           <div class="flex items-center gap-3">
-            <span class="text-sm text-on-surface-muted w-40 shrink-0">Theme</span>
-            <div class="w-40">
+            <span class="text-sm text-on-surface-muted w-44 shrink-0">Theme</span>
+            <div class="w-44">
               <SelectMenu :model-value="store.application.theme" :options="THEME_OPTIONS"
                 @update:model-value="store.saveApplication({ theme: $event })" />
             </div>
           </div>
 
           <div class="flex items-center gap-3">
-            <span class="text-sm text-on-surface-muted w-40 shrink-0">Accent</span>
+            <span class="text-sm text-on-surface-muted w-44 shrink-0">Accent</span>
             <div class="flex items-center gap-2">
               <button v-for="a in ACCENT_SWATCHES" :key="a.value" type="button" :title="a.label" :aria-label="a.label"
                 :aria-pressed="activeAccent === a.value"
@@ -212,67 +212,67 @@ onMounted(async () => {
           </div>
 
           <div class="flex items-center gap-3">
-            <span class="text-sm text-on-surface-muted w-40 shrink-0">Date format</span>
-            <div class="w-40">
+            <span class="text-sm text-on-surface-muted w-44 shrink-0">Date format</span>
+            <div class="w-44">
               <SelectMenu :model-value="store.application.dateFormat" :options="DATE_FORMAT_OPTIONS"
                 @update:model-value="store.saveApplication({ dateFormat: $event })" />
             </div>
           </div>
 
           <div class="flex items-center gap-3">
-            <span class="text-sm text-on-surface-muted w-40 shrink-0">Time format</span>
-            <div class="w-40">
+            <span class="text-sm text-on-surface-muted w-44 shrink-0">Time format</span>
+            <div class="w-44">
               <SelectMenu :model-value="store.application.timeFormat" :options="TIME_FORMAT_OPTIONS"
                 @update:model-value="store.saveApplication({ timeFormat: $event })" />
             </div>
           </div>
 
           <div class="flex items-center gap-3">
-            <span class="text-sm text-on-surface-muted w-40 shrink-0">History retention</span>
+            <span class="text-sm text-on-surface-muted w-44 shrink-0">History retention</span>
             <TextField v-model="historyRetention" type="number" min="10" max="100" class="w-24"
               @input="debounced('history', saveHistoryRetention)" />
             <span class="text-xs text-on-surface-muted">Versions kept per item (10-100)</span>
           </div>
 
           <div class="flex items-center gap-3">
-            <span class="text-sm text-on-surface-muted w-40 shrink-0">Trash retention</span>
+            <span class="text-sm text-on-surface-muted w-44 shrink-0">Trash retention</span>
             <TextField v-model="trashRetentionDays" type="number" min="1" max="365" class="w-24"
               @input="debounced('trash', saveTrashRetention)" />
             <span class="text-xs text-on-surface-muted">Days before deleted items purge</span>
           </div>
 
           <div class="flex items-center gap-3">
-            <span class="text-sm text-on-surface-muted w-40 shrink-0">New note focus</span>
-            <div class="w-40">
+            <span class="text-sm text-on-surface-muted w-44 shrink-0">New note focus</span>
+            <div class="w-44">
               <SelectMenu :model-value="store.application.newNoteFocus" :options="FOCUS_OPTIONS"
                 @update:model-value="store.saveApplication({ newNoteFocus: $event })" />
             </div>
           </div>
 
           <div class="flex items-center gap-3">
-            <span class="text-sm text-on-surface-muted w-40 shrink-0">New task focus</span>
-            <div class="w-40">
+            <span class="text-sm text-on-surface-muted w-44 shrink-0">New task focus</span>
+            <div class="w-44">
               <SelectMenu :model-value="store.application.newTaskFocus" :options="FOCUS_OPTIONS"
                 @update:model-value="store.saveApplication({ newTaskFocus: $event })" />
             </div>
           </div>
 
           <div class="flex items-center gap-3">
-            <span class="text-sm text-on-surface-muted w-40 shrink-0">Check for updates</span>
+            <span class="text-sm text-on-surface-muted w-44 shrink-0">Check for updates</span>
             <Toggle :model-value="store.application.autoCheckUpdates"
               @update:model-value="store.saveApplication({ autoCheckUpdates: $event })" />
             <span class="text-xs text-on-surface-muted">Check automatically at startup</span>
           </div>
 
           <div class="flex items-center gap-3">
-            <span class="text-sm text-on-surface-muted w-40 shrink-0">Auto-update</span>
+            <span class="text-sm text-on-surface-muted w-44 shrink-0">Auto-update</span>
             <Toggle :model-value="store.application.autoUpdate"
               @update:model-value="store.saveApplication({ autoUpdate: $event })" />
             <span class="text-xs text-on-surface-muted">Pre-download and apply on restart</span>
           </div>
 
           <div class="flex items-center gap-3">
-            <span class="text-sm text-on-surface-muted w-40 shrink-0"></span>
+            <span class="text-sm text-on-surface-muted w-44 shrink-0"></span>
             <Button disabled title="Available in packaged builds">
               <i-lucide-refresh-cw class="size-4" />
               Check for updates
@@ -285,51 +285,52 @@ onMounted(async () => {
           <h2 id="settings-editor" class="text-sm font-semibold">Editor</h2>
 
           <div class="flex items-center gap-3">
-            <span class="text-sm text-on-surface-muted w-40 shrink-0">Font size</span>
+            <span class="text-sm text-on-surface-muted w-44 shrink-0">Font size</span>
             <TextField v-model="fontSize" type="number" min="8" max="32" class="w-24"
               @input="debounced('fontSize', saveFontSize)" />
           </div>
 
           <div class="flex items-center gap-3">
-            <span class="text-sm text-on-surface-muted w-40 shrink-0">Font family</span>
-            <TextField v-model="fontFamily" type="text" spellcheck="false" placeholder="System monospace"
-              class="w-64" @input="debounced('fontFamily', saveFontFamily)" />
+            <span class="text-sm text-on-surface-muted w-44 shrink-0">Font family</span>
+            <TextField v-model="fontFamily" type="text" spellcheck="false" placeholder="System monospace" class="w-64"
+              @input="debounced('fontFamily', saveFontFamily)" />
           </div>
 
           <div class="flex items-center gap-3">
-            <span class="text-sm text-on-surface-muted w-40 shrink-0">Spellcheck</span>
+            <span class="text-sm text-on-surface-muted w-44 shrink-0">Spellcheck</span>
             <Toggle :model-value="store.editor.spellcheckEnabled"
               @update:model-value="store.saveEditor({ spellcheckEnabled: $event })" />
           </div>
 
           <div class="flex items-center gap-3">
-            <span class="text-sm text-on-surface-muted w-40 shrink-0">Show line count</span>
+            <span class="text-sm text-on-surface-muted w-44 shrink-0">Show line count</span>
             <Toggle :model-value="store.editor.showLineCount"
               @update:model-value="store.saveEditor({ showLineCount: $event })" />
           </div>
 
           <div class="flex items-center gap-3">
-            <span class="text-sm text-on-surface-muted w-40 shrink-0">Highlight active line</span>
+            <span class="text-sm text-on-surface-muted w-44 shrink-0">Highlight active line</span>
             <Toggle :model-value="store.editor.highlightActiveLine"
               @update:model-value="store.saveEditor({ highlightActiveLine: $event })" />
           </div>
 
           <div class="flex items-center gap-3">
-            <span class="text-sm text-on-surface-muted w-40 shrink-0">Remember cursor position</span>
+            <span class="text-sm text-on-surface-muted w-44 shrink-0">Remember cursor position</span>
             <Toggle :model-value="store.editor.rememberCursorPosition"
               @update:model-value="store.saveEditor({ rememberCursorPosition: $event })" />
             <span class="text-xs text-on-surface-muted">Reopen a note where you left off</span>
           </div>
 
           <div class="flex items-center gap-3">
-            <span class="text-sm text-on-surface-muted w-40 shrink-0">Autosave debounce</span>
+            <span class="text-sm text-on-surface-muted w-44 shrink-0">Autosave debounce</span>
             <TextField v-model="autosaveDebounceMs" type="number" min="100" max="10000" step="100" class="w-24"
               @input="debounced('autosave', saveAutosaveDebounce)" />
-            <span class="text-xs text-on-surface-muted">Milliseconds after typing stops (Ctrl+S saves immediately)</span>
+            <span class="text-xs text-on-surface-muted">Milliseconds after typing stops (Ctrl+S saves
+              immediately)</span>
           </div>
 
           <div class="flex items-start gap-3">
-            <span class="text-sm text-on-surface-muted w-40 shrink-0 pt-0.5">Markdown extensions</span>
+            <span class="text-sm text-on-surface-muted w-44 shrink-0 pt-0.5">Markdown extensions</span>
             <div class="flex flex-col gap-2">
               <label v-for="t in MD_TOGGLES" :key="t.key" class="flex items-center gap-2.5">
                 <Toggle :model-value="store.editor[t.key]"
@@ -344,22 +345,21 @@ onMounted(async () => {
           <h2 id="settings-sync" class="text-sm font-semibold">Sync server</h2>
 
           <div class="flex items-center gap-3">
-            <span class="text-sm text-on-surface-muted w-40 shrink-0">Status</span>
+            <span class="text-sm text-on-surface-muted w-44 shrink-0">Status</span>
             <span class="size-2.5 rounded-full shrink-0" :class="sync.connected ? 'bg-emerald-500' : 'bg-rose-500'" />
             <span class="text-sm text-on-surface-muted min-w-0 break-words">{{ sync.label }}</span>
           </div>
 
           <div class="flex items-center gap-3">
-            <span class="text-sm text-on-surface-muted w-40 shrink-0">Server URL</span>
-            <TextField v-model="syncServerUrl" type="text" spellcheck="false"
-              placeholder="https://sync.example.com" class="w-80" @blur="commitSyncServerUrl"
-              @keydown.enter.prevent="$event.target.blur()" />
+            <span class="text-sm text-on-surface-muted w-44 shrink-0">Server URL</span>
+            <TextField v-model="syncServerUrl" type="text" spellcheck="false" placeholder="https://sync.example.com"
+              class="w-80" @blur="commitSyncServerUrl" @keydown.enter.prevent="$event.target.blur()" />
           </div>
 
           <div class="flex items-center gap-3">
-            <span class="text-sm text-on-surface-muted w-40 shrink-0">Token</span>
+            <span class="text-sm text-on-surface-muted w-44 shrink-0">Token</span>
             <template v-if="sync.status?.tokenSet && !tokenEditing">
-              <span class="text-sm text-on-surface-muted w-40">••••••••</span>
+              <span class="text-sm text-on-surface-muted w-44">••••••••</span>
               <Button @click="startTokenReplace">Replace</Button>
               <Button @click="sync.removeToken()">Remove</Button>
             </template>
@@ -369,7 +369,7 @@ onMounted(async () => {
           </div>
 
           <div class="flex items-center gap-3">
-            <span class="text-sm text-on-surface-muted w-40 shrink-0"></span>
+            <span class="text-sm text-on-surface-muted w-44 shrink-0"></span>
             <Button :disabled="!sync.status?.configured || !sync.status?.tokenSet || sync.syncing" @click="sync.sync()">
               <i-lucide-refresh-cw class="size-4" :class="sync.syncing ? 'animate-spin' : ''" />
               Sync now
@@ -404,7 +404,8 @@ onMounted(async () => {
               </Button>
             </div>
             <pre
-              class="font-mono text-xs bg-surface-alt border border-border rounded-md p-3 max-h-96 overflow-auto whitespace-pre-wrap">{{ logText || 'The log is empty.' }}</pre>
+              class="font-mono text-xs bg-surface-alt border border-border rounded-md p-3 max-h-96 overflow-auto whitespace-pre-wrap">
+      {{ logText || 'The log is empty.' }}</pre>
           </div>
         </div>
 

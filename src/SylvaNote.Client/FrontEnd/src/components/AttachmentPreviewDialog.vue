@@ -126,8 +126,8 @@ const sizeLabel = () => {
        Clicking the empty backdrop closes; Esc via the dialog root. -->
   <DialogRoot :open="open" @update:open="emit('update:open', $event)">
     <DialogPortal>
-      <DialogOverlay class="fixed inset-0 bg-black/80 z-50" />
-      <DialogContent class="fixed inset-0 z-50 flex flex-col outline-none">
+      <DialogOverlay class="fixed inset-0 bg-black/80 z-50 dialog-fade" />
+      <DialogContent class="fixed inset-0 z-50 flex flex-col outline-none dialog-fade">
         <div class="flex items-center gap-1 px-4 h-12 shrink-0">
           <DialogTitle class="flex-1 min-w-0 truncate text-sm text-white/90">
             {{ shown?.filename }}

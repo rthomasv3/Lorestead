@@ -24,9 +24,9 @@ function confirm() {
 <template>
   <AlertDialogRoot :open="open" @update:open="emit('update:open', $event)">
     <AlertDialogPortal>
-      <AlertDialogOverlay class="fixed inset-0 bg-black/40 z-40" />
+      <AlertDialogOverlay class="fixed inset-0 bg-black/40 z-40 dialog-fade" />
       <AlertDialogContent
-        class="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-sm rounded-lg border border-border bg-surface-elevated p-5 shadow-xl">
+        class="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-sm rounded-lg border border-border bg-surface-elevated p-5 shadow-xl dialog-fade">
         <AlertDialogTitle class="font-semibold mb-2">{{ title }}</AlertDialogTitle>
         <AlertDialogDescription class="text-sm text-on-surface-muted mb-5">{{ message }}</AlertDialogDescription>
         <div class="flex justify-end gap-2">

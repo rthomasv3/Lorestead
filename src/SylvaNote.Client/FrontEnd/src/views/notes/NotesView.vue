@@ -381,9 +381,9 @@ onMounted(() => {
 
     <DialogRoot :open="restoreTarget !== null" @update:open="(v) => { if (!v) restoreTarget = null }">
       <DialogPortal>
-        <DialogOverlay class="fixed inset-0 bg-black/40 z-40" />
+        <DialogOverlay class="fixed inset-0 bg-black/40 z-40 dialog-fade" />
         <DialogContent
-          class="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-sm rounded-lg border border-border bg-surface-elevated p-5 shadow-xl">
+          class="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-sm rounded-lg border border-border bg-surface-elevated p-5 shadow-xl dialog-fade">
           <DialogTitle class="font-semibold mb-2">Restore note</DialogTitle>
           <DialogDescription class="text-sm text-on-surface-muted mb-5">
             This note's parent is still in the Trash. Restore it alone at the root level, or bring its parent back too.

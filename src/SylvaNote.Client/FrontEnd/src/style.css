@@ -45,11 +45,11 @@ button:not(:disabled),
    changes and only <main> carries a view-transition-name, so the sidebar never animates. */
 @media (prefers-reduced-motion: no-preference) {
     ::view-transition-old(main-view) {
-        animation: vt-content-out 90ms ease-in both;
+        animation: fade-out 90ms ease-in both;
     }
 
     ::view-transition-new(main-view) {
-        animation: vt-content-in 150ms cubic-bezier(0.16, 1, 0.3, 1) both;
+        animation: fade-in 150ms cubic-bezier(0.16, 1, 0.3, 1) both;
     }
 
     /* The sidebar and app frame (root) never change during a route transition — hold them
@@ -60,16 +60,33 @@ button:not(:disabled),
     }
 }
 
-@keyframes vt-content-out {
+/* The app's one fade, shared by the route crossfade above and dialogs below. */
+@keyframes fade-out {
     to {
         opacity: 0;
     }
 }
 
-@keyframes vt-content-in {
+@keyframes fade-in {
     from {
         opacity: 0;
     }
+}
+
+/* Dialogs and their backdrops, on the same curve and timing as the route
+   crossfade. Reka is headless and ships no animation of its own; its Presence
+   holds a closing element mounted by waiting on `animationend`, and it decides
+   something is animating by watching `animation-name` change - so the two halves
+   have to be separately named keyframes, and a transition would not play at all
+   on the way out. Not gated behind `no-preference` like the view transitions:
+   the reduced-motion rule below collapses the duration instead, which keeps the
+   name Presence needs. */
+.dialog-fade[data-state="open"] {
+    animation: fade-in 150ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.dialog-fade[data-state="closed"] {
+    animation: fade-out 90ms ease-in both;
 }
 
 /* Reduced motion, app-wide. A near-zero duration rather than `transition: none`, because
