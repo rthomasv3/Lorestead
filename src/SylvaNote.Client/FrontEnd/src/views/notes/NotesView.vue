@@ -299,7 +299,7 @@ onMounted(() => {
                 <div class="flex-1" />
                 <span v-if="readonly"
                   class="text-xs text-on-surface-muted border border-border rounded px-1.5 py-0.5 mr-1">
-                  In trash - read-only
+                  In Trash - read-only
                 </span>
                 <Button variant="ghost" size="icon" title="Export note" :disabled="readonly"
                   @click="exportNote(currentNote.id)">

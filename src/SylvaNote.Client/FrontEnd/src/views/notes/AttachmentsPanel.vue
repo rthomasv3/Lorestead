@@ -60,7 +60,7 @@ function onPick(e) {
   <div class="h-full flex flex-col min-h-0">
     <div class="flex items-center justify-between px-3 h-10 shrink-0 border-b border-border">
       <span class="text-sm font-medium">Attachments</span>
-      <Button variant="ghost" size="icon" :title="readonly ? 'Note is in the trash' : 'Add attachment'"
+      <Button variant="ghost" size="icon" :title="readonly ? 'Note is in the Trash' : 'Add attachment'"
         :disabled="readonly" @click="fileInput.click()">
         <i-lucide-plus class="size-4" />
       </Button>
@@ -74,7 +74,7 @@ function onPick(e) {
         @delete="pendingDelete = attachment" @preview="previewAttachment = attachment" />
 
       <EmptyState v-if="notesStore.currentAttachments.length === 0" class="flex-1" :drop-target="!readonly">
-        <template v-if="readonly">This note is in the trash</template>
+        <template v-if="readonly">This note is in the Trash</template>
         <template v-else>Drop files here or use + to attach. Up to 100 MB each.</template>
       </EmptyState>
     </div>

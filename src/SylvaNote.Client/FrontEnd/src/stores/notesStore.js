@@ -87,7 +87,7 @@ export const useNotesStore = defineStore('notes', () => {
         type: 'templates-root',
         selectable: false,
         expandable: true,
-        emptyLabel: 'No Templates',
+        emptyLabel: 'No templates',
         children: templateRoots,
       },
       {
@@ -96,8 +96,8 @@ export const useNotesStore = defineStore('notes', () => {
         type: 'trash-root',
         selectable: false,
         expandable: true,
-        emptyLabel: 'No Trash',
-        dropLabel: 'Delete Item',
+        emptyLabel: 'No trash',
+        dropLabel: 'Delete item',
         children: trashRoots,
       },
     ]

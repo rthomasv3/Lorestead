@@ -146,7 +146,7 @@ function toggleGap(index) {
         </Button>
         <span class="flex-1 min-w-0 text-sm font-medium truncate">{{ selected ? stamp(selected.changedAt) : '' }}</span>
         <Button variant="ghost" size="sm" class="shrink-0"
-          :title="readonly ? 'Note is in the trash' : 'Restore this version'" :disabled="readonly"
+          :title="readonly ? 'Note is in the Trash' : 'Restore this version'" :disabled="readonly"
           @click="pendingRestore = true">
           Restore
         </Button>
