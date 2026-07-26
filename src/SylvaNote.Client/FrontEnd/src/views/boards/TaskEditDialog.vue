@@ -376,7 +376,7 @@ function onDialogKeydown(e) {
 
         <div v-if="task" class="flex items-start gap-2 px-5 pt-4 shrink-0">
           <textarea ref="titleInput" :value="title" rows="1" placeholder="Untitled task"
-            class="flex-1 min-w-0 resize-none overflow-hidden bg-transparent text-lg font-semibold outline-none rounded-md border border-transparent hover:cursor-text focus:border-border px-2 py-1"
+            class="flex-1 min-w-0 resize-none overflow-hidden bg-transparent text-lg font-semibold outline-none rounded-md border border-transparent hover:cursor-text focus:border-accent px-2 py-1"
             @input="onTitleInput" @keydown.enter.prevent="$event.target.blur()" />
           <!-- Out of the tab order so Tab from the title reaches the description
                instead of the one control that throws the dialog away. Esc is the
