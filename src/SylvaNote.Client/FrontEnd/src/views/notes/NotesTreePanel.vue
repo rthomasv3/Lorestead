@@ -6,6 +6,7 @@ import Button from '../../components/Button.vue'
 import TextField from '../../components/TextField.vue'
 import IconSearch from '~icons/lucide/search'
 import { MENU_ITEM_CLASS as menuItemClass } from '../../utils/menu.js'
+import { exportSubtree, exportAll } from '../../services/exportService.js'
 import { useNotesStore, TEMPLATES_ID, TRASH_ID } from '../../stores/notesStore.js'
 import { useSettingsStore } from '../../stores/settingsStore.js'
 
@@ -232,22 +233,23 @@ defineExpose({ treeRef, addNote })
   <div class="h-full flex flex-col min-h-0">
     <div class="flex items-center gap-1 px-2 h-10 shrink-0 border-b border-border">
       <TextField v-model="query" size="small" :icon="IconSearch" placeholder="Filter notes" class="flex-1" />
-      <!-- Two plain icon buttons rather than a split control, matching the pair
-           that appears on tree row hover. -->
-      <Button variant="ghost" size="icon" title="New note" @click="addNote(null)">
-        <i-lucide-plus class="size-4" />
+      <Button variant="ghost" size="icon" title="Export all notes" @click="exportAll()">
+        <i-lucide-download class="size-4" />
       </Button>
       <Button variant="ghost" size="icon" title="New note from template"
         @click="emit('request-template', { parentId: null })">
         <i-lucide-layout-template class="size-4" />
       </Button>
+      <Button variant="ghost" size="icon" title="New note" @click="addNote(null)">
+        <i-lucide-plus class="size-4" />
+      </Button>
     </div>
 
     <div class="flex-1 min-h-0 overflow-y-auto overflow-x-auto pt-1.5 pb-2">
       <Tree ref="treeRef" :items="visibleItems" :selected-id="notesStore.selectedId"
-        :expanded-ids="notesStore.expandedIds" :can-drag="canDrag"
-        :resolve-drop="resolveDrop" :can-rename="canRename" :context-menu-for="contextMenuFor" @select="onSelect"
-        @rename="onRename" @drop="onDrop" @update:expanded-ids="(s) => (notesStore.expandedIds = s)">
+        :expanded-ids="notesStore.expandedIds" :can-drag="canDrag" :resolve-drop="resolveDrop" :can-rename="canRename"
+        :context-menu-for="contextMenuFor" @select="onSelect" @rename="onRename" @drop="onDrop"
+        @update:expanded-ids="(s) => (notesStore.expandedIds = s)">
         <template #item="{ item, editing, onEditBlur, cancelEdit }">
           <template v-if="item.type === 'note'">
             <input v-if="editing" :value="item.label === 'Untitled' ? '' : item.label" placeholder="Untitled"
@@ -262,15 +264,15 @@ defineExpose({ treeRef, addNote })
                 {{ item.label }}</span>
               <span v-if="!item.trashed" class="ml-auto shrink-0 hidden group-hover:flex items-center gap-1" @click.stop
                 @dblclick.stop>
-                <span role="button" title="Add child note"
-                  class="p-0.5 rounded text-on-surface-muted hover:text-on-surface hover:bg-on-surface/10"
-                  @click="addNote(item.noteId)">
-                  <i-lucide-plus class="size-3.5" />
-                </span>
                 <span role="button" title="Add child from template"
                   class="p-0.5 rounded text-on-surface-muted hover:text-on-surface hover:bg-on-surface/10"
                   @click="emit('request-template', { parentId: item.noteId })">
                   <i-lucide-layout-template class="size-3.5" />
+                </span>
+                <span role="button" title="Add child note"
+                  class="p-0.5 rounded text-on-surface-muted hover:text-on-surface hover:bg-on-surface/10"
+                  @click="addNote(item.noteId)">
+                  <i-lucide-plus class="size-3.5" />
                 </span>
               </span>
             </template>
@@ -307,6 +309,10 @@ defineExpose({ treeRef, addNote })
             <ContextMenuItem :class="menuItemClass" @select="treeRef.startEditing(item)">
               <i-lucide-pencil class="size-4 text-on-surface-muted" />
               Rename
+            </ContextMenuItem>
+            <ContextMenuItem :class="menuItemClass" @select="exportSubtree(item.noteId)">
+              <i-lucide-download class="size-4 text-on-surface-muted" />
+              Export as markdown
             </ContextMenuItem>
             <ContextMenuItem :class="menuItemClass" @select="emit('request-delete', { item, viaDrag: false })">
               <i-lucide-trash-2 class="size-4 text-red-500" />

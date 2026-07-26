@@ -15,6 +15,7 @@ import Button from '../../components/Button.vue'
 import { useNotesStore } from '../../stores/notesStore.js'
 import { useSettingsStore } from '../../stores/settingsStore.js'
 import { formatTimestamp } from '../../utils/dateFormat.js'
+import { exportNote } from '../../services/exportService.js'
 
 const notesStore = useNotesStore()
 const settingsStore = useSettingsStore()
@@ -291,6 +292,10 @@ onMounted(() => {
                   class="text-xs text-on-surface-muted border border-border rounded px-1.5 py-0.5 mr-1">
                   In trash - read-only
                 </span>
+                <Button variant="ghost" size="icon" title="Export note" :disabled="readonly"
+                  @click="exportNote(currentNote.id)">
+                  <i-lucide-download class="size-4" />
+                </Button>
                 <Button variant="ghost" size="icon" title="Toggle preview" :active="previewOpen"
                   @click="previewOpen = !previewOpen">
                   <i-lucide-columns-2 class="size-4" />

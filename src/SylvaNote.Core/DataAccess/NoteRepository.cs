@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Microsoft.Data.Sqlite;
 using SylvaNote.Core.Entities;
+using SylvaNote.Core.Notes;
 using SylvaNote.Core.Ordering;
 using SylvaNote.Core.Sync;
 
@@ -24,6 +25,12 @@ namespace SylvaNote.Core.DataAccess
         {
             using SqliteConnection connection = _connectionManager.CreateConnection();
             using SqliteTransaction transaction = connection.BeginTransaction();
+
+            // Every local write lands here - client services, MCP tools, template
+            // instantiation - so this is the one place the hygiene rule has to hold.
+            // Changes arriving from sync go through UpsertWithin instead and are left
+            // exactly as the originating device wrote them.
+            note.Title = NoteTitle.Normalize(note.Title);
 
             string now = Timestamps.UtcNowIso();
             if (string.IsNullOrEmpty(note.CreatedAt))

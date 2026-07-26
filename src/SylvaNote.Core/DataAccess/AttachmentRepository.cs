@@ -76,6 +76,22 @@ namespace SylvaNote.Core.DataAccess
             return attachments;
         }
 
+        // One query for the whole export rather than one per note; the caller keeps
+        // only the rows whose owner is in scope.
+        public List<Attachment> GetAllForNotes()
+        {
+            List<Attachment> attachments = new List<Attachment>();
+            using SqliteConnection connection = _connectionManager.CreateConnection();
+            using SqliteCommand select = connection.CreateCommand();
+            select.CommandText = SelectSql + " WHERE note_id IS NOT NULL AND deleted = 0 ORDER BY created_at";
+            using SqliteDataReader reader = select.ExecuteReader();
+            while (reader.Read())
+            {
+                attachments.Add(ReadAttachment(reader));
+            }
+            return attachments;
+        }
+
         public List<Attachment> GetForTask(string taskId)
         {
             List<Attachment> attachments = new List<Attachment>();

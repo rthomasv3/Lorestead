@@ -42,6 +42,7 @@ internal class Program
             .AddSingleton<ISettingsService, SettingsService>()
             .AddSingleton<INoteService, NoteService>()
             .AddSingleton<IAttachmentService, AttachmentService>()
+            .AddSingleton<IExportService, ExportService>()
             .AddSingleton<IBoardService, BoardService>()
             .AddSingleton<ISyncService, SyncEngine>()
             .AddSingleton<IChangeWatcher, DataVersionWatcher>()
@@ -98,6 +99,7 @@ internal class Program
         builder.AddNoteCommands();
         builder.AddAttachmentCommands();
         builder.AddBoardCommands();
+        builder.AddExportCommands();
 
 //-:cnd:noEmit
 #if DEBUG
