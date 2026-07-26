@@ -72,6 +72,23 @@ button:not(:disabled),
     }
 }
 
+/* Reduced motion, app-wide. A near-zero duration rather than `transition: none`, because
+   ToolPanelShell mounts its content on the width `transitionend` and would render blank if
+   that event never fired. The sync spinner is exempt: it reports work in progress, and a
+   single iteration would freeze it mid-sync. */
+@media (prefers-reduced-motion: reduce) {
+
+    *:not(.animate-spin),
+    *::before,
+    *::after {
+        transition-duration: 0.01ms !important;
+        transition-delay: 0ms !important;
+        animation-duration: 0.01ms !important;
+        animation-delay: 0ms !important;
+        animation-iteration-count: 1 !important;
+    }
+}
+
 @theme {
     --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Cantarell, 'Liberation Sans', sans-serif;
     --default-font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Cantarell, 'Liberation Sans', sans-serif;
