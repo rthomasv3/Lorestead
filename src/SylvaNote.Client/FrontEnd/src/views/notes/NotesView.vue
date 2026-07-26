@@ -12,6 +12,7 @@ import MarkdownEditor from '../../components/MarkdownEditor.vue'
 import MarkdownPreview from '../../components/MarkdownPreview.vue'
 import ConfirmDialog from '../../components/ConfirmDialog.vue'
 import Button from '../../components/Button.vue'
+import EmptyState from '../../components/EmptyState.vue'
 import { useNotesStore } from '../../stores/notesStore.js'
 import { useSettingsStore } from '../../stores/settingsStore.js'
 import { formatTimestamp } from '../../utils/dateFormat.js'
@@ -264,10 +265,9 @@ onMounted(() => {
       <SplitterPanel :min-size="30">
         <div class="h-full flex min-h-0">
           <div class="flex-1 min-w-0 flex flex-col min-h-0">
-            <div v-if="!currentNote" class="h-full flex items-center justify-center p-8">
-              <p class="text-on-surface-muted text-center">Select a note, or create one with the + button in the tree
-              </p>
-            </div>
+            <EmptyState v-if="!currentNote" class="h-full">
+              Select a note, or create one with the + button in the tree
+            </EmptyState>
 
             <div v-else class="h-full flex flex-col min-h-0">
               <div class="flex items-center gap-0.5 px-2 h-10 shrink-0 border-b border-border">

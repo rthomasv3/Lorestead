@@ -3,6 +3,7 @@ import { ref, computed, watch } from 'vue'
 import { ContextMenuItem } from 'reka-ui'
 import Tree from '../../components/Tree.vue'
 import Button from '../../components/Button.vue'
+import EmptyState from '../../components/EmptyState.vue'
 import TextField from '../../components/TextField.vue'
 import IconSearch from '~icons/lucide/search'
 import { MENU_ITEM_CLASS as menuItemClass } from '../../utils/menu.js'
@@ -62,6 +63,13 @@ const visibleItems = computed(() => {
     .map(prune)
     .filter((item) => item && (item.type === 'note' || item.children.length > 0))
 })
+
+// Two different empties, and they are not the same message. Templates and Trash
+// are always in the tree, so "no notes" is no note-type roots rather than an
+// empty tree - the message sits under those two rows, not instead of them.
+const noMatches = computed(() => filtering.value && visibleItems.value.length === 0)
+const noNotes = computed(() =>
+  !filtering.value && !notesStore.treeItems.some((item) => item.type === 'note'))
 
 function expandFiltered() {
   if (!expandedSnapshot) {
@@ -246,6 +254,15 @@ defineExpose({ treeRef, addNote })
     </div>
 
     <div class="flex-1 min-h-0 overflow-y-auto overflow-x-auto pt-1.5 pb-2">
+      <!-- Above the tree, because that is where the notes are: the message stands
+           in for the missing rows, and Templates and Trash stay put below it. -->
+      <EmptyState v-if="noMatches">
+        No notes match the filter
+      </EmptyState>
+      <EmptyState v-else-if="noNotes">
+        No notes yet. Create one with +.
+      </EmptyState>
+
       <Tree ref="treeRef" :items="visibleItems" :selected-id="notesStore.selectedId"
         :expanded-ids="notesStore.expandedIds" :can-drag="canDrag" :resolve-drop="resolveDrop" :can-rename="canRename"
         :context-menu-for="contextMenuFor" @select="onSelect" @rename="onRename" @drop="onDrop"

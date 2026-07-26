@@ -5,6 +5,7 @@ import BoardListPanel from './BoardListPanel.vue'
 import KanbanBoard from './KanbanBoard.vue'
 import TaskEditDialog from './TaskEditDialog.vue'
 import ConfirmDialog from '../../components/ConfirmDialog.vue'
+import EmptyState from '../../components/EmptyState.vue'
 import { useBoardsStore } from '../../stores/boardsStore.js'
 
 const boardsStore = useBoardsStore()
@@ -46,18 +47,12 @@ onMounted(() => {
       <SplitterResizeHandle class="w-px bg-transparent hover:bg-accent/50 transition-colors" />
 
       <SplitterPanel :min-size="30">
-        <div v-if="!boardsStore.selectedBoardId" class="h-full flex items-center justify-center p-8">
-          <div class="flex flex-col items-center gap-2 text-on-surface-muted">
-            <i-lucide-square-kanban class="size-8" />
-            <p class="text-sm text-center">
-              {{ boardsStore.boards.length === 0
-                ? 'Create a board with the + button to get started.'
-                : 'Select a board from the list.' }}
-            </p>
-          </div>
-        </div>
-        <KanbanBoard v-else @open-task="openTask"
-          @request-delete-column="(column) => (pendingDeleteColumn = column)"
+        <EmptyState v-if="!boardsStore.selectedBoardId" class="h-full mt-5">
+          {{ boardsStore.boards.length === 0
+            ? 'Create a board with the + button to get started.'
+            : 'Select a board from the list.' }}
+        </EmptyState>
+        <KanbanBoard v-else @open-task="openTask" @request-delete-column="(column) => (pendingDeleteColumn = column)"
           @request-delete-task="(task) => (pendingDeleteTask = task)" />
       </SplitterPanel>
     </SplitterGroup>
@@ -67,16 +62,15 @@ onMounted(() => {
       confirm-label="Delete" @update:open="(v) => { if (!v) pendingDeleteBoard = null }"
       @confirm="boardsStore.deleteBoard(pendingDeleteBoard.id); pendingDeleteBoard = null" />
 
-    <ConfirmDialog :open="pendingDeleteColumn !== null" title="Delete list?"
-      :message="columnTaskCount(pendingDeleteColumn) > 0
-        ? `&quot;${pendingDeleteColumn?.name || 'Untitled list'}&quot; and its ${columnTaskCount(pendingDeleteColumn)} ${columnTaskCount(pendingDeleteColumn) === 1 ? 'task' : 'tasks'} will be deleted.`
-        : `&quot;${pendingDeleteColumn?.name || 'Untitled list'}&quot; will be deleted.`"
-      confirm-label="Delete" @update:open="(v) => { if (!v) pendingDeleteColumn = null }"
+    <ConfirmDialog :open="pendingDeleteColumn !== null" title="Delete list?" :message="columnTaskCount(pendingDeleteColumn) > 0
+      ? `&quot;${pendingDeleteColumn?.name || 'Untitled list'}&quot; and its ${columnTaskCount(pendingDeleteColumn)} ${columnTaskCount(pendingDeleteColumn) === 1 ? 'task' : 'tasks'} will be deleted.`
+      : `&quot;${pendingDeleteColumn?.name || 'Untitled list'}&quot; will be deleted.`" confirm-label="Delete"
+      @update:open="(v) => { if (!v) pendingDeleteColumn = null }"
       @confirm="boardsStore.deleteColumn(pendingDeleteColumn.id); pendingDeleteColumn = null" />
 
     <ConfirmDialog :open="pendingDeleteTask !== null" title="Delete task?"
-      :message="`&quot;${pendingDeleteTask?.title || 'Untitled task'}&quot; will be deleted.`"
-      confirm-label="Delete" @update:open="(v) => { if (!v) pendingDeleteTask = null }"
+      :message="`&quot;${pendingDeleteTask?.title || 'Untitled task'}&quot; will be deleted.`" confirm-label="Delete"
+      @update:open="(v) => { if (!v) pendingDeleteTask = null }"
       @confirm="boardsStore.deleteTask(pendingDeleteTask.id); pendingDeleteTask = null" />
 
     <TaskEditDialog :open="taskDialog.open" :task-id="taskDialog.taskId" :is-new="taskDialog.isNew"

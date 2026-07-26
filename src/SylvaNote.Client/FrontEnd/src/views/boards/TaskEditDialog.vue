@@ -9,6 +9,7 @@ import AttachmentCard from '../../components/AttachmentCard.vue'
 import AttachmentPreviewDialog from '../../components/AttachmentPreviewDialog.vue'
 import Button from '../../components/Button.vue'
 import ConfirmDialog from '../../components/ConfirmDialog.vue'
+import EmptyState from '../../components/EmptyState.vue'
 import * as attachmentService from '../../services/attachmentService.js'
 import { createImageThumbnail } from '../../utils/thumbnails.js'
 import { useBoardsStore } from '../../stores/boardsStore.js'
@@ -443,10 +444,9 @@ function onDialogKeydown(e) {
               <AttachmentCard v-for="attachment in attachments" :key="attachment.id" :attachment="attachment"
                 @rename="(filename) => renameAttachment(attachment.id, filename)"
                 @delete="pendingDeleteAttachment = attachment" @preview="previewAttachment = attachment" />
-              <div v-if="attachments.length === 0"
-                class="text-sm text-on-surface-muted/60 text-center rounded-md border border-dashed border-border p-3">
+              <EmptyState v-if="attachments.length === 0" drop-target>
                 Drop files here or use + to attach. Up to 100 MB each.
-              </div>
+              </EmptyState>
             </div>
           </div>
 

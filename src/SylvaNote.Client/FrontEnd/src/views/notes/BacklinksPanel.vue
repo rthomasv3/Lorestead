@@ -1,5 +1,6 @@
 <script setup>
 import { useRouter } from 'vue-router'
+import EmptyState from '../../components/EmptyState.vue'
 import { useNotesStore } from '../../stores/notesStore.js'
 import { useBoardsStore } from '../../stores/boardsStore.js'
 
@@ -50,10 +51,9 @@ async function open(backlink) {
         <p v-if="backlink.snippet" class="text-xs text-on-surface-muted mt-1 line-clamp-3">{{ backlink.snippet }}</p>
       </button>
 
-      <div v-if="notesStore.currentBacklinks.length === 0"
-        class="flex-1 flex items-center justify-center text-center text-sm text-on-surface-muted/60 rounded-md border border-dashed border-border m-1 p-4">
+      <EmptyState v-if="notesStore.currentBacklinks.length === 0" class="flex-1">
         Nothing links to this note yet
-      </div>
+      </EmptyState>
     </div>
   </div>
 </template>

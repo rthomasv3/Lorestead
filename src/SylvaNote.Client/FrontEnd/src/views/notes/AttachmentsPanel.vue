@@ -2,6 +2,7 @@
 import { ref, computed } from 'vue'
 import AttachmentCard from '../../components/AttachmentCard.vue'
 import Button from '../../components/Button.vue'
+import EmptyState from '../../components/EmptyState.vue'
 import AttachmentPreviewDialog from '../../components/AttachmentPreviewDialog.vue'
 import ConfirmDialog from '../../components/ConfirmDialog.vue'
 import { useNotesStore } from '../../stores/notesStore.js'
@@ -72,11 +73,10 @@ function onPick(e) {
         :readonly="readonly" @rename="(filename) => notesStore.renameAttachment(attachment.id, filename)"
         @delete="pendingDelete = attachment" @preview="previewAttachment = attachment" />
 
-      <div v-if="notesStore.currentAttachments.length === 0"
-        class="flex-1 flex items-center justify-center text-center text-sm text-on-surface-muted/60 rounded-md border border-dashed border-border m-1 p-4">
+      <EmptyState v-if="notesStore.currentAttachments.length === 0" class="flex-1" :drop-target="!readonly">
         <template v-if="readonly">This note is in the trash</template>
-        <template v-else>Drop files here or use + to attach<br />Up to 100 MB each</template>
-      </div>
+        <template v-else>Drop files here or use + to attach. Up to 100 MB each.</template>
+      </EmptyState>
     </div>
 
     <AttachmentPreviewDialog :open="previewAttachment !== null" :attachment="previewAttachment"

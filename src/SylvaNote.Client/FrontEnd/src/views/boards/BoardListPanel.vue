@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import BoardListRow from './BoardListRow.vue'
 import Button from '../../components/Button.vue'
+import EmptyState from '../../components/EmptyState.vue'
 import { useBoardsStore } from '../../stores/boardsStore.js'
 
 const emit = defineEmits(['request-delete'])
@@ -55,10 +56,9 @@ function onKeydown(e) {
         @rename-done="renamingId = null" @request-rename="renamingId = board.id"
         @request-delete="emit('request-delete', board)" @drop="onDrop" />
 
-      <div v-if="boardsStore.boards.length === 0"
-        class="flex-1 flex items-center justify-center text-sm text-on-surface-muted/60">
+      <EmptyState v-if="boardsStore.boards.length === 0" class="flex-1">
         No boards yet. Create one with +.
-      </div>
+      </EmptyState>
     </div>
   </div>
 </template>

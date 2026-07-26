@@ -2,6 +2,7 @@
 import { ref, computed, watch } from 'vue'
 import Button from '../../components/Button.vue'
 import ConfirmDialog from '../../components/ConfirmDialog.vue'
+import EmptyState from '../../components/EmptyState.vue'
 import { useNotesStore } from '../../stores/notesStore.js'
 import { useSettingsStore } from '../../stores/settingsStore.js'
 import { formatTimestamp } from '../../utils/dateFormat.js'
@@ -130,10 +131,9 @@ function toggleGap(index) {
           </div>
         </button>
 
-        <div v-if="cards.length === 0"
-          class="flex-1 flex items-center justify-center text-center text-sm text-on-surface-muted/60 rounded-md border border-dashed border-border m-1 p-4">
+        <EmptyState v-if="cards.length === 0" class="flex-1">
           No earlier versions yet
-        </div>
+        </EmptyState>
       </div>
     </div>
 

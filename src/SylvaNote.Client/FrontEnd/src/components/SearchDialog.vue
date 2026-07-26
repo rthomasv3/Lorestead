@@ -2,6 +2,7 @@
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { DialogRoot, DialogPortal, DialogOverlay, DialogContent, DialogTitle, VisuallyHidden } from 'reka-ui'
+import EmptyState from './EmptyState.vue'
 import { useNotesStore } from '../stores/notesStore.js'
 import { useBoardsStore } from '../stores/boardsStore.js'
 
@@ -242,9 +243,9 @@ onUnmounted(() => {
             </span>
           </button>
         </div>
-        <div v-else-if="query.trim()" class="px-3.5 py-6 text-sm text-on-surface-muted text-center">
+        <EmptyState v-else-if="query.trim()">
           No results
-        </div>
+        </EmptyState>
 
         <div class="flex items-center gap-4 px-3.5 h-8 border-t border-border text-xs text-on-surface-muted">
           <span><kbd>↑</kbd> <kbd>↓</kbd> to navigate</span>
