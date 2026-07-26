@@ -12,7 +12,9 @@ namespace SylvaNote.Core.DataAccess
 
         // password: SQLCipher key, applied as PRAGMA key on every open (server DB);
         // null on the plain-SQLite client. The host picks the matching provider bundle.
-        public void Open(string dbPath, IReadOnlyList<IMigration> migrations, string password = null)
+        // Returns true when this call created the schema, which is the host's cue to
+        // run the first-run seeder (decisions.md).
+        public bool Open(string dbPath, IReadOnlyList<IMigration> migrations, string password = null)
         {
             SqliteConnectionStringBuilder builder = new SqliteConnectionStringBuilder
             {
@@ -36,7 +38,7 @@ namespace SylvaNote.Core.DataAccess
                 journal.ExecuteNonQuery();
             }
 
-            Migrate(connection, migrations);
+            return Migrate(connection, migrations);
         }
 
         // Shared-cache named in-memory DB for tests: it lives as long as one connection
@@ -76,14 +78,14 @@ namespace SylvaNote.Core.DataAccess
             ConnectionString = null;
         }
 
-        private static void Migrate(SqliteConnection connection, IReadOnlyList<IMigration> migrations)
+        private static bool Migrate(SqliteConnection connection, IReadOnlyList<IMigration> migrations)
         {
             DbMigrator migrator = new DbMigrator();
             foreach (IMigration migration in migrations)
             {
                 migrator.Add(migration);
             }
-            migrator.Run(connection);
+            return migrator.Run(connection);
         }
     }
 }

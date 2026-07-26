@@ -14,7 +14,10 @@ namespace SylvaNote.Core.DataAccess.Migrations
             return this;
         }
 
-        public void Run(SqliteConnection connection)
+        // Returns true when the schema was built from nothing. That is also the answer
+        // to "has this install been seeded" - every host that creates the database
+        // seeds it, so there is no separate flag to record (decisions.md).
+        public bool Run(SqliteConnection connection)
         {
             if (connection.State != ConnectionState.Open)
             {
@@ -23,6 +26,7 @@ namespace SylvaNote.Core.DataAccess.Migrations
 
             EnsureVersionTable(connection);
             int current = GetCurrentVersion(connection);
+            bool created = current == 0;
 
             _migrations.Sort((a, b) => a.Version.CompareTo(b.Version));
             foreach (IMigration migration in _migrations)
@@ -40,6 +44,8 @@ namespace SylvaNote.Core.DataAccess.Migrations
                     transaction.Commit();
                 }
             }
+
+            return created;
         }
 
         private static void EnsureVersionTable(SqliteConnection connection)

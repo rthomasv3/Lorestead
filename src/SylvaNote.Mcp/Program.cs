@@ -5,6 +5,7 @@ using ModelContextProtocol.Server;
 using SylvaNote.Core.DataAccess;
 using SylvaNote.Core.DataAccess.Migrations;
 using SylvaNote.Core.Entities;
+using SylvaNote.Core.FirstRun;
 using SylvaNote.Core.Mcp;
 
 namespace SylvaNote.Mcp;
@@ -27,8 +28,15 @@ internal static class Program
             Directory.CreateDirectory(dataDirectory);
 
             ConnectionManager connectionManager = new ConnectionManager();
-            connectionManager.Open(LocalDataPaths.GetDatabasePath(dataDirectory), MigrationSets.Client());
+            bool created = connectionManager.Open(LocalDataPaths.GetDatabasePath(dataDirectory), MigrationSets.Client());
             SyncState state = new SyncStateRepository(connectionManager).EnsureInitialized();
+
+            // An agent-first install is a real path for this app, so the binary that
+            // created the database is the one that seeds it (decisions.md).
+            if (created)
+            {
+                FirstRunSeeder.Seed(connectionManager, state.DeviceId);
+            }
 
             // The -mcp suffix marks agent edits in the change log while keeping the
             // originating device recognizable (features/mcp.md). Retention comes from

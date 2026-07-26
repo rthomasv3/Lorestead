@@ -305,6 +305,7 @@ button:not(:disabled),
     padding: 0.75em 1em;
     overflow-x: auto;
     margin: 0.6em 0;
+    line-height: 1em;
 }
 
 .markdown-preview pre code {

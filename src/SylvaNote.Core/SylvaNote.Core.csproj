@@ -11,6 +11,15 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- First-run content ships inside the assembly rather than as files beside it:
+         it has to survive packaging on every platform and be readable by whichever
+         host created the database (decisions.md). -->
+    <EmbeddedResource Include="FirstRun\Content\*.md" />
+    <EmbeddedResource Include="..\..\icon\icon-256.png"
+                      LogicalName="SylvaNote.Core.FirstRun.Content.icon-256.png" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="GaldrJson" />
     <PackageReference Include="Microsoft.Data.Sqlite.Core" />
     <PackageReference Include="ModelContextProtocol.Core" />

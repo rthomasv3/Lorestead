@@ -12,7 +12,6 @@ public class Config
     public static Config Create()
     {
         string dataDirectory = LocalDataPaths.ResolveDataDirectory();
-        LocalDataPaths.MigrateLegacyDatabase(dataDirectory);
         Directory.CreateDirectory(dataDirectory);
         Directory.CreateDirectory(Path.Combine(dataDirectory, "logs"));
 

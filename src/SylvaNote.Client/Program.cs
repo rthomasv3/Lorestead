@@ -10,6 +10,7 @@ using SylvaNote.Client.Services.Abstractions;
 using SylvaNote.Core.DataAccess;
 using SylvaNote.Core.DataAccess.Migrations;
 using SylvaNote.Core.Entities;
+using SylvaNote.Core.FirstRun;
 
 namespace SylvaNote.Client;
 
@@ -52,8 +53,12 @@ internal class Program
                 // loads - commands that need the DB then fail into the log instead.
                 try
                 {
-                    connectionManager.Open(config.DbFilePath, MigrationSets.Client());
+                    bool created = connectionManager.Open(config.DbFilePath, MigrationSets.Client());
                     SyncState syncState = new SyncStateRepository(connectionManager).EnsureInitialized();
+                    if (created)
+                    {
+                        FirstRunSeeder.Seed(connectionManager, syncState.DeviceId);
+                    }
                     PurgeExpiredTrash(connectionManager, syncState.DeviceId);
                 }
                 catch (Exception ex)

@@ -14,7 +14,6 @@ public static class LocalDataPaths
 {
     private const string OverrideVariable = "SYLVANOTE_DATA_DIR";
     private const string DirectoryName = ".sylvanote";
-    private const string LegacyDirectoryName = "SylvaNote";
     private const string DatabaseFileName = "sylvanote.db";
 
     public static string ResolveDataDirectory()
@@ -37,40 +36,5 @@ public static class LocalDataPaths
     public static string GetDatabasePath(string dataDirectory)
     {
         return Path.Combine(dataDirectory, DatabaseFileName);
-    }
-
-    // Copies a pre-relocation database (old %LOCALAPPDATA%\SylvaNote layout) into the
-    // resolved directory the first time the relocated build runs. Copy, not move, so
-    // the original survives as a fallback until the user removes it. Only the desktop
-    // client calls this: it runs unsandboxed as the real user, whereas a spawned MCP
-    // binary can see a virtualized AppData shadow rather than the real files.
-    public static void MigrateLegacyDatabase(string dataDirectory)
-    {
-        string target = GetDatabasePath(dataDirectory);
-        string legacyDatabase = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            LegacyDirectoryName,
-            DatabaseFileName);
-
-        // An existing target (including a manual copy) is authoritative; migrate only
-        // into a location that has no database yet.
-        if (!File.Exists(target) && File.Exists(legacyDatabase))
-        {
-            Directory.CreateDirectory(dataDirectory);
-
-            // -wal/-shm hold pages not yet checkpointed into the main file; copying the
-            // main DB alone would drop the most recent edits.
-            CopyIfPresent(legacyDatabase, target);
-            CopyIfPresent(legacyDatabase + "-wal", target + "-wal");
-            CopyIfPresent(legacyDatabase + "-shm", target + "-shm");
-        }
-    }
-
-    private static void CopyIfPresent(string source, string destination)
-    {
-        if (File.Exists(source))
-        {
-            File.Copy(source, destination, false);
-        }
     }
 }

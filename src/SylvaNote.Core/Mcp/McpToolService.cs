@@ -103,12 +103,22 @@ namespace SylvaNote.Core.Mcp
                 RequireActiveNote(parentId);
             }
 
+            List<Note> all = _notes.GetAll();
+            Dictionary<string, Note> liveById = new Dictionary<string, Note>();
+            foreach (Note note in all)
+            {
+                if (!note.Deleted)
+                {
+                    liveById[note.Id] = note;
+                }
+            }
+
             HashSet<string> activeIds = new HashSet<string>();
             List<Note> active = new List<Note>();
 
-            foreach (Note note in _notes.GetAll())
+            foreach (Note note in all)
             {
-                if (!note.Deleted && note.Type == NoteType.Normal)
+                if (!note.Deleted && !IsTemplateContent(note, liveById))
                 {
                     active.Add(note);
                     activeIds.Add(note.Id);
@@ -118,8 +128,8 @@ namespace SylvaNote.Core.Mcp
             Dictionary<string, List<Note>> childrenByParent = new Dictionary<string, List<Note>>();
             foreach (Note note in active)
             {
-                // A note whose parent is trashed or a template surfaces at the root
-                // rather than disappearing.
+                // A note whose parent is trashed surfaces at the root rather than
+                // disappearing - it is still a normal note that has to be reachable.
                 string key = note.ParentId != null && activeIds.Contains(note.ParentId) ? note.ParentId : string.Empty;
                 if (!childrenByParent.TryGetValue(key, out List<Note> siblings))
                 {
@@ -136,6 +146,34 @@ namespace SylvaNote.Core.Mcp
             }
 
             return response;
+        }
+
+        // A template root and everything under it stays out of the note tree:
+        // descendants of a template are template content by location (data.md), so
+        // promoting them to roots the way a trashed parent does would hand an agent
+        // three unlabelled orphans that list_templates already owns.
+        private static bool IsTemplateContent(Note note, Dictionary<string, Note> liveById)
+        {
+            bool result = false;
+            Note current = note;
+
+            while (current != null && !result)
+            {
+                if (current.Type == NoteType.Template)
+                {
+                    result = true;
+                }
+                else if (current.ParentId != null && liveById.TryGetValue(current.ParentId, out Note parent))
+                {
+                    current = parent;
+                }
+                else
+                {
+                    current = null;
+                }
+            }
+
+            return result;
         }
 
         private static void AppendTreeLevel(

@@ -121,15 +121,40 @@ namespace SylvaNote.IntegrationTests
         }
 
         [Fact]
-        public async Task TreeExcludesTrashedNotesAndTemplates()
+        public async Task TreeExcludesTrashedNotesAndWholeTemplateSubtrees()
         {
             McpCreateResponse kept = await _tools.CreateNote("Kept", null, null);
             McpCreateResponse trashed = await _tools.CreateNote("Trashed", null, null);
             _db.Notes.TrashSubtree(trashed.Id);
-            await _tools.CreateTemplate("Template", "template body");
+
+            // The section of the template that list_templates owns is the whole
+            // subtree, not just its root - descendants are template content by
+            // location (data.md), so they must not surface as orphan roots either.
+            McpCreateResponse template = await _tools.CreateTemplate("Template", "template body");
+            McpCreateResponse section = await _tools.CreateNote("Overview", null, template.Id);
+            await _tools.CreateNote("Detail", null, section.Id);
 
             McpNoteTreeResponse tree = _tools.ListNoteTree(null, 0);
             Assert.Equal(kept.Id, Assert.Single(tree.Notes).Id);
+        }
+
+        // The other half of the same rule: a normal note orphaned by trashing its
+        // parent still has to be reachable, so it does move up to the root.
+        [Fact]
+        public async Task ANoteUnderATrashedParentSurfacesAtTheRoot()
+        {
+            McpCreateResponse parent = await _tools.CreateNote("Parent", null, null);
+            McpCreateResponse child = await _tools.CreateNote("Child", null, parent.Id);
+            _db.Notes.TrashSubtree(parent.Id);
+
+            // Live child, trashed parent, parent_id untouched - what LWW leaves behind
+            // when one device trashes the parent while another keeps editing the child.
+            Note live = _db.Notes.Get(child.Id);
+            live.Deleted = false;
+            _db.Notes.Save(live);
+
+            McpNoteTreeResponse tree = _tools.ListNoteTree(null, 0);
+            Assert.Equal(child.Id, Assert.Single(tree.Notes).Id);
         }
 
         [Fact]
