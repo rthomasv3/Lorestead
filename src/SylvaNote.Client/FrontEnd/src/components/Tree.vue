@@ -58,7 +58,9 @@ function commitEdit(item, newLabel) {
 }
 
 function cancelEdit() {
+  const id = editingId.value
   editingId.value = null
+  focusItem(id)
 }
 
 function onEditBlur(item, e) {
@@ -70,6 +72,13 @@ function onEditBlur(item, e) {
     return
   }
   commitEdit(item, e.target.value)
+  // Enter blurs the input with nowhere for focus to go, so it lands on <body>
+  // and every tree key is dead from then on. A blur with a relatedTarget is the
+  // other kind - the user clicked something - and taking focus back would fight
+  // the click.
+  if (!e.relatedTarget) {
+    focusItem(item.id)
+  }
 }
 
 const contextMenuItemId = ref(null)
@@ -84,7 +93,7 @@ function hasContextMenu(item) {
 
 const focusedId = ref(null)
 
-defineExpose({ startEditing, expanded, focusItem })
+defineExpose({ startEditing, expanded, focusItem, focusTree })
 
 // --- Tree logic ---
 
@@ -209,8 +218,22 @@ function focusItem(id) {
   })
 }
 
+// Hand focus to the tree as a whole. `preferredId` is only a preference: a
+// caller's idea of the current item can be collapsed out of sight, and focusing
+// a row that is not rendered would leave focus wherever it already was.
+function focusTree(preferredId) {
+  const visible = getVisibleItems()
+  if (visible.length > 0) {
+    focusItem(visible.some((item) => item.id === preferredId) ? preferredId : visible[0].id)
+  }
+}
+
 function handleTreeKeydown(e) {
-  if (editingId.value) return
+  // A key typed into a rename field is never tree navigation, and `editingId` on
+  // its own does not catch it: Enter commits the rename on the way up, so editing
+  // is already over by the time the event reaches the tree and Enter would go on
+  // to re-activate the row it just renamed.
+  if (editingId.value || e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return
 
   const visible = getVisibleItems()
   if (visible.length === 0) return

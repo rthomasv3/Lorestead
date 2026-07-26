@@ -234,7 +234,14 @@ function onRestoreClick(item) {
   emit('request-restore', { item, nested: !!nestedInTrash })
 }
 
-defineExpose({ treeRef, addNote })
+// Esc in the editor lands here. Selecting a note moves focus into the document,
+// and nothing else brings it back - without this the tree's F2, arrows and Enter
+// are unreachable the moment you open anything.
+function focusTree() {
+  treeRef.value?.focusTree(notesStore.selectedId)
+}
+
+defineExpose({ treeRef, addNote, focusTree })
 </script>
 
 <template>
@@ -269,10 +276,14 @@ defineExpose({ treeRef, addNote })
         @update:expanded-ids="(s) => (notesStore.expandedIds = s)">
         <template #item="{ item, editing, onEditBlur, cancelEdit }">
           <template v-if="item.type === 'note'">
+            <!-- .prevent on Enter: committing hands focus back to the row button,
+                 and Enter's default action is "activate whatever is focused" -
+                 applied after the handlers run, so without this the row is
+                 activated by the same keystroke that finished the rename. -->
             <input v-if="editing" :value="item.label === 'Untitled' ? '' : item.label" placeholder="Untitled"
               class="flex-1 min-w-0 bg-transparent text-sm border-b border-accent outline-none"
-              :ref="(el) => el && el.focus()" @blur="onEditBlur(item, $event)" @keydown.enter="$event.target.blur()"
-              @keydown.esc.stop="cancelEdit()" @click.stop />
+              :ref="(el) => el && el.focus()" @blur="onEditBlur(item, $event)"
+              @keydown.enter.prevent="$event.target.blur()" @keydown.esc.stop="cancelEdit()" @click.stop />
             <template v-else>
               <!-- The transparent border matches the rename input's underline, so
                    entering edit mode doesn't grow the row by a pixel. -->

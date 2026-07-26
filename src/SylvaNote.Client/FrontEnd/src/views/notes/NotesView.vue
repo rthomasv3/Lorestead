@@ -128,6 +128,15 @@ function onEditorFocusRequest() {
   editorRef.value?.focus()
 }
 
+// Esc is the way back out of the document. Not when CodeMirror already used the
+// key - an open `[[` completion closes on the first Esc and only the second one
+// leaves the editor.
+function onEditorEscape(e) {
+  if (!e.defaultPrevented) {
+    treePanel.value?.focusTree()
+  }
+}
+
 function onBeforeUnload() {
   // Best-effort synchronous kick-off; the bridge call itself is async.
   flush()
@@ -305,8 +314,8 @@ onMounted(() => {
               <SplitterGroup direction="horizontal" class="flex-1 min-h-0">
                 <SplitterPanel :min-size="25">
                   <MarkdownEditor ref="editorRef" :model-value="body" :readonly="readonly"
-                    :attachments="notesStore.currentAttachments" :document-key="editingNoteId ?? ''"
-                    remember-cursor @update:model-value="onBodyChange" @save="flush" />
+                    :attachments="notesStore.currentAttachments" :document-key="editingNoteId ?? ''" remember-cursor
+                    @update:model-value="onBodyChange" @save="flush" @keydown.esc="onEditorEscape" />
                 </SplitterPanel>
                 <template v-if="previewOpen">
                   <SplitterResizeHandle class="w-px bg-border hover:bg-accent/50 transition-colors" />
