@@ -9,10 +9,17 @@ import hljs from 'highlight.js/lib/common'
 import AttachmentPreviewDialog from './AttachmentPreviewDialog.vue'
 import { useSettingsStore } from '../stores/settingsStore.js'
 import { useNotesStore } from '../stores/notesStore.js'
+import { sourceLines, toggleTaskLine } from '../utils/markdownSource.js'
 
 const props = defineProps({
   markdown: { type: String, default: '' },
+  // Off by default: most surfaces that render markdown here are read-only
+  // (task cards, trashed notes), and a live checkbox in one of those would
+  // offer an edit the host has no way to save.
+  editable: { type: Boolean, default: false },
 })
+
+const emit = defineEmits(['update:markdown'])
 
 const settingsStore = useSettingsStore()
 const notesStore = useNotesStore()
@@ -41,10 +48,16 @@ const md = computed(() => {
   })
   if (!editor.mdTables) instance.disable('table')
   if (!editor.mdStrikethrough) instance.disable('strikethrough')
-  if (editor.mdTaskLists) instance.use(taskLists, { enabled: false })
+  // `enabled` is constant on purpose. The plugin keeps it in a module-level
+  // variable written by use() but read while rendering, so passing per-instance
+  // values means the last instance constructed decides for all of them - the
+  // task dialog opening would make every card behind it clickable. Read-only
+  // surfaces disable their own checkboxes in the DOM pass below instead.
+  if (editor.mdTaskLists) instance.use(taskLists, { enabled: true })
   if (editor.mdFootnotes) instance.use(footnote)
   if (editor.mdHighlight) instance.use(mark)
   instance.use(underline)
+  instance.use(sourceLines)
   return instance
 })
 
@@ -58,10 +71,14 @@ function noteIdOf(href) {
 // against the loaded note index (decisions.md) - no lookup call, so no unresolved
 // frame. Re-runs when summaries arrive, which is why it only sets attributes:
 // clicks are delegated below and cannot double-bind.
-watch([html, container, () => notesStore.summaries], async () => {
+watch([html, container, () => props.editable, () => notesStore.summaries], async () => {
   await nextTick()
   const root = container.value
   if (!root) return
+
+  for (const box of root.querySelectorAll('input.task-list-item-checkbox')) {
+    box.disabled = !props.editable
+  }
 
   for (const img of root.querySelectorAll('img[src^="attachment://"]')) {
     const id = img.getAttribute('src').slice('attachment://'.length)
@@ -88,6 +105,12 @@ watch([html, container, () => notesStore.summaries], async () => {
 
 // Delegated: survives every re-render without stacking listeners on the same node.
 function onPreviewClick(event) {
+  const checkbox = event.target.closest?.('input.task-list-item-checkbox')
+  if (checkbox) {
+    toggleTask(event, checkbox)
+    return
+  }
+
   const anchor = event.target.closest?.('a[href^="attachment://"], a[href^="note://"]')
   if (!anchor) return
 
@@ -109,12 +132,26 @@ function onPreviewClick(event) {
     }
   }
 }
+
+// The markdown owns the checked state, so the browser's own toggle is cancelled
+// and the re-render supplies it: a checkbox can never show a state the text does
+// not have. stopPropagation for the same reason link clicks do - in the task
+// dialog's reading mode a container click enters edit mode.
+function toggleTask(event, checkbox) {
+  event.preventDefault()
+  event.stopPropagation()
+  if (!props.editable) return
+
+  const line = Number(checkbox.closest('[data-line]')?.dataset.line)
+  const next = toggleTaskLine(props.markdown, line)
+  if (next !== null) emit('update:markdown', next)
+}
 </script>
 
 <template>
   <div>
-    <div ref="container" class="markdown-preview text-sm leading-relaxed max-w-none" v-html="html"
-      @click="onPreviewClick" />
+    <div ref="container" class="markdown-preview text-sm leading-relaxed max-w-none"
+      :class="editable ? 'tasks-editable' : ''" v-html="html" @click="onPreviewClick" />
     <AttachmentPreviewDialog :open="previewId !== null" :attachment="previewId ? { id: previewId } : null"
       @update:open="(v) => { if (!v) previewId = null }" />
   </div>

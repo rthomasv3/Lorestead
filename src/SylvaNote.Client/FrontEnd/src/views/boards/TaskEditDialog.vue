@@ -400,7 +400,7 @@ function onDialogKeydown(e) {
               class="h-64 overflow-y-auto rounded-md border cursor-text px-2.5 py-2 outline-none"
               :class="attachDragOver ? 'border-accent bg-drop-target' : 'border-border/60 hover:border-border'"
               @click="enterEdit" @focus="enterEdit">
-              <MarkdownPreview v-if="body.trim()" :markdown="body" />
+              <MarkdownPreview v-if="body.trim()" :markdown="body" editable @update:markdown="onBodyChange" />
               <p v-else class="text-sm text-on-surface-muted/60">Click to add a description...</p>
             </div>
             <div v-else class="h-64 rounded-md border border-border focus-within:border-accent flex flex-col"

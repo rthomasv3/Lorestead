@@ -321,7 +321,7 @@ onMounted(() => {
                   <SplitterResizeHandle class="w-px bg-border hover:bg-accent/50 transition-colors" />
                   <SplitterPanel :default-size="50" :min-size="20" class="bg-surface">
                     <div class="h-full overflow-y-auto p-4">
-                      <MarkdownPreview :markdown="body" />
+                      <MarkdownPreview :markdown="body" :editable="!readonly" @update:markdown="onBodyChange" />
                     </div>
                   </SplitterPanel>
                 </template>

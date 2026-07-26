@@ -307,14 +307,66 @@ button:not(:disabled),
     margin: 0.2em 0;
 }
 
-.markdown-preview li.task-list-item {
+/* The checkbox stands in for the bullet, so the list gives back the indent the
+   bullet would have used rather than each item clawing it back with a negative
+   margin. Nested lists still step in. */
+.markdown-preview .contains-task-list {
     list-style: none;
-    margin-left: -1.3em;
+    padding-left: 0;
 }
 
+.markdown-preview li .contains-task-list {
+    padding-left: 1.6em;
+}
+
+.markdown-preview li.task-list-item {
+    list-style: none;
+}
+
+/* A native checkbox draws itself from the OS palette and only `accent-color` is
+   themeable, which leaves the unchecked box unthemed. Drawn here instead, in the
+   two states the app's own switch uses: bordered surface off, accent fill on. */
 .markdown-preview li.task-list-item input {
-    margin-right: 0.4em;
-    accent-color: var(--color-accent-strong);
+    appearance: none;
+    width: 1em;
+    height: 1em;
+    margin: 0 0.45em 0 0;
+    /* Baseline - the default - parks the box's bottom edge on the text baseline,
+       leaving the text low beside it. `middle` is defined as centring on the
+       x-height, but the band a line of text reads as centred on is the cap
+       height, which sits (cap - x)/2 higher. `middle` aligns the *margin* box,
+       so a bottom margin of the full difference lifts the border box by half of
+       it - landing on the cap centre at any font or size. Dropped whole on an
+       engine without `cap`, which just leaves the x-height centring. */
+    vertical-align: middle;
+    margin-bottom: calc(1cap - 1ex);
+    border: 1px solid var(--color-border);
+    border-radius: 0.25em;
+    background-color: var(--color-surface-alt);
+}
+
+.markdown-preview li.task-list-item input:checked {
+    background-color: var(--color-accent-strong);
+    border-color: var(--color-accent-strong);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23fff' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3.5 8.5 6.5 11.5 12.5 5'/%3E%3C/svg%3E");
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: 0.75em;
+}
+
+.markdown-preview li.task-list-item input:disabled {
+    opacity: 0.5;
+}
+
+.markdown-preview li.task-list-item input:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 1px;
+}
+
+/* The plugin's own `enabled` class cannot be trusted per instance (see
+   MarkdownPreview), so the host surface says whether these are live. */
+.markdown-preview.tasks-editable li.task-list-item input {
+    cursor: pointer;
 }
 
 .markdown-preview blockquote {
