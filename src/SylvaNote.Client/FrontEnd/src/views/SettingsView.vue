@@ -3,6 +3,7 @@ import { ref, computed, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import { useSettingsStore, ACCENTS } from '../stores/settingsStore'
 import { useSyncStore } from '../stores/syncStore'
 import { getAbout, getLog } from '../services/systemService'
+import { MD_TOGGLES } from '../utils/settingsIndex.js'
 import SelectMenu from '../components/SelectMenu.vue'
 import Toggle from '../components/Toggle.vue'
 import Button from '../components/Button.vue'
@@ -135,16 +136,6 @@ function cancelTokenEdit() {
   syncToken.value = ''
   tokenEditing.value = false
 }
-
-const MD_TOGGLES = [
-  { key: 'mdTables', label: 'Tables' },
-  { key: 'mdTaskLists', label: 'Task lists' },
-  { key: 'mdStrikethrough', label: 'Strikethrough' },
-  { key: 'mdAutolinks', label: 'Autolinks' },
-  { key: 'mdFootnotes', label: 'Footnotes' },
-  { key: 'mdCodeHighlighting', label: 'Code highlighting' },
-  { key: 'mdHighlight', label: 'Highlight (==mark==)' },
-]
 
 const about = ref(null)
 
@@ -392,7 +383,8 @@ onMounted(async () => {
         </div>
 
         <div class="flex flex-col gap-3">
-          <button type="button" class="flex items-center gap-2 text-sm font-semibold text-left" @click="toggleLog">
+          <button id="settings-logs" type="button" class="flex items-center gap-2 text-sm font-semibold text-left"
+            @click="toggleLog">
             <i-lucide-chevron-right class="size-4 transition-transform" :class="logOpen ? 'rotate-90' : ''" />
             Logs
           </button>

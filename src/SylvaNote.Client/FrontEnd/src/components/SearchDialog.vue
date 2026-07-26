@@ -3,6 +3,7 @@ import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { DialogRoot, DialogPortal, DialogOverlay, DialogContent, DialogTitle, VisuallyHidden } from 'reka-ui'
 import EmptyState from './EmptyState.vue'
+import { SETTINGS_INDEX } from '../utils/settingsIndex.js'
 import { useNotesStore } from '../stores/notesStore.js'
 import { useBoardsStore } from '../stores/boardsStore.js'
 
@@ -19,30 +20,21 @@ const selectedIndex = ref(0)
 const input = ref(null)
 let searchTimer = null
 
-// Static in-app list (features/search.md) - settings entries never touch the DB.
-const SETTINGS_ENTRIES = [
-  ['Theme', 'Application'], ['Accent color', 'Application'], ['Date format', 'Application'],
-  ['Time format', 'Application'], ['History retention', 'Application'], ['Trash retention', 'Application'],
-  ['New note focus', 'Application'], ['New task focus', 'Application'], ['Check for updates', 'Application'],
-  ['Automatic updates', 'Application'],
-  ['Font size', 'Editor'], ['Font family', 'Editor'], ['Spell check', 'Editor'], ['Line numbers', 'Editor'],
-  ['Highlight active line', 'Editor'], ['Autosave delay', 'Editor'], ['Tables', 'Editor'],
-  ['Task list checkboxes', 'Editor'], ['Strikethrough', 'Editor'], ['Autolinks', 'Editor'],
-  ['Footnotes', 'Editor'], ['Code highlighting', 'Editor'], ['Highlight marks', 'Editor'],
-  ['About', 'About'], ['Logs', 'About'],
-]
-
 const settingsResults = computed(() => {
   const q = query.value.trim().toLowerCase()
   if (!q) return []
-  return SETTINGS_ENTRIES
-    .filter(([label]) => label.toLowerCase().includes(q))
-    .map(([label, section]) => ({
+  return SETTINGS_INDEX
+    .filter((entry) => entry.label.toLowerCase().includes(q))
+    .map((entry) => ({
       kind: 'settings',
-      key: `settings:${section}:${label}`,
-      breadcrumb: ['Settings', section, label],
-      label,
-      section,
+      key: `settings:${entry.section}:${entry.label}`,
+      // A section is its own entry where the section is the whole control (About,
+      // Logs); repeating it would read "Settings > About > About".
+      breadcrumb: entry.label === entry.section
+        ? ['Settings', entry.section]
+        : ['Settings', entry.section, entry.label],
+      label: entry.label,
+      anchor: entry.anchor,
     }))
 })
 
@@ -160,7 +152,7 @@ async function choose(result) {
   } else {
     await router.push('/settings')
     setTimeout(() => {
-      document.getElementById(`settings-${result.section.toLowerCase()}`)?.scrollIntoView({ block: 'start' })
+      document.getElementById(result.anchor)?.scrollIntoView({ block: 'start' })
     }, 100)
   }
 }
