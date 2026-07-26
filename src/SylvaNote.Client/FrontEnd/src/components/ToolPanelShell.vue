@@ -4,6 +4,10 @@ import { useResizablePanel } from '../composables/useResizablePanel.js'
 
 const props = defineProps({
   open: { type: Boolean, default: false },
+  // Which tool is showing. One shell holds every tool, so switching changes this
+  // while `open` stays true: the panel keeps its width and the content
+  // crossfades rather than collapsing and re-expanding (ui/overview.md).
+  contentKey: { type: [String, Number], default: null },
   storageKey: { type: String, default: 'SylvaNote-tool-panel-width' },
 })
 
@@ -45,7 +49,7 @@ function onTransitionEnd(event) {
     <div class="w-px shrink-0 h-full transition-colors" :class="isDragging ? 'bg-accent' : 'bg-border'" />
     <div class="flex flex-col h-full flex-1 min-w-0">
       <Transition name="tool-content" mode="out-in">
-        <div v-if="contentVisible" class="flex flex-col h-full min-h-0">
+        <div v-if="contentVisible" :key="contentKey" class="flex flex-col h-full min-h-0">
           <slot />
         </div>
       </Transition>

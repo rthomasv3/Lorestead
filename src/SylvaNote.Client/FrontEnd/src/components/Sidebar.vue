@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { TooltipProvider } from 'reka-ui'
 import HoverTip from './HoverTip.vue'
 import TextField from './TextField.vue'
+import NavButton from './NavButton.vue'
 import IconNotebookText from '~icons/lucide/notebook-text'
 import IconSquareKanban from '~icons/lucide/square-kanban'
 import IconSettings from '~icons/lucide/settings'
@@ -53,27 +54,15 @@ function openSearch() {
         </HoverTip>
 
         <HoverTip v-for="item in items" :key="item.to" :text="item.label" :disabled="!collapsed">
-          <button
-            class="flex items-center gap-3 rounded-md px-2.5 h-9 text-sm shrink-0"
-            :class="isActive(item.to) ? 'bg-accent-soft text-on-surface' : 'text-on-surface-muted hover:bg-surface-alt'"
-            @click="router.push(item.to)"
-          >
-            <component :is="item.icon" class="size-5 shrink-0" />
-            <span v-if="!collapsed" class="truncate">{{ item.label }}</span>
-          </button>
+          <NavButton :icon="item.icon" :label="collapsed ? '' : item.label" :active="isActive(item.to)"
+            @click="router.push(item.to)" />
         </HoverTip>
 
         <div class="flex-1" />
 
         <HoverTip text="Settings" :disabled="!collapsed">
-          <button
-            class="flex items-center gap-3 rounded-md px-2.5 h-9 text-sm shrink-0"
-            :class="isActive('/settings') ? 'bg-accent-soft text-on-surface' : 'text-on-surface-muted hover:bg-surface-alt'"
-            @click="router.push('/settings')"
-          >
-            <IconSettings class="size-5 shrink-0" />
-            <span v-if="!collapsed" class="truncate">Settings</span>
-          </button>
+          <NavButton :icon="IconSettings" :label="collapsed ? '' : 'Settings'" :active="isActive('/settings')"
+            @click="router.push('/settings')" />
         </HoverTip>
       </div>
 

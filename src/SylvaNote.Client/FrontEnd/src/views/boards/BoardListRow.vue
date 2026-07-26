@@ -14,6 +14,8 @@ const props = defineProps({
   renaming: { type: Boolean, default: false },
 })
 
+const contextOpen = ref(false)
+
 const emit = defineEmits(['select', 'rename', 'rename-done', 'request-delete', 'request-rename', 'drop'])
 
 const row = ref(null)
@@ -109,27 +111,28 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <ContextMenuRoot>
+  <ContextMenuRoot @update:open="contextOpen = $event">
     <ContextMenuTrigger as-child>
       <div>
-      <div ref="row" class="relative">
-        <div v-if="dropEdge === 'top'" class="absolute -top-px left-2 right-2 h-0.5 rounded bg-accent z-10" />
-        <div v-if="dropEdge === 'bottom'" class="absolute -bottom-px left-2 right-2 h-0.5 rounded bg-accent z-10" />
-        <button
-          class="w-full flex items-center gap-2 rounded-md px-2.5 h-8 text-sm text-left"
-          :class="[
-            selected ? 'bg-accent-soft text-on-surface' : 'text-on-surface-muted hover:bg-surface-alt hover:text-on-surface',
-            dragging ? 'opacity-40' : '',
-          ]"
-          @click="emit('select')" @dblclick="emit('request-rename')">
-          <i-lucide-square-kanban class="size-4 shrink-0" />
-          <input v-if="renaming" ref="editInput" :value="board.name" placeholder="Untitled board"
-            class="flex-1 min-w-0 bg-transparent text-sm border-b border-accent outline-none text-on-surface"
-            @blur="commitRename" @keydown.enter="$event.target.blur()" @keydown.esc.stop="cancelRename"
-            @click.stop @dblclick.stop />
-          <span v-else class="truncate border-b border-transparent">{{ board.name || 'Untitled board' }}</span>
-        </button>
-      </div>
+        <div ref="row" class="relative">
+          <div v-if="dropEdge === 'top'" class="absolute -top-px left-2 right-2 h-0.5 rounded bg-accent z-10" />
+          <div v-if="dropEdge === 'bottom'" class="absolute -bottom-px left-2 right-2 h-0.5 rounded bg-accent z-10" />
+          <!-- Same states as a notes tree row (TreeNode): full-strength label,
+             accent-soft when selected, a neutral tint while its context menu is
+             open, surface-alt on hover. -->
+          <button class="w-full flex items-center gap-2 rounded-md px-2.5 h-8 text-sm text-left transition-colors"
+            :class="[
+              contextOpen ? 'bg-on-surface/5' : selected ? 'bg-accent-soft' : 'hover:bg-surface-alt',
+              dragging ? 'opacity-40' : '',
+            ]" @click="emit('select')" @dblclick="emit('request-rename')">
+            <!-- <i-lucide-square-kanban class="size-4 shrink-0 text-on-surface-muted" /> -->
+            <input v-if="renaming" ref="editInput" :value="board.name" placeholder="Untitled board"
+              class="flex-1 min-w-0 bg-transparent text-sm border-b border-accent outline-none text-on-surface"
+              @blur="commitRename" @keydown.enter="$event.target.blur()" @keydown.esc.stop="cancelRename" @click.stop
+              @dblclick.stop />
+            <span v-else class="truncate border-b border-transparent">{{ board.name || 'Untitled board' }}</span>
+          </button>
+        </div>
       </div>
     </ContextMenuTrigger>
     <ContextMenuPortal>

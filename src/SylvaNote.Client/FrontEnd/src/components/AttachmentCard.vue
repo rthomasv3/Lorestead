@@ -102,16 +102,15 @@ onUnmounted(() => {
     class="group flex items-center gap-2.5 rounded-md border border-border bg-surface-alt px-2.5 py-2 cursor-pointer"
     @click="emit('preview')">
     <div class="flex size-12 shrink-0 items-center justify-center">
-      <img v-if="thumbnailUrl" :src="thumbnailUrl" :alt="attachment.filename"
-        class="size-12 rounded-md object-cover" />
-      <component :is="typeIcon" v-else class="size-6 text-on-surface-muted" />
+      <img v-if="thumbnailUrl" :src="thumbnailUrl" :alt="attachment.filename" class="size-12 rounded-md object-cover" />
+      <component :is="typeIcon" v-else class="size-7 text-on-surface-muted" />
     </div>
     <div class="flex-1 min-w-0">
       <!-- block: this column is not a flex row, so an inline-block input would sit
            on the text baseline and add descender space under it. -->
       <input v-if="editing" ref="editInput" :value="attachment.filename"
-        class="block w-full bg-transparent text-sm border-b border-accent outline-none"
-        @keydown.enter="commitRename" @keydown.esc="cancelRename" @blur="commitRename" @click.stop />
+        class="block w-full bg-transparent text-sm border-b border-accent outline-none" @keydown.enter="commitRename"
+        @keydown.esc="cancelRename" @blur="commitRename" @click.stop />
       <!-- The transparent border matches the rename input's underline, so
            entering edit mode doesn't grow the card by a pixel. -->
       <div v-else class="text-sm truncate border-b border-transparent" :title="attachment.filename"

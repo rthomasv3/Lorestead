@@ -24,6 +24,10 @@ const editorRef = ref(null)
 const previewOpen = ref(false)
 const toolOpen = ref(null)
 
+// Count bubble on a rail button; the button itself supplies `relative`.
+const RAIL_BADGE_CLASS =
+  'absolute -top-0.5 -right-0.5 min-w-4 h-4 px-0.5 rounded-full bg-accent-strong text-white text-[10px] leading-4 text-center'
+
 const pendingTrash = ref(null)
 const pendingPurge = ref(null)
 const restoreTarget = ref(null)
@@ -255,104 +259,97 @@ onMounted(() => {
       <SplitterPanel :min-size="30">
         <div class="h-full flex min-h-0">
           <div class="flex-1 min-w-0 flex flex-col min-h-0">
-        <div v-if="!currentNote" class="h-full flex items-center justify-center p-8">
-          <p class="text-on-surface-muted text-center">Select a note, or create one with the + button in the tree</p>
-        </div>
+            <div v-if="!currentNote" class="h-full flex items-center justify-center p-8">
+              <p class="text-on-surface-muted text-center">Select a note, or create one with the + button in the tree
+              </p>
+            </div>
 
-        <div v-else class="h-full flex flex-col min-h-0">
-          <div class="flex items-center gap-0.5 px-2 h-10 shrink-0 border-b border-border">
-            <Button v-for="action in toolbarActions" :key="action.name" variant="ghost" size="icon"
-              :title="action.title" :disabled="readonly" @click="runToolbar(action.name)">
-              <i-lucide-bold v-if="action.name === 'bold'" class="size-4" />
-              <i-lucide-italic v-else-if="action.name === 'italic'" class="size-4" />
-              <i-lucide-underline v-else-if="action.name === 'underline'" class="size-4" />
-              <i-lucide-strikethrough v-else-if="action.name === 'strikethrough'" class="size-4" />
-              <i-lucide-heading v-else-if="action.name === 'heading'" class="size-4" />
-              <i-lucide-list v-else-if="action.name === 'bulletList'" class="size-4" />
-              <i-lucide-list-ordered v-else-if="action.name === 'numberedList'" class="size-4" />
-              <i-lucide-list-checks v-else-if="action.name === 'checkboxList'" class="size-4" />
-              <i-lucide-link v-else-if="action.name === 'link'" class="size-4" />
-              <i-lucide-code v-else-if="action.name === 'inlineCode'" class="size-4" />
-              <i-lucide-square-code v-else-if="action.name === 'codeBlock'" class="size-4" />
-              <i-lucide-text-quote v-else-if="action.name === 'quote'" class="size-4" />
-              <i-lucide-table v-else class="size-4" />
-            </Button>
-            <div class="flex-1" />
-            <span v-if="readonly" class="text-xs text-on-surface-muted border border-border rounded px-1.5 py-0.5 mr-1">
-              In trash - read-only
-            </span>
-            <Button variant="ghost" size="icon" title="Toggle preview" :active="previewOpen"
-              @click="previewOpen = !previewOpen">
-              <i-lucide-columns-2 class="size-4" />
-            </Button>
+            <div v-else class="h-full flex flex-col min-h-0">
+              <div class="flex items-center gap-0.5 px-2 h-10 shrink-0 border-b border-border">
+                <Button v-for="action in toolbarActions" :key="action.name" variant="ghost" size="icon"
+                  :title="action.title" :disabled="readonly" @click="runToolbar(action.name)">
+                  <i-lucide-bold v-if="action.name === 'bold'" class="size-4" />
+                  <i-lucide-italic v-else-if="action.name === 'italic'" class="size-4" />
+                  <i-lucide-underline v-else-if="action.name === 'underline'" class="size-4" />
+                  <i-lucide-strikethrough v-else-if="action.name === 'strikethrough'" class="size-4" />
+                  <i-lucide-heading v-else-if="action.name === 'heading'" class="size-4" />
+                  <i-lucide-list v-else-if="action.name === 'bulletList'" class="size-4" />
+                  <i-lucide-list-ordered v-else-if="action.name === 'numberedList'" class="size-4" />
+                  <i-lucide-list-checks v-else-if="action.name === 'checkboxList'" class="size-4" />
+                  <i-lucide-link v-else-if="action.name === 'link'" class="size-4" />
+                  <i-lucide-code v-else-if="action.name === 'inlineCode'" class="size-4" />
+                  <i-lucide-square-code v-else-if="action.name === 'codeBlock'" class="size-4" />
+                  <i-lucide-text-quote v-else-if="action.name === 'quote'" class="size-4" />
+                  <i-lucide-table v-else class="size-4" />
+                </Button>
+                <div class="flex-1" />
+                <span v-if="readonly"
+                  class="text-xs text-on-surface-muted border border-border rounded px-1.5 py-0.5 mr-1">
+                  In trash - read-only
+                </span>
+                <Button variant="ghost" size="icon" title="Toggle preview" :active="previewOpen"
+                  @click="previewOpen = !previewOpen">
+                  <i-lucide-columns-2 class="size-4" />
+                </Button>
+              </div>
+
+              <SplitterGroup direction="horizontal" class="flex-1 min-h-0">
+                <SplitterPanel :min-size="25">
+                  <MarkdownEditor ref="editorRef" :model-value="body" :readonly="readonly"
+                    :attachments="notesStore.currentAttachments" @update:model-value="onBodyChange" @save="flush" />
+                </SplitterPanel>
+                <template v-if="previewOpen">
+                  <SplitterResizeHandle class="w-px bg-border hover:bg-accent/50 transition-colors" />
+                  <SplitterPanel :default-size="50" :min-size="20" class="bg-surface">
+                    <div class="h-full overflow-y-auto p-4">
+                      <MarkdownPreview :markdown="body" />
+                    </div>
+                  </SplitterPanel>
+                </template>
+              </SplitterGroup>
+
+              <div
+                class="grid grid-cols-3 items-center px-3 h-7 shrink-0 border-t border-border text-xs text-on-surface-muted">
+                <span>{{ wordCount }} {{ wordCount === 1 ? 'word' : 'words' }}</span>
+                <span class="text-center truncate">{{ modifiedLabel }}</span>
+                <span class="text-right">{{ readonly ? 'Read-only' : dirty ? 'Unsaved' : 'Saved' }}</span>
+              </div>
+            </div>
           </div>
 
-          <SplitterGroup direction="horizontal" class="flex-1 min-h-0">
-            <SplitterPanel :min-size="25">
-              <MarkdownEditor ref="editorRef" :model-value="body" :readonly="readonly"
-                :attachments="notesStore.currentAttachments" @update:model-value="onBodyChange" @save="flush" />
-            </SplitterPanel>
-            <template v-if="previewOpen">
-              <SplitterResizeHandle class="w-px bg-border hover:bg-accent/50 transition-colors" />
-              <SplitterPanel :default-size="50" :min-size="20" class="bg-surface">
-                <div class="h-full overflow-y-auto p-4">
-                  <MarkdownPreview :markdown="body" />
-                </div>
-              </SplitterPanel>
-            </template>
-          </SplitterGroup>
-
-          <div
-            class="grid grid-cols-3 items-center px-3 h-7 shrink-0 border-t border-border text-xs text-on-surface-muted">
-            <span>{{ wordCount }} {{ wordCount === 1 ? 'word' : 'words' }}</span>
-            <span class="text-center truncate">{{ modifiedLabel }}</span>
-            <span class="text-right">{{ readonly ? 'Read-only' : dirty ? 'Unsaved' : 'Saved' }}</span>
-          </div>
-        </div>
-          </div>
-
-          <ToolPanelShell :open="toolOpen === 'attachments'">
-            <AttachmentsPanel />
-          </ToolPanelShell>
-
-          <ToolPanelShell :open="toolOpen === 'backlinks'" storage-key="SylvaNote-backlinks-panel-width">
-            <BacklinksPanel />
-          </ToolPanelShell>
-
-          <ToolPanelShell :open="toolOpen === 'history'" storage-key="SylvaNote-history-panel-width">
-            <HistoryPanel :current-body="body" :readonly="readonly" @restore="onRestoreVersion" />
+          <!-- One shell for all three tools: switching keeps the panel's width and
+               crossfades the content instead of collapsing and re-expanding. -->
+          <ToolPanelShell :open="toolOpen !== null" :content-key="toolOpen">
+            <AttachmentsPanel v-if="toolOpen === 'attachments'" />
+            <BacklinksPanel v-else-if="toolOpen === 'backlinks'" />
+            <HistoryPanel v-else-if="toolOpen === 'history'" :current-body="body" :readonly="readonly"
+              @restore="onRestoreVersion" />
           </ToolPanelShell>
 
           <TooltipProvider :delay-duration="300">
-            <div class="w-11 shrink-0 border-l border-border bg-surface flex flex-col items-center py-2 gap-1">
+            <div class="w-11 shrink-0 border-l border-border bg-surface flex flex-col items-center py-2 gap-2.5">
               <HoverTip text="Attachments" side="left">
-                <button class="relative p-2 rounded-md"
-                  :class="toolOpen === 'attachments' ? 'text-accent bg-accent-soft' : 'text-on-surface-muted hover:text-on-surface hover:bg-surface-alt'"
+                <Button variant="ghost" size="icon" class="relative" :active="toolOpen === 'attachments'"
                   @click="toggleTool('attachments')">
-                  <i-lucide-paperclip class="size-4.5" />
-                  <span v-if="notesStore.currentAttachments.length > 0"
-                    class="absolute -top-0.5 -right-0.5 min-w-4 h-4 px-0.5 rounded-full bg-accent-strong text-white text-[10px] leading-4 text-center">
+                  <i-lucide-paperclip class="size-4" />
+                  <span v-if="notesStore.currentAttachments.length > 0" :class="RAIL_BADGE_CLASS">
                     {{ notesStore.currentAttachments.length }}
                   </span>
-                </button>
+                </Button>
               </HoverTip>
               <HoverTip text="Backlinks" side="left">
-                <button class="relative p-2 rounded-md"
-                  :class="toolOpen === 'backlinks' ? 'text-accent bg-accent-soft' : 'text-on-surface-muted hover:text-on-surface hover:bg-surface-alt'"
+                <Button variant="ghost" size="icon" class="relative" :active="toolOpen === 'backlinks'"
                   @click="toggleTool('backlinks')">
-                  <i-lucide-link class="size-4.5" />
-                  <span v-if="notesStore.currentBacklinks.length > 0"
-                    class="absolute -top-0.5 -right-0.5 min-w-4 h-4 px-0.5 rounded-full bg-accent-strong text-white text-[10px] leading-4 text-center">
+                  <i-lucide-link class="size-4" />
+                  <span v-if="notesStore.currentBacklinks.length > 0" :class="RAIL_BADGE_CLASS">
                     {{ notesStore.currentBacklinks.length }}
                   </span>
-                </button>
+                </Button>
               </HoverTip>
               <HoverTip text="History" side="left">
-                <button class="relative p-2 rounded-md"
-                  :class="toolOpen === 'history' ? 'text-accent bg-accent-soft' : 'text-on-surface-muted hover:text-on-surface hover:bg-surface-alt'"
-                  @click="toggleTool('history')">
-                  <i-lucide-history class="size-4.5" />
-                </button>
+                <Button variant="ghost" size="icon" :active="toolOpen === 'history'" @click="toggleTool('history')">
+                  <i-lucide-history class="size-4" />
+                </Button>
               </HoverTip>
             </div>
           </TooltipProvider>

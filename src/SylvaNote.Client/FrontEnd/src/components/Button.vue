@@ -1,5 +1,6 @@
 <script setup>
 import { computed } from 'vue'
+import { CONTROL_ACTIVE, CONTROL_GHOST } from '../utils/controlStates.js'
 
 const props = defineProps({
   variant: { type: String, default: 'outline' }, // 'primary' | 'outline' | 'destructive' | 'ghost'
@@ -9,13 +10,13 @@ const props = defineProps({
   active: { type: Boolean, default: false },
 })
 
-const ACTIVE = 'text-accent bg-accent-soft'
+const ACTIVE = CONTROL_ACTIVE
 
 const VARIANTS = {
   primary: 'bg-accent-strong text-white enabled:hover:bg-accent-strong-hover shadow-sm',
   outline: 'border border-border enabled:hover:bg-surface-alt',
   destructive: 'bg-red-600 enabled:hover:bg-red-700 text-white',
-  ghost: 'text-on-surface-muted enabled:hover:bg-surface-alt enabled:hover:text-on-surface',
+  ghost: CONTROL_GHOST,
 }
 
 // sm is the text button that fits a h-10 panel header; icon is every icon-only
