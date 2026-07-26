@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import BoardListRow from './BoardListRow.vue'
 import Button from '../../components/Button.vue'
+import HoverTip from '../../components/HoverTip.vue'
 import EmptyState from '../../components/EmptyState.vue'
 import { useBoardsStore } from '../../stores/boardsStore.js'
 
@@ -44,9 +45,11 @@ function onKeydown(e) {
   <div class="h-full flex flex-col min-h-0" tabindex="-1" @keydown="onKeydown">
     <div class="flex items-center justify-between pl-3 pr-2 h-10 shrink-0 border-b border-border">
       <span class="text-sm font-medium">Boards</span>
-      <Button variant="ghost" size="icon" title="New board" @click="addBoard">
-        <i-lucide-plus class="size-4" />
-      </Button>
+      <HoverTip text="New board" side="bottom">
+        <Button variant="ghost" size="icon" @click="addBoard">
+          <i-lucide-plus class="size-4" />
+        </Button>
+      </HoverTip>
     </div>
 
     <div class="flex-1 min-h-0 overflow-y-auto px-2 pt-1.5 pb-2 flex flex-col gap-0.5">

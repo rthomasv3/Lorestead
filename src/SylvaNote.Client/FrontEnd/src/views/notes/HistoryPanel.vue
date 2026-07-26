@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
 import Button from '../../components/Button.vue'
+import HoverTip from '../../components/HoverTip.vue'
 import ConfirmDialog from '../../components/ConfirmDialog.vue'
 import EmptyState from '../../components/EmptyState.vue'
 import { useNotesStore } from '../../stores/notesStore.js'
@@ -112,10 +113,11 @@ function toggleGap(index) {
           @click="open(card.version)">
           <div class="flex items-center gap-2 min-w-0">
             <span class="text-[11px] text-on-surface-muted truncate">{{ stamp(card.version.changedAt) }}</span>
-            <span v-if="card.version.supersededConcurrent"
-              class="shrink-0 px-1 rounded bg-surface-alt text-[10px] leading-4 text-amber-500" title="Overwrote a concurrent edit">
-              Conflict
-            </span>
+            <HoverTip v-if="card.version.supersededConcurrent" text="Overwrote a concurrent edit" side="bottom">
+              <span class="shrink-0 px-1 rounded bg-surface-alt text-[10px] leading-4 text-amber-500">
+                Conflict
+              </span>
+            </HoverTip>
           </div>
 
           <p v-if="card.kind === 'edit'" class="text-xs text-on-surface-muted mt-1 line-clamp-2">
@@ -141,15 +143,17 @@ function toggleGap(index) {
     <div class="absolute inset-0 flex flex-col min-h-0 bg-surface transition-transform duration-250 ease-[cubic-bezier(0.32,0.72,0,1)]"
       :class="selected ? 'translate-x-0' : 'translate-x-full'">
       <div class="flex items-center gap-1.5 px-2 h-10 shrink-0 border-b border-border">
-        <Button variant="ghost" size="icon" title="Back" @click="back">
-          <i-lucide-chevron-left class="size-4" />
-        </Button>
+        <HoverTip text="Back" side="bottom">
+          <Button variant="ghost" size="icon" @click="back">
+            <i-lucide-chevron-left class="size-4" />
+          </Button>
+        </HoverTip>
         <span class="flex-1 min-w-0 text-sm font-medium truncate">{{ selected ? stamp(selected.changedAt) : '' }}</span>
-        <Button variant="ghost" size="sm" class="shrink-0"
-          :title="readonly ? 'Note is in the Trash' : 'Restore this version'" :disabled="readonly"
-          @click="pendingRestore = true">
-          Restore
-        </Button>
+        <HoverTip :text="readonly ? 'Note is in the Trash' : 'Restore this version'" side="bottom" wrap>
+          <Button variant="ghost" size="sm" class="shrink-0" :disabled="readonly" @click="pendingRestore = true">
+            Restore
+          </Button>
+        </HoverTip>
       </div>
 
       <div class="flex-1 min-h-0 overflow-auto p-2 font-mono text-xs leading-relaxed">

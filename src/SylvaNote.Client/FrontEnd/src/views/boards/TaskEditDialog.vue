@@ -9,6 +9,7 @@ import AttachmentCard from '../../components/AttachmentCard.vue'
 import AttachmentPreviewDialog from '../../components/AttachmentPreviewDialog.vue'
 import Button from '../../components/Button.vue'
 import ConfirmDialog from '../../components/ConfirmDialog.vue'
+import HoverTip from '../../components/HoverTip.vue'
 import EmptyState from '../../components/EmptyState.vue'
 import * as attachmentService from '../../services/attachmentService.js'
 import { createImageThumbnail } from '../../utils/thumbnails.js'
@@ -213,22 +214,6 @@ onUnmounted(() => {
   if (readingDropCleanup) readingDropCleanup()
 })
 
-const toolbarActions = [
-  { name: 'bold', title: 'Bold' },
-  { name: 'italic', title: 'Italic' },
-  { name: 'underline', title: 'Underline' },
-  { name: 'strikethrough', title: 'Strikethrough' },
-  { name: 'heading', title: 'Heading' },
-  { name: 'bulletList', title: 'Bulleted list' },
-  { name: 'numberedList', title: 'Numbered list' },
-  { name: 'checkboxList', title: 'Checkbox list' },
-  { name: 'link', title: 'Link' },
-  { name: 'inlineCode', title: 'Inline code' },
-  { name: 'codeBlock', title: 'Code block' },
-  { name: 'quote', title: 'Quote' },
-  { name: 'table', title: 'Table' },
-]
-
 function runToolbar(name) {
   editorRef.value?.[name]?.()
 }
@@ -382,10 +367,11 @@ function onDialogKeydown(e) {
                instead of the one control that throws the dialog away. Esc is the
                keyboard close, same as every other dialog; the toolbar and save
                buttons below opt out for the same reason. -->
-          <Button variant="ghost" size="icon" class="mt-1" title="Close" tabindex="-1"
-            @click="emit('update:open', false)">
-            <i-lucide-x class="size-4" />
-          </Button>
+          <HoverTip text="Close" side="left">
+            <Button variant="ghost" size="icon" class="mt-1" tabindex="-1" @click="emit('update:open', false)">
+              <i-lucide-x class="size-4" />
+            </Button>
+          </HoverTip>
         </div>
 
         <div v-if="task" class="flex-1 min-h-0 overflow-y-auto px-5 pb-5 pt-3 flex flex-col gap-4">
@@ -406,27 +392,17 @@ function onDialogKeydown(e) {
             <div v-else class="h-64 rounded-md border border-border focus-within:border-accent flex flex-col"
               @focusout="onEditorFocusOut">
               <div class="flex items-center gap-0.5 px-1.5 h-9 shrink-0 border-b border-border flex-wrap">
-                <Button v-for="action in toolbarActions" :key="action.name" variant="ghost" size="icon"
-                  :title="action.title" tabindex="-1" @click="runToolbar(action.name)">
-                  <i-lucide-bold v-if="action.name === 'bold'" class="size-4" />
-                  <i-lucide-italic v-else-if="action.name === 'italic'" class="size-4" />
-                  <i-lucide-underline v-else-if="action.name === 'underline'" class="size-4" />
-                  <i-lucide-strikethrough v-else-if="action.name === 'strikethrough'" class="size-4" />
-                  <i-lucide-heading v-else-if="action.name === 'heading'" class="size-4" />
-                  <i-lucide-list v-else-if="action.name === 'bulletList'" class="size-4" />
-                  <i-lucide-list-ordered v-else-if="action.name === 'numberedList'" class="size-4" />
-                  <i-lucide-list-checks v-else-if="action.name === 'checkboxList'" class="size-4" />
-                  <i-lucide-link v-else-if="action.name === 'link'" class="size-4" />
-                  <i-lucide-code v-else-if="action.name === 'inlineCode'" class="size-4" />
-                  <i-lucide-square-code v-else-if="action.name === 'codeBlock'" class="size-4" />
-                  <i-lucide-text-quote v-else-if="action.name === 'quote'" class="size-4" />
-                  <i-lucide-table v-else class="size-4" />
-                </Button>
+                <HoverTip v-for="action in TOOLBAR_ACTIONS" :key="action.name" :text="action.title" side="bottom">
+                  <Button variant="ghost" size="icon" tabindex="-1" @click="runToolbar(action.name)">
+                    <component :is="action.icon" class="size-4" />
+                  </Button>
+                </HoverTip>
                 <div class="flex-1" />
-                <Button variant="ghost" size="icon" title="Save" tabindex="-1"
-                  @click="editingBody = false; flush()">
-                  <i-lucide-save class="size-4" />
-                </Button>
+                <HoverTip text="Save" side="bottom">
+                  <Button variant="ghost" size="icon" tabindex="-1" @click="editingBody = false; flush()">
+                    <i-lucide-save class="size-4" />
+                  </Button>
+                </HoverTip>
               </div>
               <div class="flex-1 min-h-0">
                 <!-- document-key without remember-cursor: an agent editing this
@@ -442,10 +418,11 @@ function onDialogKeydown(e) {
           <div>
             <div class="flex items-center justify-between mb-1.5">
               <span class="text-sm font-medium text-on-surface-muted ml-1">Attachments</span>
-              <button class="text-on-surface-muted hover:text-on-surface" title="Add attachment"
-                @click="fileInput.click()">
-                <i-lucide-plus class="size-4" />
-              </button>
+              <HoverTip text="Add attachment" side="left">
+                <button class="text-on-surface-muted hover:text-on-surface" @click="fileInput.click()">
+                  <i-lucide-plus class="size-4" />
+                </button>
+              </HoverTip>
               <input ref="fileInput" type="file" multiple class="hidden" @change="onPick" />
             </div>
             <div class="flex flex-col gap-1.5 rounded-md" :class="dragOver ? 'bg-drop-target' : ''"
@@ -468,10 +445,11 @@ function onDialogKeydown(e) {
                   class="flex items-center gap-1 rounded bg-accent-soft text-sm px-1.5 py-0.5">
                   <button class="hover:text-accent truncate max-w-48" :title="note.title || 'Untitled'"
                     @click="openLinkedNote(note.id)">{{ note.title || 'Untitled' }}</button>
-                  <button class="text-on-surface-muted hover:text-on-surface" title="Remove link"
-                    @click="removeLink(note.id)">
-                    <i-lucide-x class="size-3" />
-                  </button>
+                  <HoverTip text="Remove link">
+                    <button class="text-on-surface-muted hover:text-on-surface" @click="removeLink(note.id)">
+                      <i-lucide-x class="size-3" />
+                    </button>
+                  </HoverTip>
                 </span>
                 <input v-model="linkQuery" placeholder="Link a note..."
                   class="flex-1 min-w-24 bg-transparent text-sm outline-none placeholder:text-on-surface-muted/60"

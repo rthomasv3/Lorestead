@@ -1,5 +1,6 @@
 <script setup>
 import { useRouter } from 'vue-router'
+import { TooltipProvider } from 'reka-ui'
 import { useSettingsStore } from './stores/settingsStore'
 import { useSyncStore } from './stores/syncStore'
 import { useNotesStore } from './stores/notesStore'
@@ -48,11 +49,19 @@ window.addEventListener('boards:changed', () => {
 </script>
 
 <template>
-  <div class="h-screen flex bg-surface text-on-surface">
-    <Sidebar />
-    <main class="flex-1 min-w-0 flex flex-col min-h-0 bg-surface [view-transition-name:main-view]">
-      <router-view />
-    </main>
-    <SearchDialog />
-  </div>
+  <!-- One provider for every HoverTip in the app. skip-delay-duration=0 because a
+       provider shares one "recently open" flag across all its tooltips, and inside
+       that window the next trigger opens with no delay at all - one provider app-wide
+       is what would turn that into the second toolbar button popping instantly.
+       HoverTip drives its own timer and never reads the flag, but this is not
+       something to leave resting on that. -->
+  <TooltipProvider :skip-delay-duration="0">
+    <div class="h-screen flex bg-surface text-on-surface">
+      <Sidebar />
+      <main class="flex-1 min-w-0 flex flex-col min-h-0 bg-surface [view-transition-name:main-view]">
+        <router-view />
+      </main>
+      <SearchDialog />
+    </div>
+  </TooltipProvider>
 </template>

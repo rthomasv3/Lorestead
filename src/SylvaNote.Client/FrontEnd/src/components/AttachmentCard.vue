@@ -8,6 +8,7 @@ import IconFileText from '~icons/lucide/file-text'
 import IconFileArchive from '~icons/lucide/file-archive'
 import IconFile from '~icons/lucide/file'
 import Button from './Button.vue'
+import HoverTip from './HoverTip.vue'
 import { useNotesStore } from '../stores/notesStore.js'
 import * as attachmentService from '../services/attachmentService.js'
 
@@ -123,17 +124,22 @@ onUnmounted(() => {
          tab order whether they are painted or not. -->
     <span
       class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity shrink-0">
-      <Button variant="ghost" size="icon" title="Download attachment"
-        @click.stop="attachmentService.downloadAttachment({ id: attachment.id })">
-        <i-lucide-download class="size-4" />
-      </Button>
-      <Button v-if="!readonly" variant="ghost" size="icon" title="Rename attachment" @click.stop="startRename">
-        <i-lucide-pencil class="size-4" />
-      </Button>
-      <Button v-if="!readonly" variant="ghost-danger" size="icon" title="Delete attachment"
-        @click.stop="emit('delete')">
-        <i-lucide-trash-2 class="size-4" />
-      </Button>
+      <HoverTip text="Download" side="bottom">
+        <Button variant="ghost" size="icon"
+          @click.stop="attachmentService.downloadAttachment({ id: attachment.id })">
+          <i-lucide-download class="size-4" />
+        </Button>
+      </HoverTip>
+      <HoverTip v-if="!readonly" text="Rename" side="bottom">
+        <Button variant="ghost" size="icon" @click.stop="startRename">
+          <i-lucide-pencil class="size-4" />
+        </Button>
+      </HoverTip>
+      <HoverTip v-if="!readonly" text="Delete" side="bottom">
+        <Button variant="ghost-danger" size="icon" @click.stop="emit('delete')">
+          <i-lucide-trash-2 class="size-4" />
+        </Button>
+      </HoverTip>
     </span>
   </div>
 </template>

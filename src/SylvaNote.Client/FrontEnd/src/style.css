@@ -18,6 +18,15 @@ button:not(:disabled),
     cursor: pointer;
 }
 
+/* Preflight gives kbd the mono stack, but a key hint never stands alone - it sits
+   beside UI text in a tooltip, a field label, the search footer. Two fonts put
+   their baselines a pixel apart inside identical line boxes, and no alignment
+   property reaches that: the boxes are already aligned, only the glyphs are not.
+   Same font, same baseline. */
+kbd {
+    font-family: inherit;
+}
+
 * {
     scrollbar-color: var(--color-scrollbar-thumb) transparent;
 }

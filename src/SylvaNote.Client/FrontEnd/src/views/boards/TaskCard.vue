@@ -7,6 +7,7 @@ import { pointerOutsideOfPreview } from '@atlaskit/pragmatic-drag-and-drop/eleme
 import { attachClosestEdge, extractClosestEdge } from '@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge'
 import { ContextMenuRoot, ContextMenuTrigger, ContextMenuPortal, ContextMenuContent, ContextMenuItem } from 'reka-ui'
 import MarkdownPreview from '../../components/MarkdownPreview.vue'
+import HoverTip from '../../components/HoverTip.vue'
 import { useSettingsStore } from '../../stores/settingsStore.js'
 import { formatTimestamp } from '../../utils/dateFormat.js'
 import { MENU_ITEM_CLASS as menuItemClass } from '../../utils/menu.js'
@@ -122,11 +123,13 @@ onUnmounted(() => {
             :class="dragging ? 'opacity-40' : ''" @click="emit('open')">
             <div class="flex items-start gap-1.5">
               <div class="flex-1 min-w-0 text-sm">{{ task.title || 'Untitled task' }}</div>
-              <button
-                class="opacity-0 group-hover:opacity-100 shrink-0 mt-0.5 text-on-surface-muted hover:text-red-500 transition-opacity"
-                title="Delete task" @click.stop="emit('request-delete')">
-                <i-lucide-trash-2 class="size-3.5" />
-              </button>
+              <HoverTip text="Delete task" side="left">
+                <button
+                  class="opacity-0 group-hover:opacity-100 shrink-0 mt-0.5 text-on-surface-muted hover:text-red-500 transition-opacity"
+                  @click.stop="emit('request-delete')">
+                  <i-lucide-trash-2 class="size-3.5" />
+                </button>
+              </HoverTip>
             </div>
             <div v-if="snippet"
               class="max-h-16 overflow-hidden text-xs text-on-surface-muted pointer-events-none [&_.markdown-preview]:text-xs">

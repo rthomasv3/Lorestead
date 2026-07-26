@@ -8,6 +8,7 @@ import { attachClosestEdge, extractClosestEdge } from '@atlaskit/pragmatic-drag-
 import { DropdownMenuRoot, DropdownMenuTrigger, DropdownMenuPortal, DropdownMenuContent, DropdownMenuItem } from 'reka-ui'
 import TaskCard from './TaskCard.vue'
 import { MENU_ITEM_CLASS as menuItemClass } from '../../utils/menu.js'
+import HoverTip from '../../components/HoverTip.vue'
 
 const props = defineProps({
   column: { type: Object, required: true },
@@ -129,11 +130,13 @@ onUnmounted(() => {
           </span>
           <span class="text-xs text-on-surface-muted/70 shrink-0">{{ tasks.length || '' }}</span>
           <DropdownMenuRoot>
-            <DropdownMenuTrigger
-              class="p-1 rounded opacity-0 group-hover:opacity-100 data-[state=open]:opacity-100 text-on-surface-muted hover:text-on-surface hover:bg-surface-alt shrink-0"
-              title="List actions" @click.stop>
-              <i-lucide-pencil class="size-3.5" />
-            </DropdownMenuTrigger>
+            <HoverTip text="List actions" side="bottom">
+              <DropdownMenuTrigger
+                class="p-1 rounded opacity-0 group-hover:opacity-100 data-[state=open]:opacity-100 text-on-surface-muted hover:text-on-surface hover:bg-surface-alt shrink-0"
+                @click.stop>
+                <i-lucide-pencil class="size-3.5" />
+              </DropdownMenuTrigger>
+            </HoverTip>
             <DropdownMenuPortal>
               <DropdownMenuContent align="start" :side-offset="4"
                 class="bg-surface-elevated border border-border rounded-lg shadow-lg p-1 min-w-40 z-50">

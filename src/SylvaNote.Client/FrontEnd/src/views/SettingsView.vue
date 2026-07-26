@@ -9,6 +9,7 @@ import Toggle from '../components/Toggle.vue'
 import Button from '../components/Button.vue'
 import TextField from '../components/TextField.vue'
 import AppLogo from '../components/AppLogo.vue'
+import HoverTip from '../components/HoverTip.vue'
 
 const store = useSettingsStore()
 const sync = useSyncStore()
@@ -192,13 +193,14 @@ onMounted(async () => {
           <div class="flex items-center gap-3">
             <span class="text-sm text-on-surface-muted w-44 shrink-0">Accent</span>
             <div class="flex items-center gap-2">
-              <button v-for="a in ACCENT_SWATCHES" :key="a.value" type="button" :title="a.label" :aria-label="a.label"
-                :aria-pressed="activeAccent === a.value"
-                class="size-6 rounded-full flex items-center justify-center ring-offset-2 ring-offset-surface transition"
-                :class="[a.dot, activeAccent === a.value ? 'ring-2 ring-on-surface/40' : 'hover:ring-2 hover:ring-border']"
-                @click="store.saveApplication({ accentColor: a.value })">
-                <i-lucide-check v-if="activeAccent === a.value" class="size-3.5 text-white" />
-              </button>
+              <HoverTip v-for="a in ACCENT_SWATCHES" :key="a.value" :text="a.label" side="bottom">
+                <button type="button" :aria-label="a.label" :aria-pressed="activeAccent === a.value"
+                  class="size-6 rounded-full flex items-center justify-center ring-offset-2 ring-offset-surface transition"
+                  :class="[a.dot, activeAccent === a.value ? 'ring-2 ring-on-surface/40' : 'hover:ring-2 hover:ring-border']"
+                  @click="store.saveApplication({ accentColor: a.value })">
+                  <i-lucide-check v-if="activeAccent === a.value" class="size-3.5 text-white" />
+                </button>
+              </HoverTip>
             </div>
           </div>
 
@@ -264,10 +266,12 @@ onMounted(async () => {
 
           <div class="flex items-center gap-3">
             <span class="text-sm text-on-surface-muted w-44 shrink-0"></span>
-            <Button disabled title="Available in packaged builds">
-              <i-lucide-refresh-cw class="size-4" />
-              Check for updates
-            </Button>
+            <HoverTip text="Available in packaged builds" side="bottom" wrap>
+              <Button disabled>
+                <i-lucide-refresh-cw class="size-4" />
+                Check for updates
+              </Button>
+            </HoverTip>
             <span class="text-xs text-on-surface-muted">Last checked: {{ lastChecked }}</span>
           </div>
         </div>
@@ -391,9 +395,11 @@ onMounted(async () => {
           <div v-if="logOpen" class="flex flex-col gap-2">
             <div class="flex items-center gap-2">
               <span class="text-xs text-on-surface-muted">System logs and errors</span>
-              <Button size="icon" title="Refresh" @click="refreshLog">
-                <i-lucide-refresh-cw class="size-4" />
-              </Button>
+              <HoverTip text="Refresh" side="bottom">
+                <Button size="icon" @click="refreshLog">
+                  <i-lucide-refresh-cw class="size-4" />
+                </Button>
+              </HoverTip>
             </div>
             <pre
               class="font-mono text-xs bg-surface-alt border border-border rounded-md p-3 max-h-96 overflow-auto whitespace-pre-wrap">

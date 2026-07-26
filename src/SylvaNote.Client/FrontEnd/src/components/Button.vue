@@ -33,7 +33,9 @@ const SIZES = {
 }
 
 const classes = computed(() =>
-  `flex items-center rounded-md disabled:opacity-40 ${props.active ? ACTIVE : VARIANTS[props.variant]} ${SIZES[props.size]}`,
+  // disabled:pointer-events-none so a disabled button stops being the hit target
+  // and a HoverTip wrapped around it still hears the hover - see its `wrap` prop.
+  `flex items-center rounded-md disabled:opacity-40 disabled:pointer-events-none ${props.active ? ACTIVE : VARIANTS[props.variant]} ${SIZES[props.size]}`,
 )
 </script>
 

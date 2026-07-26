@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
+import HoverTip from './HoverTip.vue'
 import { DialogRoot, DialogPortal, DialogOverlay, DialogContent, DialogTitle } from 'reka-ui'
 import Button from './Button.vue'
 import * as attachmentService from '../services/attachmentService.js'
@@ -132,14 +133,17 @@ const sizeLabel = () => {
           <DialogTitle class="flex-1 min-w-0 truncate text-sm text-white/90">
             {{ shown?.filename }}
           </DialogTitle>
-          <button class="p-2 rounded-md text-white/80 hover:text-white hover:bg-white/10" title="Download"
-            @click="download">
-            <i-lucide-download class="size-4.5" />
-          </button>
-          <button class="p-2 rounded-md text-white/80 hover:text-white hover:bg-white/10" title="Close"
-            @click="emit('update:open', false)">
-            <i-lucide-x class="size-4.5" />
-          </button>
+          <HoverTip text="Download" side="bottom">
+            <button class="p-2 rounded-md text-white/80 hover:text-white hover:bg-white/10" @click="download">
+              <i-lucide-download class="size-4.5" />
+            </button>
+          </HoverTip>
+          <HoverTip text="Close" side="bottom">
+            <button class="p-2 rounded-md text-white/80 hover:text-white hover:bg-white/10"
+              @click="emit('update:open', false)">
+              <i-lucide-x class="size-4.5" />
+            </button>
+          </HoverTip>
         </div>
 
         <div class="flex-1 min-h-0 flex items-center justify-center px-6 pb-6"

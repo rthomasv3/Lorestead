@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
-import { SplitterGroup, SplitterPanel, SplitterResizeHandle, DialogRoot, DialogPortal, DialogOverlay, DialogContent, DialogTitle, DialogDescription, TooltipProvider } from 'reka-ui'
+import { SplitterGroup, SplitterPanel, SplitterResizeHandle, DialogRoot, DialogPortal, DialogOverlay, DialogContent, DialogTitle, DialogDescription } from 'reka-ui'
 import HoverTip from '../../components/HoverTip.vue'
 import NotesTreePanel from './NotesTreePanel.vue'
 import AttachmentsPanel from './AttachmentsPanel.vue'
@@ -17,6 +17,7 @@ import { useNotesStore } from '../../stores/notesStore.js'
 import { useSettingsStore } from '../../stores/settingsStore.js'
 import { formatTimestamp } from '../../utils/dateFormat.js'
 import { exportNote } from '../../services/exportService.js'
+import { TOOLBAR_ACTIONS } from '../../utils/editorToolbar.js'
 
 const notesStore = useNotesStore()
 const settingsStore = useSettingsStore()
@@ -205,22 +206,6 @@ function onTemplateCreated(rootId) {
 
 // --- Toolbar ---
 
-const toolbarActions = [
-  { name: 'bold', title: 'Bold' },
-  { name: 'italic', title: 'Italic' },
-  { name: 'underline', title: 'Underline' },
-  { name: 'strikethrough', title: 'Strikethrough' },
-  { name: 'heading', title: 'Heading' },
-  { name: 'bulletList', title: 'Bulleted list' },
-  { name: 'numberedList', title: 'Numbered list' },
-  { name: 'checkboxList', title: 'Checkbox list' },
-  { name: 'link', title: 'Link' },
-  { name: 'inlineCode', title: 'Inline code' },
-  { name: 'codeBlock', title: 'Code block' },
-  { name: 'quote', title: 'Quote' },
-  { name: 'table', title: 'Table' },
-]
-
 function runToolbar(name) {
   editorRef.value?.[name]?.()
 }
@@ -280,35 +265,27 @@ onMounted(() => {
 
             <div v-else class="h-full flex flex-col min-h-0">
               <div class="flex items-center gap-0.5 px-2 h-10 shrink-0 border-b border-border">
-                <Button v-for="action in toolbarActions" :key="action.name" variant="ghost" size="icon"
-                  :title="action.title" :disabled="readonly" @click="runToolbar(action.name)">
-                  <i-lucide-bold v-if="action.name === 'bold'" class="size-4" />
-                  <i-lucide-italic v-else-if="action.name === 'italic'" class="size-4" />
-                  <i-lucide-underline v-else-if="action.name === 'underline'" class="size-4" />
-                  <i-lucide-strikethrough v-else-if="action.name === 'strikethrough'" class="size-4" />
-                  <i-lucide-heading v-else-if="action.name === 'heading'" class="size-4" />
-                  <i-lucide-list v-else-if="action.name === 'bulletList'" class="size-4" />
-                  <i-lucide-list-ordered v-else-if="action.name === 'numberedList'" class="size-4" />
-                  <i-lucide-list-checks v-else-if="action.name === 'checkboxList'" class="size-4" />
-                  <i-lucide-link v-else-if="action.name === 'link'" class="size-4" />
-                  <i-lucide-code v-else-if="action.name === 'inlineCode'" class="size-4" />
-                  <i-lucide-square-code v-else-if="action.name === 'codeBlock'" class="size-4" />
-                  <i-lucide-text-quote v-else-if="action.name === 'quote'" class="size-4" />
-                  <i-lucide-table v-else class="size-4" />
-                </Button>
+                <HoverTip v-for="action in TOOLBAR_ACTIONS" :key="action.name" :text="action.title" side="bottom"
+                  wrap>
+                  <Button variant="ghost" size="icon" :disabled="readonly" @click="runToolbar(action.name)">
+                    <component :is="action.icon" class="size-4" />
+                  </Button>
+                </HoverTip>
                 <div class="flex-1" />
                 <span v-if="readonly"
                   class="text-xs text-on-surface-muted border border-border rounded px-1.5 py-0.5 mr-1">
                   In Trash - read-only
                 </span>
-                <Button variant="ghost" size="icon" title="Export note" :disabled="readonly"
-                  @click="exportNote(currentNote.id)">
-                  <i-lucide-download class="size-4" />
-                </Button>
-                <Button variant="ghost" size="icon" title="Toggle preview" :active="previewOpen"
-                  @click="previewOpen = !previewOpen">
-                  <i-lucide-columns-2 class="size-4" />
-                </Button>
+                <HoverTip :text="readonly ? 'Note is in the Trash' : 'Export note'" side="bottom" wrap>
+                  <Button variant="ghost" size="icon" :disabled="readonly" @click="exportNote(currentNote.id)">
+                    <i-lucide-download class="size-4" />
+                  </Button>
+                </HoverTip>
+                <HoverTip text="Toggle preview" side="bottom">
+                  <Button variant="ghost" size="icon" :active="previewOpen" @click="previewOpen = !previewOpen">
+                    <i-lucide-columns-2 class="size-4" />
+                  </Button>
+                </HoverTip>
               </div>
 
               <SplitterGroup direction="horizontal" class="flex-1 min-h-0">
@@ -345,33 +322,31 @@ onMounted(() => {
               @restore="onRestoreVersion" />
           </ToolPanelShell>
 
-          <TooltipProvider :delay-duration="300">
-            <div class="w-11 shrink-0 border-l border-border bg-surface flex flex-col items-center py-2 gap-2.5">
-              <HoverTip text="Attachments" side="left">
-                <Button variant="ghost" size="icon" class="relative" :active="toolOpen === 'attachments'"
-                  @click="toggleTool('attachments')">
-                  <i-lucide-paperclip class="size-4" />
-                  <span v-if="notesStore.currentAttachments.length > 0" :class="RAIL_BADGE_CLASS">
-                    {{ notesStore.currentAttachments.length }}
-                  </span>
-                </Button>
-              </HoverTip>
-              <HoverTip text="Backlinks" side="left">
-                <Button variant="ghost" size="icon" class="relative" :active="toolOpen === 'backlinks'"
-                  @click="toggleTool('backlinks')">
-                  <i-lucide-link class="size-4" />
-                  <span v-if="notesStore.currentBacklinks.length > 0" :class="RAIL_BADGE_CLASS">
-                    {{ notesStore.currentBacklinks.length }}
-                  </span>
-                </Button>
-              </HoverTip>
-              <HoverTip text="History" side="left">
-                <Button variant="ghost" size="icon" :active="toolOpen === 'history'" @click="toggleTool('history')">
-                  <i-lucide-history class="size-4" />
-                </Button>
-              </HoverTip>
-            </div>
-          </TooltipProvider>
+          <div class="w-11 shrink-0 border-l border-border bg-surface flex flex-col items-center py-2 gap-2.5">
+            <HoverTip text="Attachments" side="left">
+              <Button variant="ghost" size="icon" class="relative" :active="toolOpen === 'attachments'"
+                @click="toggleTool('attachments')">
+                <i-lucide-paperclip class="size-4" />
+                <span v-if="notesStore.currentAttachments.length > 0" :class="RAIL_BADGE_CLASS">
+                  {{ notesStore.currentAttachments.length }}
+                </span>
+              </Button>
+            </HoverTip>
+            <HoverTip text="Backlinks" side="left">
+              <Button variant="ghost" size="icon" class="relative" :active="toolOpen === 'backlinks'"
+                @click="toggleTool('backlinks')">
+                <i-lucide-link class="size-4" />
+                <span v-if="notesStore.currentBacklinks.length > 0" :class="RAIL_BADGE_CLASS">
+                  {{ notesStore.currentBacklinks.length }}
+                </span>
+              </Button>
+            </HoverTip>
+            <HoverTip text="History" side="left">
+              <Button variant="ghost" size="icon" :active="toolOpen === 'history'" @click="toggleTool('history')">
+                <i-lucide-history class="size-4" />
+              </Button>
+            </HoverTip>
+          </div>
         </div>
       </SplitterPanel>
     </SplitterGroup>

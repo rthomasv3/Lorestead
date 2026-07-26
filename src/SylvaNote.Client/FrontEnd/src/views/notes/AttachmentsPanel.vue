@@ -2,6 +2,7 @@
 import { ref, computed } from 'vue'
 import AttachmentCard from '../../components/AttachmentCard.vue'
 import Button from '../../components/Button.vue'
+import HoverTip from '../../components/HoverTip.vue'
 import EmptyState from '../../components/EmptyState.vue'
 import AttachmentPreviewDialog from '../../components/AttachmentPreviewDialog.vue'
 import ConfirmDialog from '../../components/ConfirmDialog.vue'
@@ -60,10 +61,11 @@ function onPick(e) {
   <div class="h-full flex flex-col min-h-0">
     <div class="flex items-center justify-between px-3 h-10 shrink-0 border-b border-border">
       <span class="text-sm font-medium">Attachments</span>
-      <Button variant="ghost" size="icon" :title="readonly ? 'Note is in the Trash' : 'Add attachment'"
-        :disabled="readonly" @click="fileInput.click()">
-        <i-lucide-plus class="size-4" />
-      </Button>
+      <HoverTip :text="readonly ? 'Note is in the Trash' : 'Add attachment'" side="bottom" wrap>
+        <Button variant="ghost" size="icon" :disabled="readonly" @click="fileInput.click()">
+          <i-lucide-plus class="size-4" />
+        </Button>
+      </HoverTip>
       <input ref="fileInput" type="file" multiple class="hidden" @change="onPick" />
     </div>
 

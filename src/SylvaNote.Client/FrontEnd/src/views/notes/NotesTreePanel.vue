@@ -5,6 +5,7 @@ import Tree from '../../components/Tree.vue'
 import Button from '../../components/Button.vue'
 import EmptyState from '../../components/EmptyState.vue'
 import TextField from '../../components/TextField.vue'
+import HoverTip from '../../components/HoverTip.vue'
 import IconSearch from '~icons/lucide/search'
 import { MENU_ITEM_CLASS as menuItemClass } from '../../utils/menu.js'
 import { exportSubtree, exportAll } from '../../services/exportService.js'
@@ -248,16 +249,21 @@ defineExpose({ treeRef, addNote, focusTree })
   <div class="h-full flex flex-col min-h-0">
     <div class="flex items-center gap-1 px-2 h-10 shrink-0 border-b border-border">
       <TextField v-model="query" size="small" :icon="IconSearch" placeholder="Filter notes" class="flex-1" />
-      <Button variant="ghost" size="icon" title="Export all notes" @click="exportAll()">
-        <i-lucide-download class="size-4" />
-      </Button>
-      <Button variant="ghost" size="icon" title="New note from template"
-        @click="emit('request-template', { parentId: null })">
-        <i-lucide-layout-template class="size-4" />
-      </Button>
-      <Button variant="ghost" size="icon" title="New note" @click="addNote(null)">
-        <i-lucide-plus class="size-4" />
-      </Button>
+      <HoverTip text="Export all notes" side="bottom">
+        <Button variant="ghost" size="icon" @click="exportAll()">
+          <i-lucide-download class="size-4" />
+        </Button>
+      </HoverTip>
+      <HoverTip text="New note from template" side="bottom">
+        <Button variant="ghost" size="icon" @click="emit('request-template', { parentId: null })">
+          <i-lucide-layout-template class="size-4" />
+        </Button>
+      </HoverTip>
+      <HoverTip text="New note" side="bottom">
+        <Button variant="ghost" size="icon" @click="addNote(null)">
+          <i-lucide-plus class="size-4" />
+        </Button>
+      </HoverTip>
     </div>
 
     <div class="flex-1 min-h-0 overflow-y-auto overflow-x-auto pt-1.5 pb-2">
@@ -292,16 +298,20 @@ defineExpose({ treeRef, addNote, focusTree })
                 {{ item.label }}</span>
               <span v-if="!item.trashed" class="ml-auto shrink-0 hidden group-hover:flex items-center gap-1" @click.stop
                 @dblclick.stop>
-                <span role="button" title="Add child from template"
-                  class="p-0.5 rounded text-on-surface-muted hover:text-on-surface hover:bg-on-surface/10"
-                  @click="emit('request-template', { parentId: item.noteId })">
-                  <i-lucide-layout-template class="size-3.5" />
-                </span>
-                <span role="button" title="Add child note"
-                  class="p-0.5 rounded text-on-surface-muted hover:text-on-surface hover:bg-on-surface/10"
-                  @click="addNote(item.noteId)">
-                  <i-lucide-plus class="size-3.5" />
-                </span>
+                <HoverTip text="Add child from template" side="bottom">
+                  <span role="button"
+                    class="p-0.5 rounded text-on-surface-muted hover:text-on-surface hover:bg-on-surface/10"
+                    @click="emit('request-template', { parentId: item.noteId })">
+                    <i-lucide-layout-template class="size-3.5" />
+                  </span>
+                </HoverTip>
+                <HoverTip text="Add child note" side="bottom">
+                  <span role="button"
+                    class="p-0.5 rounded text-on-surface-muted hover:text-on-surface hover:bg-on-surface/10"
+                    @click="addNote(item.noteId)">
+                    <i-lucide-plus class="size-3.5" />
+                  </span>
+                </HoverTip>
               </span>
             </template>
           </template>
