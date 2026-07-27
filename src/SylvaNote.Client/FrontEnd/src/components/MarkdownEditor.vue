@@ -10,6 +10,7 @@ import { dropTargetForElements } from '@atlaskit/pragmatic-drag-and-drop/element
 import { useSettingsStore } from '../stores/settingsStore.js'
 import { useNotesStore } from '../stores/notesStore.js'
 import { getCursor, setCursor, flushCursors } from '../utils/cursorPositions.js'
+import { toolbarKeymap } from '../utils/editorToolbar.js'
 
 const props = defineProps({
   modelValue: { type: String, default: '' },
@@ -236,6 +237,10 @@ function createView() {
           // no popup is open, so Tab keeps its normal behaviour the rest of the
           // time (Enter is bound by the autocomplete keymap already).
           { key: 'Tab', run: acceptCompletion },
+          // Ahead of defaultKeymap so Mod-e beats the emacs-style cursorLineEnd
+          // it binds on macOS. Bound here rather than by the hosts, so the task
+          // dialog's editor gets the shortcuts without asking for them.
+          ...toolbarKeymap(actions),
           ...defaultKeymap,
           ...historyKeymap,
         ]),
@@ -462,15 +467,17 @@ function insertAtCursor(text) {
   view.focus()
 }
 
-defineExpose({
-  focus,
-  insertAtCursor,
+// One object rather than an inline defineExpose, because the key bindings run the
+// same methods the toolbar buttons do - a shortcut and its button are the same
+// action by construction, not by two implementations that agree today.
+const actions = {
   bold: () => wrapSelection('**'),
   italic: () => wrapSelection('*'),
   // markdown-it-underline renders _underscore emphasis_ as <u>; * stays italic.
   underline: () => wrapSelection('_'),
   strikethrough: () => wrapSelection('~~'),
-  heading: () => prefixLines('## '),
+  // The toolbar button passes nothing and gets H2; Mod+1..6 pass the level.
+  heading: (level = 2) => prefixLines(`${'#'.repeat(level)} `),
   bulletList: () => prefixLines('- '),
   numberedList: () => prefixLines('', { numbered: true }),
   checkboxList: () => prefixLines('- [ ] '),
@@ -479,7 +486,9 @@ defineExpose({
   codeBlock: () => insertBlock('```\ncode\n```'),
   quote: () => prefixLines('> '),
   table: () => insertBlock('| Column | Column |\n| --- | --- |\n| Cell | Cell |'),
-})
+}
+
+defineExpose({ focus, insertAtCursor, ...actions })
 </script>
 
 <template>

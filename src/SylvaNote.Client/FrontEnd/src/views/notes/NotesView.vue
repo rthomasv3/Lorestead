@@ -18,6 +18,7 @@ import { useSettingsStore } from '../../stores/settingsStore.js'
 import { formatTimestamp } from '../../utils/dateFormat.js'
 import { exportNote } from '../../services/exportService.js'
 import { TOOLBAR_ACTIONS } from '../../utils/editorToolbar.js'
+import { shortcut } from '../../utils/platform.js'
 
 const notesStore = useNotesStore()
 const settingsStore = useSettingsStore()
@@ -143,15 +144,37 @@ function onBeforeUnload() {
   flush()
 }
 
+// Preview and export act on the whole note rather than on the text under the
+// caret, so they are the page's keys, not the editor's - the task dialog has
+// neither. Shift on both: plain Mod+P prints and Mod+S is the save flush.
+const PREVIEW_KEY = shortcut('mod', 'shift', 'P')
+const EXPORT_KEY = shortcut('mod', 'shift', 'S')
+
+// On window, not on the view's root: the editor holds focus most of the time and
+// CodeMirror stops keydown from reaching an ancestor listener.
+function onViewKeydown(e) {
+  if (!(e.ctrlKey || e.metaKey) || !e.shiftKey) return
+  const key = e.key.toLowerCase()
+  if (key === 'p') {
+    e.preventDefault()
+    previewOpen.value = !previewOpen.value
+  } else if (key === 's' && !readonly.value && currentNote.value) {
+    e.preventDefault()
+    exportNote(currentNote.value.id)
+  }
+}
+
 onMounted(() => {
   window.addEventListener('editor:focus', onEditorFocusRequest)
   window.addEventListener('beforeunload', onBeforeUnload)
+  window.addEventListener('keydown', onViewKeydown)
 })
 
 onUnmounted(() => {
   flush()
   window.removeEventListener('editor:focus', onEditorFocusRequest)
   window.removeEventListener('beforeunload', onBeforeUnload)
+  window.removeEventListener('keydown', onViewKeydown)
 })
 
 // --- Tree panel dialog requests ---
@@ -265,8 +288,8 @@ onMounted(() => {
 
             <div v-else class="h-full flex flex-col min-h-0">
               <div class="flex items-center gap-0.5 px-2 h-10 shrink-0 border-b border-border">
-                <HoverTip v-for="action in TOOLBAR_ACTIONS" :key="action.name" :text="action.title" side="bottom"
-                  wrap>
+                <HoverTip v-for="action in TOOLBAR_ACTIONS" :key="action.name" :text="action.title"
+                  :hotkey="action.hotkey" side="bottom" wrap>
                   <Button variant="ghost" size="icon" :disabled="readonly" @click="runToolbar(action.name)">
                     <component :is="action.icon" class="size-4" />
                   </Button>
@@ -276,12 +299,13 @@ onMounted(() => {
                   class="text-xs text-on-surface-muted border border-border rounded px-1.5 py-0.5 mr-1">
                   In Trash - read-only
                 </span>
-                <HoverTip :text="readonly ? 'Note is in the Trash' : 'Export note'" side="bottom" wrap>
+                <HoverTip :text="readonly ? 'Note is in the Trash' : 'Export note'" :hotkey="EXPORT_KEY"
+                  side="bottom" wrap>
                   <Button variant="ghost" size="icon" :disabled="readonly" @click="exportNote(currentNote.id)">
                     <i-lucide-download class="size-4" />
                   </Button>
                 </HoverTip>
-                <HoverTip text="Toggle preview" side="bottom">
+                <HoverTip text="Toggle preview" :hotkey="PREVIEW_KEY" side="bottom">
                   <Button variant="ghost" size="icon" :active="previewOpen" @click="previewOpen = !previewOpen">
                     <i-lucide-columns-2 class="size-4" />
                   </Button>

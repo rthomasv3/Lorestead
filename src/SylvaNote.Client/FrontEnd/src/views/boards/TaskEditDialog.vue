@@ -17,6 +17,8 @@ import { useBoardsStore } from '../../stores/boardsStore.js'
 import { useNotesStore } from '../../stores/notesStore.js'
 import { useSettingsStore } from '../../stores/settingsStore.js'
 import { formatTimestamp } from '../../utils/dateFormat.js'
+import { TOOLBAR_ACTIONS } from '../../utils/editorToolbar.js'
+import { shortcut } from '../../utils/platform.js'
 
 const props = defineProps({
   open: { type: Boolean, default: false },
@@ -171,12 +173,20 @@ async function enterEdit() {
   editorRef.value?.focus()
 }
 
-// Blur flushes and returns to reading mode (ui/pages/task-edit.md) - but not when
-// focus just moved to the toolbar, or every button click would close the editor.
+// The one way out of edit mode: the toolbar's save button, Ctrl+S, and blurring
+// all land here. Leaving the editor is what "saved" means in this dialog - the
+// button that flushed but stayed in edit mode would look like it had done
+// nothing, since the save status lives in the notes footer, not here.
+function leaveEdit() {
+  editingBody.value = false
+  flush()
+}
+
+// Blur returns to reading mode (ui/pages/task-edit.md) - but not when focus just
+// moved to the toolbar, or every button click would close the editor.
 function onEditorFocusOut(e) {
   if (!e.currentTarget.contains(e.relatedTarget)) {
-    editingBody.value = false
-    flush()
+    leaveEdit()
   }
 }
 
@@ -392,14 +402,15 @@ function onDialogKeydown(e) {
             <div v-else class="h-64 rounded-md border border-border focus-within:border-accent flex flex-col"
               @focusout="onEditorFocusOut">
               <div class="flex items-center gap-0.5 px-1.5 h-9 shrink-0 border-b border-border flex-wrap">
-                <HoverTip v-for="action in TOOLBAR_ACTIONS" :key="action.name" :text="action.title" side="bottom">
+                <HoverTip v-for="action in TOOLBAR_ACTIONS" :key="action.name" :text="action.title"
+                  :hotkey="action.hotkey" side="bottom">
                   <Button variant="ghost" size="icon" tabindex="-1" @click="runToolbar(action.name)">
                     <component :is="action.icon" class="size-4" />
                   </Button>
                 </HoverTip>
                 <div class="flex-1" />
-                <HoverTip text="Save" side="bottom">
-                  <Button variant="ghost" size="icon" tabindex="-1" @click="editingBody = false; flush()">
+                <HoverTip text="Save" :hotkey="shortcut('mod', 'S')" side="bottom">
+                  <Button variant="ghost" size="icon" tabindex="-1" @click="leaveEdit">
                     <i-lucide-save class="size-4" />
                   </Button>
                 </HoverTip>
@@ -410,7 +421,7 @@ function onDialogKeydown(e) {
                      store is garbage-collected against the note index, so a task
                      id would be swept on the next load. -->
                 <MarkdownEditor ref="editorRef" :model-value="body" :attachments="attachments"
-                  :document-key="taskId ?? ''" @update:model-value="onBodyChange" @save="flush" />
+                  :document-key="taskId ?? ''" @update:model-value="onBodyChange" @save="leaveEdit" />
               </div>
             </div>
           </div>
