@@ -28,7 +28,7 @@ const props = defineProps({
   rememberCursor: { type: Boolean, default: false },
 })
 
-const emit = defineEmits(['update:modelValue', 'save'])
+const emit = defineEmits(['update:modelValue', 'save', 'scroll'])
 
 const settingsStore = useSettingsStore()
 const notesStore = useNotesStore()
@@ -267,11 +267,42 @@ function createView() {
       ],
     }),
   })
+  // Not domEventHandlers: those are bound to the content, and scroll does not
+  // bubble up out of the element that scrolled.
+  view.scrollDOM.addEventListener('scroll', onScroll)
   // A restored offset is real but off-screen until something scrolls to it, and
   // EditorState.create has no way to ask for that.
   if (anchor > 0) {
     view.dispatch({ selection: { anchor }, scrollIntoView: true })
   }
+}
+
+function onScroll() {
+  emit('scroll')
+}
+
+// Where the viewport sits, how far it can travel, and where a given source line
+// sits, all in the scroller's own coordinate space. lineTop has to come from here
+// because only CodeMirror knows how many visual rows a wrapped line takes up.
+function scrollGeometry() {
+  if (!view) return null
+  const scroller = view.scrollDOM
+  // Block tops are measured from the top of the document, which sits below
+  // scrollTop 0 by the content's padding.
+  const pad = view.documentTop - scroller.getBoundingClientRect().top + scroller.scrollTop
+  return {
+    top: scroller.scrollTop,
+    max: scroller.scrollHeight - scroller.clientHeight,
+    lineTop: (line) => {
+      const doc = view.state.doc
+      const number = Math.min(Math.max(line + 1, 1), doc.lines)
+      return view.lineBlockAt(doc.line(number).from).top + pad
+    },
+  }
+}
+
+function scrollTo(top) {
+  if (view) view.scrollDOM.scrollTop = top
 }
 
 let dropCleanup = null
@@ -332,7 +363,10 @@ onMounted(() => {
 onUnmounted(() => {
   if (dropCleanup) dropCleanup()
   hideDropCaret()
-  if (view) view.destroy()
+  if (view) {
+    view.scrollDOM.removeEventListener('scroll', onScroll)
+    view.destroy()
+  }
   // The position store writes on a debounce; a note closed inside that window
   // would otherwise lose the last move.
   flushCursors()
@@ -488,7 +522,7 @@ const actions = {
   table: () => insertBlock('| Column | Column |\n| --- | --- |\n| Cell | Cell |'),
 }
 
-defineExpose({ focus, insertAtCursor, ...actions })
+defineExpose({ focus, insertAtCursor, scrollGeometry, scrollTo, ...actions })
 </script>
 
 <template>

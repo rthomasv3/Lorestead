@@ -15,6 +15,7 @@ import Button from '../../components/Button.vue'
 import EmptyState from '../../components/EmptyState.vue'
 import { useNotesStore } from '../../stores/notesStore.js'
 import { useSettingsStore } from '../../stores/settingsStore.js'
+import { useScrollSync } from '../../composables/useScrollSync.js'
 import { formatTimestamp } from '../../utils/dateFormat.js'
 import { exportNote } from '../../services/exportService.js'
 import { TOOLBAR_ACTIONS } from '../../utils/editorToolbar.js'
@@ -25,8 +26,11 @@ const settingsStore = useSettingsStore()
 
 const treePanel = ref(null)
 const editorRef = ref(null)
+const previewScroller = ref(null)
 const previewOpen = ref(false)
 const toolOpen = ref(null)
+
+const { onEditorScroll, onPreviewScroll } = useScrollSync(editorRef, previewScroller)
 
 // Count bubble on a rail button; the button itself supplies `relative`.
 const RAIL_BADGE_CLASS =
@@ -316,12 +320,13 @@ onMounted(() => {
                 <SplitterPanel :min-size="25">
                   <MarkdownEditor ref="editorRef" :model-value="body" :readonly="readonly"
                     :attachments="notesStore.currentAttachments" :document-key="editingNoteId ?? ''" remember-cursor
-                    @update:model-value="onBodyChange" @save="flush" @keydown.esc="onEditorEscape" />
+                    @update:model-value="onBodyChange" @save="flush" @scroll="onEditorScroll"
+                    @keydown.esc="onEditorEscape" />
                 </SplitterPanel>
                 <template v-if="previewOpen">
                   <SplitterResizeHandle class="w-px bg-border hover:bg-accent/50 transition-colors" />
                   <SplitterPanel :default-size="50" :min-size="20" class="bg-surface">
-                    <div class="h-full overflow-y-auto p-4">
+                    <div ref="previewScroller" class="h-full overflow-y-auto p-4" @scroll="onPreviewScroll">
                       <MarkdownPreview :markdown="body" :editable="!readonly" @update:markdown="onBodyChange" />
                     </div>
                   </SplitterPanel>
