@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Threading.Tasks;
+using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 using SylvaNote.Core.DataAccess;
 using SylvaNote.Core.DataAccess.Migrations;
@@ -47,9 +48,36 @@ internal static class Program
                 state.DeviceId + "-mcp",
                 historyRetention: settings.HistoryRetention);
 
+            // A debug build is one a developer registered against their own machine
+            // while changing this code, so it says so rather than passing for an
+            // installed one. Read from the build config, not from configuration a
+            // client could get wrong.
+#if DEBUG
+            string build = "development build";
+#else
+            string build = "release build";
+#endif
+
             await using McpServer server = McpServer.Create(
                 new StdioServerTransport("SylvaNote"),
-                new McpServerOptions { ToolCollection = [.. McpToolRegistry.CreateTools(tools)] });
+                new McpServerOptions
+                {
+                    ServerInfo = new Implementation
+                    {
+                        Name = "sylvanote",
+                        Title = "SylvaNote (" + build + ")",
+                        Version = typeof(Program).Assembly.GetName().Version.ToString(),
+                    },
+                    // Which database this is talking to is the one thing a caller
+                    // cannot see and the one thing that has actually gone wrong
+                    // before (decisions.md), so the handshake states it outright.
+                    ServerInstructions =
+                        "SylvaNote notes and boards, " + build + ", reading and writing the local database at "
+                        + dataDirectory + ". Edits land in the same database the desktop client is using and "
+                        + "appear there without a restart; they are attributed to this device with an -mcp suffix "
+                        + "in the note history.",
+                    ToolCollection = [.. McpToolRegistry.CreateTools(tools)],
+                });
             await server.RunAsync();
         }
         catch (Exception ex)

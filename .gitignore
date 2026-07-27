@@ -1,4 +1,5 @@
 .claude/
+.mcp.json
 CLAUDE.md
 bin/
 obj/
