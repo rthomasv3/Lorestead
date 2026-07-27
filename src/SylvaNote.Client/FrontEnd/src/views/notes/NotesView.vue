@@ -27,8 +27,6 @@ const settingsStore = useSettingsStore()
 const treePanel = ref(null)
 const editorRef = ref(null)
 const previewScroller = ref(null)
-const previewOpen = ref(false)
-const toolOpen = ref(null)
 
 const { onEditorScroll, onPreviewScroll } = useScrollSync(editorRef, previewScroller)
 
@@ -161,7 +159,7 @@ function onViewKeydown(e) {
   const key = e.key.toLowerCase()
   if (key === 'p') {
     e.preventDefault()
-    previewOpen.value = !previewOpen.value
+    notesStore.previewOpen = !notesStore.previewOpen
   } else if (key === 's' && !readonly.value && currentNote.value) {
     e.preventDefault()
     exportNote(currentNote.value.id)
@@ -248,10 +246,10 @@ async function onRestoreVersion(version) {
 }
 
 function toggleTool(name) {
-  toolOpen.value = toolOpen.value === name ? null : name
+  notesStore.toolOpen = notesStore.toolOpen === name ? null : name
   // History carries every retained version's payload, so it is fetched on open and
   // dropped on close rather than riding along with the note (decisions.md).
-  if (toolOpen.value === 'history') notesStore.loadHistory()
+  if (notesStore.toolOpen === 'history') notesStore.loadHistory()
   else notesStore.clearHistory()
 }
 
@@ -261,11 +259,15 @@ function toggleTool(name) {
 watch(
   () => [notesStore.selectedId, notesStore.byId.get(notesStore.selectedId)?.updatedAt],
   () => {
-    if (toolOpen.value === 'history') notesStore.loadHistory()
+    if (notesStore.toolOpen === 'history') notesStore.loadHistory()
   })
 
 onMounted(() => {
   if (!notesStore.loaded) notesStore.load()
+  // Now that the open panel survives navigation, history can come back showing
+  // whatever was loaded before you left. The watcher below only fires on a
+  // change, so a version added while you were on the boards would not appear.
+  if (notesStore.toolOpen === 'history') notesStore.loadHistory()
   // Backlinks can be changed from the boards side - a task's linked-notes list or a
   // note:// mention in its body - and a local edit publishes no event (the watcher
   // only fires for foreign devices). The task dialog lives on the boards route, so
@@ -310,20 +312,26 @@ onMounted(() => {
                   </Button>
                 </HoverTip>
                 <HoverTip text="Toggle preview" :hotkey="PREVIEW_KEY" side="bottom">
-                  <Button variant="ghost" size="icon" :active="previewOpen" @click="previewOpen = !previewOpen">
+                  <Button variant="ghost" size="icon" :active="notesStore.previewOpen"
+                    @click="notesStore.previewOpen = !notesStore.previewOpen">
                     <i-lucide-columns-2 class="size-4" />
                   </Button>
                 </HoverTip>
               </div>
 
-              <SplitterGroup direction="horizontal" class="flex-1 min-h-0">
+              <!-- Its own auto-save-id, like the two splitters around it: the
+                   editor/preview ratio is a size, so it outlives a launch even
+                   though whether the preview is open does not. Reka keys the
+                   saved layout by the panel set, so the closed and open shapes
+                   are stored separately and cannot overwrite each other. -->
+              <SplitterGroup direction="horizontal" class="flex-1 min-h-0" auto-save-id="sylvanote-notes-preview">
                 <SplitterPanel :min-size="25">
                   <MarkdownEditor ref="editorRef" :model-value="body" :readonly="readonly"
                     :attachments="notesStore.currentAttachments" :document-key="editingNoteId ?? ''" remember-cursor
                     @update:model-value="onBodyChange" @save="flush" @scroll="onEditorScroll"
                     @keydown.esc="onEditorEscape" />
                 </SplitterPanel>
-                <template v-if="previewOpen">
+                <template v-if="notesStore.previewOpen">
                   <SplitterResizeHandle class="w-px bg-border hover:bg-accent/50 transition-colors" />
                   <SplitterPanel :default-size="50" :min-size="20" class="bg-surface">
                     <div ref="previewScroller" class="h-full overflow-y-auto p-4" @scroll="onPreviewScroll">
@@ -344,16 +352,16 @@ onMounted(() => {
 
           <!-- One shell for all three tools: switching keeps the panel's width and
                crossfades the content instead of collapsing and re-expanding. -->
-          <ToolPanelShell :open="toolOpen !== null" :content-key="toolOpen">
-            <AttachmentsPanel v-if="toolOpen === 'attachments'" />
-            <BacklinksPanel v-else-if="toolOpen === 'backlinks'" />
-            <HistoryPanel v-else-if="toolOpen === 'history'" :current-body="body" :readonly="readonly"
+          <ToolPanelShell :open="notesStore.toolOpen !== null" :content-key="notesStore.toolOpen">
+            <AttachmentsPanel v-if="notesStore.toolOpen === 'attachments'" />
+            <BacklinksPanel v-else-if="notesStore.toolOpen === 'backlinks'" />
+            <HistoryPanel v-else-if="notesStore.toolOpen === 'history'" :current-body="body" :readonly="readonly"
               @restore="onRestoreVersion" />
           </ToolPanelShell>
 
           <div class="w-11 shrink-0 border-l border-border bg-surface flex flex-col items-center py-2 gap-2.5">
             <HoverTip text="Attachments" side="left">
-              <Button variant="ghost" size="icon" class="relative" :active="toolOpen === 'attachments'"
+              <Button variant="ghost" size="icon" class="relative" :active="notesStore.toolOpen === 'attachments'"
                 @click="toggleTool('attachments')">
                 <i-lucide-paperclip class="size-4" />
                 <span v-if="notesStore.currentAttachments.length > 0" :class="RAIL_BADGE_CLASS">
@@ -362,7 +370,7 @@ onMounted(() => {
               </Button>
             </HoverTip>
             <HoverTip text="Backlinks" side="left">
-              <Button variant="ghost" size="icon" class="relative" :active="toolOpen === 'backlinks'"
+              <Button variant="ghost" size="icon" class="relative" :active="notesStore.toolOpen === 'backlinks'"
                 @click="toggleTool('backlinks')">
                 <i-lucide-link class="size-4" />
                 <span v-if="notesStore.currentBacklinks.length > 0" :class="RAIL_BADGE_CLASS">
@@ -371,7 +379,7 @@ onMounted(() => {
               </Button>
             </HoverTip>
             <HoverTip text="History" side="left">
-              <Button variant="ghost" size="icon" :active="toolOpen === 'history'" @click="toggleTool('history')">
+              <Button variant="ghost" size="icon" :active="notesStore.toolOpen === 'history'" @click="toggleTool('history')">
                 <i-lucide-history class="size-4" />
               </Button>
             </HoverTip>

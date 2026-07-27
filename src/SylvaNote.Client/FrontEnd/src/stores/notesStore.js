@@ -22,6 +22,14 @@ export const useNotesStore = defineStore('notes', () => {
   // Tree expansion lives here (not in the Tree component) so it survives route
   // changes - the view unmounts on navigation but the store does not.
   const expandedIds = ref(new Set())
+  // Which tool panel is open (null for none), and whether the preview is showing.
+  // Same reason as the expansion above, and the same reason the selection is
+  // here: stepping over to the boards to make a task and coming back should not
+  // find half the window shut. In the store rather than localStorage on purpose -
+  // these say where you were, not how you like things sized, and a fresh launch
+  // is meant to be a fresh start.
+  const toolOpen = ref(null)
+  const previewOpen = ref(false)
 
   const blobUrls = new Map()
 
@@ -389,6 +397,8 @@ export const useNotesStore = defineStore('notes', () => {
     currentBacklinks,
     currentHistory,
     expandedIds,
+    toolOpen,
+    previewOpen,
     treeItems,
     templateRootSummaries,
     byId,
