@@ -52,7 +52,9 @@ function onKeydown(e) {
       </HoverTip>
     </div>
 
-    <div class="flex-1 min-h-0 overflow-y-auto px-2 pt-1.5 pb-2 flex flex-col gap-0.5">
+    <!-- No horizontal padding and no gap: the rows carry their own padding and run
+         edge to edge, the same as the notes tree. -->
+    <div class="flex-1 min-h-0 overflow-y-auto pb-2 flex flex-col">
       <BoardListRow v-for="board in boardsStore.boards" :key="board.id" :board="board"
         :selected="board.id === boardsStore.selectedBoardId" :renaming="renamingId === board.id"
         @select="boardsStore.select(board.id)" @rename="(name) => onRename(board.id, name)"

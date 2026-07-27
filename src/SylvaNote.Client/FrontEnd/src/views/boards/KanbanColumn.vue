@@ -5,9 +5,8 @@ import { draggable, dropTargetForElements, monitorForElements } from '@atlaskit/
 import { setCustomNativeDragPreview } from '@atlaskit/pragmatic-drag-and-drop/element/set-custom-native-drag-preview'
 import { pointerOutsideOfPreview } from '@atlaskit/pragmatic-drag-and-drop/element/pointer-outside-of-preview'
 import { attachClosestEdge, extractClosestEdge } from '@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge'
-import { DropdownMenuRoot, DropdownMenuTrigger, DropdownMenuPortal, DropdownMenuContent, DropdownMenuItem } from 'reka-ui'
 import TaskCard from './TaskCard.vue'
-import { MENU_ITEM_CLASS as menuItemClass } from '../../utils/menu.js'
+import Button from '../../components/Button.vue'
 import HoverTip from '../../components/HoverTip.vue'
 
 const props = defineProps({
@@ -121,36 +120,28 @@ onUnmounted(() => {
       <div ref="header" class="group flex items-center gap-1 px-2.5 h-9 shrink-0 cursor-grab">
         <input v-if="renaming" ref="editInput" :value="column.name" placeholder="Untitled list"
           class="flex-1 min-w-0 bg-transparent text-sm font-medium border-b border-accent outline-none"
-          @blur="commitRename" @keydown.enter="$event.target.blur()" @keydown.esc.stop="emit('rename-done')"
-          @click.stop @dblclick.stop />
+          @blur="commitRename" @keydown.enter="$event.target.blur()" @keydown.esc.stop="emit('rename-done')" @click.stop
+          @dblclick.stop />
         <template v-else>
           <span class="flex-1 min-w-0 truncate text-sm font-medium border-b border-transparent"
             @dblclick="emit('request-rename')">
             {{ column.name || 'Untitled list' }}
           </span>
-          <span class="text-xs text-on-surface-muted/70 shrink-0">{{ tasks.length || '' }}</span>
-          <DropdownMenuRoot>
-            <HoverTip text="List actions" side="bottom">
-              <DropdownMenuTrigger
-                class="p-1 rounded opacity-0 group-hover:opacity-100 data-[state=open]:opacity-100 text-on-surface-muted hover:text-on-surface hover:bg-surface-alt shrink-0"
-                @click.stop>
-                <i-lucide-pencil class="size-3.5" />
-              </DropdownMenuTrigger>
+          <!-- hidden rather than opacity-0, as in the notes tree: a list is 256px
+               wide and the title should have all of it until there is a reason not
+               to. -->
+          <span class="shrink-0 hidden group-hover:flex items-center gap-1" @click.stop @dblclick.stop>
+            <HoverTip text="Rename list" side="bottom">
+              <Button variant="ghost" size="icon" @click="emit('request-rename')">
+                <i-lucide-pencil class="size-4" />
+              </Button>
             </HoverTip>
-            <DropdownMenuPortal>
-              <DropdownMenuContent align="start" :side-offset="4"
-                class="bg-surface-elevated border border-border rounded-lg shadow-lg p-1 min-w-40 z-50">
-                <DropdownMenuItem :class="menuItemClass" @select="emit('request-rename')">
-                  <i-lucide-pencil class="size-4 text-on-surface-muted" />
-                  Rename
-                </DropdownMenuItem>
-                <DropdownMenuItem :class="menuItemClass" @select="emit('request-delete')">
-                  <i-lucide-trash-2 class="size-4 text-red-500" />
-                  Delete
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenuPortal>
-          </DropdownMenuRoot>
+            <HoverTip text="Delete list" side="bottom">
+              <Button variant="ghost-danger" size="icon" @click="emit('request-delete')">
+                <i-lucide-trash-2 class="size-4" />
+              </Button>
+            </HoverTip>
+          </span>
         </template>
       </div>
 

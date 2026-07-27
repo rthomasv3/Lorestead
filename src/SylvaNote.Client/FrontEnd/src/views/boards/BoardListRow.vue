@@ -115,12 +115,15 @@ onUnmounted(() => {
     <ContextMenuTrigger as-child>
       <div>
         <div ref="row" class="relative">
-          <div v-if="dropEdge === 'top'" class="absolute -top-px left-2 right-2 h-0.5 rounded bg-accent z-10" />
-          <div v-if="dropEdge === 'bottom'" class="absolute -bottom-px left-2 right-2 h-0.5 rounded bg-accent z-10" />
-          <!-- Same states as a notes tree row (TreeNode): full-strength label,
-             accent-soft when selected, a neutral tint while its context menu is
-             open, surface-alt on hover. -->
-          <button class="w-full flex items-center gap-2 rounded-md px-2.5 h-8 text-sm text-left transition-colors"
+          <div v-if="dropEdge === 'top'" class="absolute -top-px left-0 right-0 h-0.5 rounded bg-accent z-10" />
+          <div v-if="dropEdge === 'bottom'" class="absolute -bottom-px left-0 right-0 h-0.5 rounded bg-accent z-10" />
+          <!-- Same shape and states as a notes tree row (TreeNode): square, full
+             width of the panel, its own px-3; full-strength label, accent-soft when
+             selected, a neutral tint while its context menu is open, surface-alt on
+             hover. py-1.5 rather than a fixed height, which is what the tree does:
+             the two rows then derive the same height from the same text instead of
+             agreeing on a number that only holds at today's type scale. -->
+          <button class="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-left transition-colors"
             :class="[
               contextOpen ? 'bg-on-surface/5' : selected ? 'bg-accent-soft' : 'hover:bg-surface-alt',
               dragging ? 'opacity-40' : '',

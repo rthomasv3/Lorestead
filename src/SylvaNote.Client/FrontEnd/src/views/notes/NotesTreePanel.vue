@@ -266,7 +266,7 @@ defineExpose({ treeRef, addNote, focusTree })
       </HoverTip>
     </div>
 
-    <div class="flex-1 min-h-0 overflow-y-auto overflow-x-auto pt-1.5 pb-2">
+    <div class="flex-1 min-h-0 overflow-y-auto overflow-x-auto pb-2">
       <!-- Above the tree, because that is where the notes are: the message stands
            in for the missing rows, and Templates and Trash stay put below it. -->
       <EmptyState v-if="noMatches">

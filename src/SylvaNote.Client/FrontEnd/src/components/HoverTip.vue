@@ -6,6 +6,14 @@ import { TooltipRoot, TooltipTrigger, TooltipPortal, TooltipContent } from 'reka
 // pop after closing a dialog (focus returns to the trigger) and while tabbing.
 // Driving `open` from here rather than letting Reka's trigger do it is what buys
 // that - and is also why the provider's delay props never apply to these.
+
+// Tooltipping the trigger of a menu, popover or select means wrapping the whole
+// thing - `<HoverTip wrap><DropdownMenuRoot>...` - never slipping this between a
+// root and its trigger. TooltipRoot brings its own Popper root, and the trigger
+// inside would register its anchor with that one instead of with the menu's; the
+// menu then opens with nothing to position against and Reka parks it off-screen,
+// so it reads as a dead button. `wrap` is required in that shape because a root
+// component renders no element for `as-child` to bind the hover listeners to.
 const props = defineProps({
   text: { type: String, required: true },
   hotkey: { type: String, default: '' },
