@@ -13,6 +13,7 @@
     "@atlaskit/pragmatic-drag-and-drop-hitbox": "^2.0.0",
     "@codemirror/autocomplete": "^6.20.3",
     "@codemirror/lang-markdown": "^6.5.1",
+    "@codemirror/search": "^6.7.1",
     "@codemirror/state": "^6.7.1",
     "@codemirror/view": "^6.43.6",
     "codemirror": "^6.0.2",

@@ -33,7 +33,12 @@ const controlAttrs = computed(() => {
 })
 
 // A component ref points at the instance, not the input, so focus is explicit.
-defineExpose({ focus: () => inputEl.value?.focus() })
+// `select` comes with it: a field reopened on its last value (the editor's find
+// bar) wants that value replaced by the next keystroke, not appended to.
+defineExpose({
+  focus: () => inputEl.value?.focus(),
+  select: () => inputEl.value?.select(),
+})
 </script>
 
 <template>

@@ -339,16 +339,6 @@ kbd {
     appearance: none;
     width: 1em;
     height: 1em;
-    margin: 0 0.45em 0 0;
-    /* Baseline - the default - parks the box's bottom edge on the text baseline,
-       leaving the text low beside it. `middle` is defined as centring on the
-       x-height, but the band a line of text reads as centred on is the cap
-       height, which sits (cap - x)/2 higher. `middle` aligns the *margin* box,
-       so a bottom margin of the full difference lifts the border box by half of
-       it - landing on the cap centre at any font or size. Dropped whole on an
-       engine without `cap`, which just leaves the x-height centring. */
-    vertical-align: middle;
-    margin-bottom: calc(1cap - 1ex);
     border: 1px solid var(--color-border);
     border-radius: 0.25em;
     background-color: var(--color-surface-alt);
@@ -363,13 +353,26 @@ kbd {
     background-size: 0.75em;
 }
 
-.markdown-preview li.task-list-item input:disabled {
-    opacity: 0.5;
-}
-
 .markdown-preview li.task-list-item input:focus-visible {
     outline: 2px solid var(--color-accent);
     outline-offset: 1px;
+}
+
+.markdown-preview li.task-list-item input {
+    margin: 0 0.45em 0 0;
+    /* Baseline - the default - parks the box's bottom edge on the text baseline,
+       leaving the text low beside it. `middle` is defined as centring on the
+       x-height, but the band a line of text reads as centred on is the cap
+       height, which sits (cap - x)/2 higher. `middle` aligns the *margin* box,
+       so a bottom margin of the full difference lifts the border box by half of
+       it - landing on the cap centre at any font or size. Dropped whole on an
+       engine without `cap`, which just leaves the x-height centring. */
+    vertical-align: middle;
+    margin-bottom: calc(1cap - 1ex);
+}
+
+.markdown-preview li.task-list-item input:disabled {
+    opacity: 0.5;
 }
 
 /* The plugin's own `enabled` class cannot be trusted per instance (see
