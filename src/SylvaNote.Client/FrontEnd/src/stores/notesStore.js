@@ -156,10 +156,18 @@ export const useNotesStore = defineStore('notes', () => {
     await load()
   }
 
+  // The cached note mirrors the write (same as rename): the editor hydrates from
+  // currentNote on remount, and a body left at its selected-time text handed the
+  // editor pre-save content after a round trip through another route. Mutating in
+  // place keeps the ref's identity, so the hydrate watch does not re-fire mid-typing.
   async function saveBody(id, body) {
     const response = await noteService.saveNote({ id, body })
     const summary = byId.value.get(id)
     if (summary) summary.updatedAt = response.updatedAt
+    if (currentNote.value?.id === id) {
+      currentNote.value.body = body
+      currentNote.value.updatedAt = response.updatedAt
+    }
     return response
   }
 
