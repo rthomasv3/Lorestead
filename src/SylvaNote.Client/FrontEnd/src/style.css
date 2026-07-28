@@ -569,3 +569,7 @@ kbd {
 .ͼc {
     color: var(--color-code-indicator);
 }
+
+.cm-gutter {
+    min-width: 3.25em;
+}
