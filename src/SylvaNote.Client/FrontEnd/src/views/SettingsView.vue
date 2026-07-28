@@ -17,6 +17,7 @@ const sync = useSyncStore()
 const THEME_OPTIONS = [
   { value: 'system', label: 'System' },
   { value: 'light', label: 'Light' },
+  { value: 'parchment', label: 'Parchment' },
   { value: 'dark', label: 'Dark' },
 ]
 const ACCENT_SWATCHES = [
@@ -26,6 +27,8 @@ const ACCENT_SWATCHES = [
   { value: 'cyan', label: 'Cyan', dot: 'bg-cyan-500' },
   { value: 'emerald', label: 'Emerald', dot: 'bg-emerald-500' },
   { value: 'rose', label: 'Rose', dot: 'bg-rose-500' },
+  { value: 'rust', label: 'Rust', dot: 'bg-[#b05f3d]' },
+  { value: 'olive', label: 'Olive', dot: 'bg-[#6f8149]' },
 ]
 const DATE_FORMAT_OPTIONS = [
   { value: 'yyyy-MM-dd', label: '2026-07-23' },

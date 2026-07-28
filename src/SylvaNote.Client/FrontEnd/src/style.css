@@ -143,6 +143,11 @@ kbd {
        has to outrank a resting selection. */
     --color-drop-target: rgb(99 102 241 / 0.18);
     --color-code-indicator: #219;
+    /* Hover wash — the one hover tint for ghost controls and rows (controlStates.js).
+       An alpha over on-surface so it reads on every plane; the strength is per theme
+       because the same percentage of near-black that vanishes on zinc reads heavy
+       on paper. */
+    --color-hover-wash: color-mix(in srgb, var(--color-on-surface) 6%, transparent);
 }
 
 .light {
@@ -161,6 +166,7 @@ kbd {
     --color-drop-target: color-mix(in oklab, var(--accent-soft-base) 18%, transparent);
 
     --color-code-indicator: #219;
+    --color-hover-wash: color-mix(in srgb, var(--color-on-surface) 6%, transparent);
 }
 
 .dark {
@@ -179,6 +185,30 @@ kbd {
     --color-drop-target: color-mix(in oklab, var(--accent-soft-base-dark) 30%, transparent);
 
     --color-code-indicator: rgb(89, 77, 248);
+    --color-hover-wash: color-mix(in srgb, var(--color-on-surface) 10%, transparent);
+}
+
+/* Warm paper alternative to light. Same structure as `.light` — the page plane is the
+   darker aged tone and raised surfaces step lighter, like fresh paper on an aged desk.
+   Accents reuse the on-light shades; soft/drop mixes run a couple points higher because
+   the tinted base has less contrast against parchment than against white. */
+.parchment {
+    color-scheme: light;
+    --color-surface: #ede5d2;
+    --color-surface-alt: #f7f2e6;
+    --color-surface-elevated: #f7f2e6;
+    --color-on-surface: #3b3428;
+    --color-on-surface-muted: #75684d;
+    --color-border: #d5c8aa;
+    --color-scrollbar-thumb: #cfc2a4;
+    --color-scrollbar-thumb-hover: #b9ab8a;
+
+    --color-accent: var(--accent-on-light);
+    --color-accent-soft: color-mix(in oklab, var(--accent-soft-base) 15%, transparent);
+    --color-drop-target: color-mix(in oklab, var(--accent-soft-base) 21%, transparent);
+
+    --color-code-indicator: #6d3d1e;
+    --color-hover-wash: color-mix(in srgb, var(--color-on-surface) 6%, transparent);
 }
 
 /* Accent palette. Each block sets the raw shades the theme rules map to semantic tokens.
@@ -237,6 +267,27 @@ kbd {
     --color-accent-strong-hover: var(--color-rose-700);
     --accent-soft-base: var(--color-rose-500);
     --accent-soft-base-dark: var(--color-rose-400);
+}
+
+/* Earth accents, added alongside the parchment theme but available everywhere.
+   Not Tailwind shades — literal ramps tuned so `strong` keeps white text AA (rust 6.2:1,
+   olive 5.9:1) and the on-dark tones stay readable on zinc-900. */
+[data-accent="rust"] {
+    --accent-on-light: #9b4a2c;
+    --accent-on-dark: #cd7f5c;
+    --color-accent-strong: #9b4a2c;
+    --color-accent-strong-hover: #833e24;
+    --accent-soft-base: #b05f3d;
+    --accent-soft-base-dark: #cd7f5c;
+}
+
+[data-accent="olive"] {
+    --accent-on-light: #5a693c;
+    --accent-on-dark: #a8b878;
+    --color-accent-strong: #5a693c;
+    --color-accent-strong-hover: #4a5731;
+    --accent-soft-base: #6f8149;
+    --accent-soft-base-dark: #a8b878;
 }
 
 /* Markdown preview — GitHub-readme style over theme tokens. Rendered via v-html,

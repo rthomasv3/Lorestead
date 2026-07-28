@@ -18,7 +18,7 @@ const VARIANTS = {
   // Half the ghost's wash: the border already marks the target, so the same
   // strength would read as pressed. Alpha for the same reason ghost uses it -
   // outline buttons also appear inside dialogs, which are an elevated plane.
-  outline: 'border border-border enabled:hover:bg-on-surface/5',
+  outline: 'border border-border enabled:hover:bg-hover-wash/50',
   destructive: 'bg-red-600 enabled:hover:bg-red-700 text-white',
   ghost: CONTROL_GHOST,
   'ghost-danger': CONTROL_GHOST_DANGER,

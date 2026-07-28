@@ -9,13 +9,14 @@ export const CONTROL_ACTIVE = 'bg-accent-soft text-on-surface'
 // The hover tint is an alpha wash over whatever is underneath, not `surface-alt`.
 // `surface-alt` and `surface-elevated` resolve to the same color, so a ghost
 // control sitting on a card, a menu or a dialog painted its own hover invisible
-// - the same bug the context menus had. An alpha reads on every plane.
+// - the same bug the context menus had. An alpha reads on every plane. The wash
+// strength lives in the `hover-wash` token because it needs tuning per theme.
 //
 // `enabled:` because Button can be disabled; a NavButton never is, and a
 // non-disabled button matches :enabled either way. It also means these strings
 // only work on form elements - a `<span role="button">` never matches :enabled,
 // so the tree row's nested hover icons still carry their tones by hand.
-export const CONTROL_GHOST = 'text-on-surface-muted enabled:hover:bg-on-surface/10 enabled:hover:text-on-surface'
+export const CONTROL_GHOST = 'text-on-surface-muted enabled:hover:bg-hover-wash enabled:hover:text-on-surface'
 
 // Destructive ghost: rests in the same muted tone as its neighbours and only
 // turns red under the pointer, so a row of icons doesn't shout before you aim.

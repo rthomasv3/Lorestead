@@ -3,8 +3,8 @@ import { ref } from 'vue'
 import { getSettings, saveApplicationSettings, saveEditorSettings } from '../services/settingsService'
 import { clearCursors } from '../utils/cursorPositions.js'
 
-export const THEMES = ['system', 'light', 'dark']
-export const ACCENTS = ['indigo', 'violet', 'blue', 'cyan', 'emerald', 'rose']
+export const THEMES = ['system', 'light', 'parchment', 'dark']
+export const ACCENTS = ['indigo', 'violet', 'blue', 'cyan', 'emerald', 'rose', 'rust', 'olive']
 
 // Cached copy of the last-applied theme/accent, used only for the first synchronous paint -
 // the DB is authoritative and overwrites it as soon as getSettings resolves.
@@ -52,7 +52,7 @@ function resolveTheme(theme) {
 
 function applyAppearance(theme, accent) {
   const html = document.documentElement
-  html.classList.remove('light', 'dark')
+  html.classList.remove('light', 'parchment', 'dark')
   html.classList.add(resolveTheme(THEMES.includes(theme) ? theme : 'system'))
   html.dataset.accent = ACCENTS.includes(accent) ? accent : 'indigo'
   try {

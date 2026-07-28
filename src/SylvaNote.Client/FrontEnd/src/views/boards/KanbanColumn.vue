@@ -155,7 +155,7 @@ onUnmounted(() => {
       </div>
 
       <button
-        class="flex items-center gap-1.5 mx-2 mb-2 px-1.5 h-7 shrink-0 rounded text-sm text-on-surface-muted hover:text-on-surface hover:bg-surface-alt"
+        class="flex items-center gap-1.5 mx-2 mb-2 px-1.5 h-7 shrink-0 rounded text-sm text-on-surface-muted hover:text-on-surface hover:bg-hover-wash"
         @click="emit('add-task')">
         <i-lucide-plus class="size-4" />
         Add task

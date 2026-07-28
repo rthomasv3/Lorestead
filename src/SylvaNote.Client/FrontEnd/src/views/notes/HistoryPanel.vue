@@ -163,7 +163,7 @@ function toggleGap(index) {
 
         <template v-for="(row, index) in diffRows" :key="index">
           <button v-if="row.kind === 'gap' && !expandedGaps.has(index)"
-            class="w-full text-left px-1.5 py-0.5 my-0.5 rounded text-on-surface-muted/70 hover:bg-surface-alt"
+            class="w-full text-left px-1.5 py-0.5 my-0.5 rounded text-on-surface-muted/70 hover:bg-hover-wash"
             @click="toggleGap(index)">
             &ctdot; {{ row.lines.length }} unchanged {{ row.lines.length === 1 ? 'line' : 'lines' }}
           </button>

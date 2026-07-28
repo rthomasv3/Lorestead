@@ -119,13 +119,13 @@ onUnmounted(() => {
           <div v-if="dropEdge === 'bottom'" class="absolute -bottom-px left-0 right-0 h-0.5 rounded bg-accent z-10" />
           <!-- Same shape and states as a notes tree row (TreeNode): square, full
              width of the panel, its own px-3; full-strength label, accent-soft when
-             selected, a neutral tint while its context menu is open, surface-alt on
-             hover. py-1.5 rather than a fixed height, which is what the tree does:
+             selected, a neutral tint while its context menu is open, the shared
+             on-surface wash on hover. py-1.5 rather than a fixed height, which is what the tree does:
              the two rows then derive the same height from the same text instead of
              agreeing on a number that only holds at today's type scale. -->
           <button class="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-left transition-colors"
             :class="[
-              contextOpen ? 'bg-on-surface/5' : selected ? 'bg-accent-soft' : 'hover:bg-surface-alt',
+              contextOpen ? 'bg-on-surface/5' : selected ? 'bg-accent-soft' : 'hover:bg-hover-wash',
               dragging ? 'opacity-40' : '',
             ]" @click="emit('select')" @dblclick="emit('request-rename')">
             <!-- <i-lucide-square-kanban class="size-4 shrink-0 text-on-surface-muted" /> -->
