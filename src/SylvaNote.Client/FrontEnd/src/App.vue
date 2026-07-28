@@ -29,22 +29,26 @@ window.addEventListener('note:navigate', async (event) => {
 // Pulled remote changes land here; only already-loaded data refreshes. The open
 // note's body and the open task dialog are not touched from here - those views own
 // the decision, because it depends on whether their editor is mid-edit.
+//
+// Content refreshes are gated on the route that shows them: an unmounted view has
+// dropped its content and refetches everything on mount anyway (decisions.md), so
+// refreshing it from here would just repopulate state nobody is showing. The
+// summary lists (load) stay ungated - they are navigation data, kept warm so the
+// tree and board list render instantly on return.
 window.addEventListener('notes:changed', () => {
-  if (notes.loaded) {
-    notes.load()
+  if (notes.loaded) notes.load()
+  if (router.currentRoute.value.name === 'notes') {
     notes.refreshAttachments()
     notes.refreshBacklinks()
   }
 })
 window.addEventListener('boards:changed', () => {
-  if (boards.loaded) {
-    boards.load()
-    boards.refreshBoard()
-  }
+  if (boards.loaded) boards.load()
+  if (router.currentRoute.value.name === 'boards') boards.refreshBoard()
   // A task change can alter the open note's backlinks two ways - its linked-notes
   // list (task_note) or a note:// mention in its body - and both publish
   // boards:changed, never notes:changed.
-  notes.refreshBacklinks()
+  if (router.currentRoute.value.name === 'notes') notes.refreshBacklinks()
 })
 </script>
 

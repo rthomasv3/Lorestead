@@ -53,8 +53,10 @@ let saveTimer = null
 // note's text is still loaded, and the remembered offset gets clamped to that.
 const editingNoteId = ref(null)
 
-// immediate: the store keeps the selection across route changes, so on remount the
-// editor must hydrate from the already-loaded note, not wait for a change.
+// The store keeps only the selection across route changes - content is dropped on
+// unmount and refetched on mount - so on remount this fires with null (empty
+// buffer) and again when the fetch lands. immediate: a reselect of the same id
+// still swaps the buffer through here.
 watch(currentNote, async (note) => {
   if (editingNoteId.value && editingNoteId.value !== note?.id) {
     await flushFor(editingNoteId.value)
@@ -173,7 +175,10 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  // flush() registers its save synchronously (notesStore.pendingSave), so the
+  // clear cannot race it and the next mount's fetch waits for the write.
   flush()
+  notesStore.clearContent()
   window.removeEventListener('editor:focus', onEditorFocusRequest)
   window.removeEventListener('beforeunload', onBeforeUnload)
   window.removeEventListener('keydown', onViewKeydown)
@@ -264,15 +269,12 @@ watch(
 
 onMounted(() => {
   if (!notesStore.loaded) notesStore.load()
-  // Now that the open panel survives navigation, history can come back showing
-  // whatever was loaded before you left. The watcher below only fires on a
-  // change, so a version added while you were on the boards would not appear.
+  // Everything for the selected note - body, attachments, backlinks - is fetched
+  // fresh on every mount; the store carries no content across routes (decisions.md).
+  // select() awaits any save still in flight from the unmount flush.
+  if (notesStore.selectedId) notesStore.select(notesStore.selectedId)
+  // History is not part of getNote, so the reopened panel loads its own data.
   if (notesStore.toolOpen === 'history') notesStore.loadHistory()
-  // Backlinks can be changed from the boards side - a task's linked-notes list or a
-  // note:// mention in its body - and a local edit publishes no event (the watcher
-  // only fires for foreign devices). The task dialog lives on the boards route, so
-  // coming back here is the moment that staleness becomes visible.
-  notesStore.refreshBacklinks()
 })
 </script>
 

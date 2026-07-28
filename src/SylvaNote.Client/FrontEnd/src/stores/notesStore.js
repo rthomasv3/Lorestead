@@ -124,6 +124,10 @@ export const useNotesStore = defineStore('notes', () => {
     pruneCursors(summaries.value.map((summary) => summary.id))
   }
 
+  // A body save can still be in flight when the view unmounts (the unmount flush
+  // does not block navigation); a fetch racing past it would read the pre-save row.
+  let pendingSave = null
+
   async function select(id) {
     selectedId.value = id
     if (!id) {
@@ -131,6 +135,10 @@ export const useNotesStore = defineStore('notes', () => {
       currentAttachments.value = []
       currentBacklinks.value = []
     } else {
+      if (pendingSave) {
+        await pendingSave
+        pendingSave = null
+      }
       // The previous note stays visible until the new one arrives - clearing first
       // would flash the empty state on every click, including reselects.
       const response = await noteService.getNote({ id })
@@ -140,6 +148,17 @@ export const useNotesStore = defineStore('notes', () => {
         currentBacklinks.value = response.backlinks ?? []
       }
     }
+  }
+
+  // Content never survives navigation (decisions.md): the store keeps only where
+  // you were - selection, expansion, open panels - and the view drops the rest on
+  // unmount, so a remount can only show what the database returns. Local SQLite by
+  // primary key resolves well inside the route transition.
+  function clearContent() {
+    currentNote.value = null
+    currentAttachments.value = []
+    currentBacklinks.value = []
+    currentHistory.value = []
   }
 
   async function create({ parentId = null, title = '', template = false } = {}) {
@@ -156,18 +175,12 @@ export const useNotesStore = defineStore('notes', () => {
     await load()
   }
 
-  // The cached note mirrors the write (same as rename): the editor hydrates from
-  // currentNote on remount, and a body left at its selected-time text handed the
-  // editor pre-save content after a round trip through another route. Mutating in
-  // place keeps the ref's identity, so the hydrate watch does not re-fire mid-typing.
   async function saveBody(id, body) {
-    const response = await noteService.saveNote({ id, body })
+    const request = noteService.saveNote({ id, body })
+    pendingSave = request.catch(() => {})
+    const response = await request
     const summary = byId.value.get(id)
     if (summary) summary.updatedAt = response.updatedAt
-    if (currentNote.value?.id === id) {
-      currentNote.value.body = body
-      currentNote.value.updatedAt = response.updatedAt
-    }
     return response
   }
 
@@ -412,6 +425,7 @@ export const useNotesStore = defineStore('notes', () => {
     byId,
     load,
     select,
+    clearContent,
     create,
     rename,
     saveBody,

@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch, onMounted } from 'vue'
+import { ref, watch, onMounted, onUnmounted } from 'vue'
 import { SplitterGroup, SplitterPanel, SplitterResizeHandle } from 'reka-ui'
 import BoardListPanel from './BoardListPanel.vue'
 import KanbanBoard from './KanbanBoard.vue'
@@ -34,8 +34,12 @@ watch(() => boardsStore.openTaskRequest, (taskId) => {
 
 onMounted(() => {
   if (!boardsStore.loaded) boardsStore.load()
-  else boardsStore.refreshBoard()
+  // Columns and tasks are fetched fresh on every mount - the store carries no
+  // content across routes (decisions.md); refreshBoard no-ops with no selection.
+  boardsStore.refreshBoard()
 })
+
+onUnmounted(() => boardsStore.clearContent())
 </script>
 
 <template>
