@@ -1,11 +1,19 @@
 <script setup>
-import { ref, computed, watch } from 'vue'
-import { ContextMenuItem } from 'reka-ui'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import {
+  ContextMenuItem,
+  DropdownMenuRoot,
+  DropdownMenuTrigger,
+  DropdownMenuPortal,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from 'reka-ui'
 import Tree from '../../components/Tree.vue'
 import Button from '../../components/Button.vue'
 import EmptyState from '../../components/EmptyState.vue'
 import TextField from '../../components/TextField.vue'
 import HoverTip from '../../components/HoverTip.vue'
+import ImportDialog from './ImportDialog.vue'
 import IconSearch from '~icons/lucide/search'
 import { MENU_ITEM_CLASS as menuItemClass } from '../../utils/menu.js'
 import { exportSubtree, exportAll } from '../../services/exportService.js'
@@ -17,6 +25,38 @@ const emit = defineEmits(['request-delete', 'request-purge', 'request-restore', 
 const notesStore = useNotesStore()
 const settingsStore = useSettingsStore()
 const treeRef = ref(null)
+
+// --- Header ---
+
+const importOpen = ref(false)
+const importParentId = ref(null)
+
+function openImport(parentId = null) {
+  importParentId.value = parentId
+  importOpen.value = true
+}
+
+// Below this the filter and the four icon buttons no longer share the row, so
+// the icons collapse into one kebab menu - all or nothing, because a partial
+// collapse would make actions appear and disappear one at a time as the
+// splitter moves. Measured (not a window breakpoint): the splitter is what
+// changes this panel's width.
+const COLLAPSE_WIDTH = 300
+
+const headerRef = ref(null)
+const collapsed = ref(false)
+let headerObserver = null
+
+onMounted(() => {
+  headerObserver = new ResizeObserver((entries) => {
+    collapsed.value = entries[0].contentRect.width < COLLAPSE_WIDTH
+  })
+  headerObserver.observe(headerRef.value)
+})
+
+onUnmounted(() => {
+  headerObserver?.disconnect()
+})
 
 // --- Filter ---
 
@@ -247,24 +287,61 @@ defineExpose({ treeRef, addNote, focusTree })
 
 <template>
   <div class="h-full flex flex-col min-h-0">
-    <div class="flex items-center gap-1 px-2 h-10 shrink-0 border-b border-border">
+    <div ref="headerRef" class="flex items-center gap-1 px-2 h-10 shrink-0 border-b border-border">
       <TextField v-model="query" size="small" :icon="IconSearch" placeholder="Filter notes" class="flex-1" />
-      <HoverTip text="Export all notes" side="bottom">
-        <Button variant="ghost" size="icon" @click="exportAll()">
-          <i-lucide-download class="size-4" />
-        </Button>
-      </HoverTip>
-      <HoverTip text="New note from template" side="bottom">
-        <Button variant="ghost" size="icon" @click="emit('request-template', { parentId: null })">
-          <i-lucide-layout-template class="size-4" />
-        </Button>
-      </HoverTip>
-      <HoverTip text="New note" side="bottom">
-        <Button variant="ghost" size="icon" @click="addNote(null)">
-          <i-lucide-plus class="size-4" />
-        </Button>
-      </HoverTip>
+      <template v-if="!collapsed">
+        <HoverTip text="Import notes" side="bottom">
+          <Button variant="ghost" size="icon" @click="openImport()">
+            <i-lucide-import class="size-4" />
+          </Button>
+        </HoverTip>
+        <HoverTip text="Export all notes" side="bottom">
+          <Button variant="ghost" size="icon" @click="exportAll()">
+            <i-lucide-folder-output class="size-4" />
+          </Button>
+        </HoverTip>
+        <HoverTip text="New note from template" side="bottom">
+          <Button variant="ghost" size="icon" @click="emit('request-template', { parentId: null })">
+            <i-lucide-layout-template class="size-4" />
+          </Button>
+        </HoverTip>
+        <HoverTip text="New note" side="bottom">
+          <Button variant="ghost" size="icon" @click="addNote(null)">
+            <i-lucide-plus class="size-4" />
+          </Button>
+        </HoverTip>
+      </template>
+      <DropdownMenuRoot v-else>
+        <DropdownMenuTrigger as-child>
+          <Button variant="ghost" size="icon">
+            <i-lucide-ellipsis-vertical class="size-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuPortal>
+          <DropdownMenuContent :side-offset="6" align="end"
+            class="z-50 min-w-48 rounded-md border border-border bg-surface-elevated p-1 shadow-lg">
+            <DropdownMenuItem :class="menuItemClass" @select="addNote(null)">
+              <i-lucide-plus class="size-4 text-on-surface-muted" />
+              New note
+            </DropdownMenuItem>
+            <DropdownMenuItem :class="menuItemClass" @select="emit('request-template', { parentId: null })">
+              <i-lucide-layout-template class="size-4 text-on-surface-muted" />
+              New note from template
+            </DropdownMenuItem>
+            <DropdownMenuItem :class="menuItemClass" @select="exportAll()">
+              <i-lucide-folder-output class="size-4 text-on-surface-muted" />
+              Export all notes
+            </DropdownMenuItem>
+            <DropdownMenuItem :class="menuItemClass" @select="openImport()">
+              <i-lucide-import class="size-4 text-on-surface-muted" />
+              Import notes
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenuPortal>
+      </DropdownMenuRoot>
     </div>
+
+    <ImportDialog v-model:open="importOpen" :parent-id="importParentId" />
 
     <div class="flex-1 min-h-0 overflow-y-auto overflow-x-auto pb-2">
       <!-- Above the tree, because that is where the notes are: the message stands
@@ -349,8 +426,14 @@ defineExpose({ treeRef, addNote, focusTree })
               Rename
             </ContextMenuItem>
             <ContextMenuItem :class="menuItemClass" @select="exportSubtree(item.noteId)">
-              <i-lucide-download class="size-4 text-on-surface-muted" />
+              <i-lucide-folder-output class="size-4 text-on-surface-muted" />
               Export as markdown
+            </ContextMenuItem>
+            <!-- Templates are excluded: the destination picker only offers live
+                 normal notes, so a template target has nothing to preselect. -->
+            <ContextMenuItem v-if="!item.template" :class="menuItemClass" @select="openImport(item.noteId)">
+              <i-lucide-import class="size-4 text-on-surface-muted" />
+              Import notes
             </ContextMenuItem>
             <ContextMenuItem :class="menuItemClass" @select="emit('request-delete', { item, viaDrag: false })">
               <i-lucide-trash-2 class="size-4 text-red-500" />

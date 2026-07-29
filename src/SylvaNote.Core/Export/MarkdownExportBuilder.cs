@@ -193,8 +193,9 @@ namespace SylvaNote.Core.Export
         }
 
         // Titles are free-form, so anything that would turn a plain scalar into a list
-        // item, a mapping, a comment or an anchor gets quoted instead.
-        private static string YamlScalar(string value)
+        // item, a mapping, a comment or an anchor gets quoted instead. Public because
+        // the Joplin RAW import transform writes the same front matter.
+        public static string YamlScalar(string value)
         {
             string result = value ?? string.Empty;
             bool quote = result.Length == 0;

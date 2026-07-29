@@ -56,6 +56,7 @@ const selected = computed(() => props.options.find((o) => o.value === props.mode
             :key="o.value"
             :value="o.value"
             class="flex cursor-pointer items-center justify-between gap-2 rounded px-2 py-1.5 text-sm outline-none data-highlighted:bg-accent/10 data-[state=checked]:text-accent"
+            :style="o.depth ? { paddingLeft: 8 + o.depth * 14 + 'px' } : undefined"
           >
             <SelectItemText>{{ o.label }}</SelectItemText>
             <SelectItemIndicator>

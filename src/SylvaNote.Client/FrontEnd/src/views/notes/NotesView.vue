@@ -310,7 +310,7 @@ onMounted(() => {
                 <HoverTip :text="readonly ? 'Note is in the Trash' : 'Export note'" :hotkey="EXPORT_KEY"
                   side="bottom" wrap>
                   <Button variant="ghost" size="icon" :disabled="readonly" @click="exportNote(currentNote.id)">
-                    <i-lucide-download class="size-4" />
+                    <i-lucide-folder-output class="size-4" />
                   </Button>
                 </HoverTip>
                 <HoverTip text="Toggle preview" :hotkey="PREVIEW_KEY" side="bottom">
