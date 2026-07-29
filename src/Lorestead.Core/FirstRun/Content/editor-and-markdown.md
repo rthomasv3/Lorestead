@@ -15,7 +15,7 @@ All of these are on by default and can be turned off individually in Settings un
 | Tables | the table you are reading |
 | Task lists | `- [ ] something to do` |
 | Strikethrough | `~~struck out~~` |
-| Autolinks | `https://lorestead.dev` |
+| Autolinks | `https://github.com/rthomasv3/Lorestead` |
 | Footnotes | `text[^1]` |
 | Code highlighting | fenced blocks with a language |
 | Highlight | `==marked text==` |
