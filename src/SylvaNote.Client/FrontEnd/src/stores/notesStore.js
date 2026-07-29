@@ -219,6 +219,12 @@ export const useNotesStore = defineStore('notes', () => {
     }
   }
 
+  async function duplicate(id) {
+    const response = await noteService.duplicateNote({ id })
+    await load()
+    return response
+  }
+
   async function createFromTemplate({ templateId, title, parentId = null }) {
     const response = await noteService.createFromTemplate({ templateId, title, parentId })
     await load()
@@ -434,6 +440,7 @@ export const useNotesStore = defineStore('notes', () => {
     restore,
     restoreAt,
     purge,
+    duplicate,
     createFromTemplate,
     search,
     refreshAttachments,

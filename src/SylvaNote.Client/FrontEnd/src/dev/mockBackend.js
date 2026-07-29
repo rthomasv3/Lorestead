@@ -185,6 +185,31 @@ export function installMockBackend() {
       }
       return { rootId: map.get(request.templateId) }
     },
+    duplicateNote: ({ request }) => {
+      const original = byId(request.id)
+      const title = original.title ? `${original.title} Copy` : 'Untitled Copy'
+      const siblings = notes
+        .filter((n) => (n.parentId ?? null) === (original.parentId ?? null) && !n.deleted)
+        .sort((a, b) => (a.position < b.position ? -1 : 1))
+      const next = siblings[siblings.findIndex((n) => n.id === request.id) + 1]
+      // Trashed descendants stay behind - a whole trashed branch drops out together.
+      const ids = subtreeIds(request.id).filter((id) => !byId(id).deleted)
+      const map = new Map(ids.map((id) => [id, newId()]))
+      for (const id of ids) {
+        const source = byId(id)
+        const isRoot = id === request.id
+        notes.push({
+          ...source,
+          id: map.get(id),
+          parentId: isRoot ? (original.parentId ?? null) : map.get(source.parentId),
+          title: isRoot ? title : source.title,
+          position: isRoot ? positionBetween(original.parentId ?? null, request.id, next?.id ?? null) : source.position,
+          createdAt: nowIso(),
+          updatedAt: nowIso(),
+        })
+      }
+      return { rootId: map.get(request.id), title }
+    },
     searchNotes: ({ request }) => {
       const q = (request.query ?? '').toLowerCase()
       const results = notes

@@ -224,6 +224,25 @@ namespace SylvaNote.Core.DataAccess
             return result is string value ? value : null;
         }
 
+        // Nearest sibling key above `afterPosition`, again across ALL children: with
+        // both bounds from the shared keyspace, a key between them cannot collide
+        // with a hidden sibling.
+        public string GetNextChildPosition(string parentId, string afterPosition)
+        {
+            using SqliteConnection connection = _connectionManager.CreateConnection();
+            using SqliteCommand select = connection.CreateCommand();
+            select.CommandText = parentId == null
+                ? "SELECT MIN(position) FROM note WHERE parent_id IS NULL AND position > @after"
+                : "SELECT MIN(position) FROM note WHERE parent_id = @parent_id AND position > @after";
+            if (parentId != null)
+            {
+                select.Parameters.AddWithValue("@parent_id", parentId);
+            }
+            select.Parameters.AddWithValue("@after", afterPosition);
+            object result = select.ExecuteScalar();
+            return result is string value ? value : null;
+        }
+
         public bool ChildPositionExists(string parentId, string position)
         {
             using SqliteConnection connection = _connectionManager.CreateConnection();
@@ -352,11 +371,38 @@ namespace SylvaNote.Core.DataAccess
 
         public string InstantiateTemplate(string templateId, string title, string parentId, string position)
         {
+            using SqliteConnection connection = _connectionManager.CreateConnection();
+            using SqliteTransaction transaction = connection.BeginTransaction();
+
+            string newRootId = CopySubtreeWithin(connection, transaction, templateId, title, parentId, position, forceNormalType: true);
+
+            transaction.Commit();
+            return newRootId;
+        }
+
+        // Duplicate lands as a sibling of the original (same parent; the caller picks
+        // the position, typically just after it). Types are preserved so a duplicated
+        // template stays a template; trashed descendants stay behind.
+        public string DuplicateSubtree(string noteId, string title, string position)
+        {
             string newRootId = null;
             using SqliteConnection connection = _connectionManager.CreateConnection();
             using SqliteTransaction transaction = connection.BeginTransaction();
 
-            List<Note> subtree = ReadSubtreeWithin(connection, transaction, templateId, activeOnly: true);
+            Note original = GetWithin(connection, transaction, noteId);
+            if (original != null)
+            {
+                newRootId = CopySubtreeWithin(connection, transaction, noteId, title, original.ParentId, position, forceNormalType: false);
+            }
+
+            transaction.Commit();
+            return newRootId;
+        }
+
+        private string CopySubtreeWithin(SqliteConnection connection, SqliteTransaction transaction, string rootId, string rootTitle, string rootParentId, string rootPosition, bool forceNormalType)
+        {
+            string newRootId = null;
+            List<Note> subtree = ReadSubtreeWithin(connection, transaction, rootId, activeOnly: true);
             if (subtree.Count > 0)
             {
                 string now = Timestamps.UtcNowIso();
@@ -368,15 +414,15 @@ namespace SylvaNote.Core.DataAccess
 
                 foreach (Note note in subtree)
                 {
-                    bool isRoot = note.Id == templateId;
+                    bool isRoot = note.Id == rootId;
                     Note copy = new Note
                     {
                         Id = idMap[note.Id],
-                        ParentId = isRoot ? parentId : idMap[note.ParentId],
-                        Title = isRoot ? title : note.Title,
+                        ParentId = isRoot ? rootParentId : idMap[note.ParentId],
+                        Title = isRoot ? rootTitle : note.Title,
                         Body = note.Body,
-                        Position = isRoot ? position : note.Position,
-                        Type = NoteType.Normal,
+                        Position = isRoot ? rootPosition : note.Position,
+                        Type = forceNormalType ? NoteType.Normal : note.Type,
                         Deleted = false,
                         CreatedAt = now,
                         UpdatedAt = now,
@@ -387,10 +433,8 @@ namespace SylvaNote.Core.DataAccess
                     CopyAttachmentsWithin(connection, transaction, note.Id, copy.Id, now);
                 }
 
-                newRootId = idMap[templateId];
+                newRootId = idMap[rootId];
             }
-
-            transaction.Commit();
             return newRootId;
         }
 

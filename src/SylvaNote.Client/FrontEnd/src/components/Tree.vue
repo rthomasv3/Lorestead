@@ -66,9 +66,11 @@ function cancelEdit() {
 function onEditBlur(item, e) {
   // Radix context menu restores focus to the trigger button after closing,
   // which steals focus from our input. Ignore blur events that fire within
-  // 200ms of the edit starting and re-focus the input instead.
+  // 200ms of the edit starting and re-focus the input instead. Re-select too:
+  // an edit this young is still meant to open with the whole title selected.
   if (Date.now() - editStartedAt < 200) {
     e.target.focus()
+    e.target.select()
     return
   }
   commitEdit(item, e.target.value)

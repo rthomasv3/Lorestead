@@ -164,6 +164,24 @@ async function addNote(parentId) {
   }
 }
 
+async function duplicateNote(item) {
+  const response = await notesStore.duplicate(item.noteId)
+  await notesStore.select(response.rootId)
+  requestAnimationFrame(() => {
+    treeRef.value?.startEditing({ id: response.rootId, label: response.title, type: 'note' })
+    treeRef.value?.focusItem(response.rootId)
+  })
+}
+
+// Function refs re-fire on re-render; the guard keeps a background refresh from
+// clobbering the caret and reselecting mid-typing.
+function focusEditInput(el) {
+  if (el && document.activeElement !== el) {
+    el.focus()
+    el.select()
+  }
+}
+
 // --- Drag & drop ---
 
 function canDrag(item) {
@@ -365,7 +383,7 @@ defineExpose({ treeRef, addNote, focusTree })
                  activated by the same keystroke that finished the rename. -->
             <input v-if="editing" :value="item.label === 'Untitled' ? '' : item.label" placeholder="Untitled"
               class="flex-1 min-w-0 bg-transparent text-sm border-b border-accent outline-none"
-              :ref="(el) => el && el.focus()" @blur="onEditBlur(item, $event)"
+              :ref="focusEditInput" @blur="onEditBlur(item, $event)"
               @keydown.enter.prevent="$event.target.blur()" @keydown.esc.stop="cancelEdit()" @click.stop />
             <template v-else>
               <!-- The transparent border matches the rename input's underline, so
@@ -424,6 +442,10 @@ defineExpose({ treeRef, addNote, focusTree })
             <ContextMenuItem :class="menuItemClass" @select="treeRef.startEditing(item)">
               <i-lucide-pencil class="size-4 text-on-surface-muted" />
               Rename
+            </ContextMenuItem>
+            <ContextMenuItem :class="menuItemClass" @select="duplicateNote(item)">
+              <i-lucide-copy class="size-4 text-on-surface-muted" />
+              Duplicate
             </ContextMenuItem>
             <ContextMenuItem :class="menuItemClass" @select="exportSubtree(item.noteId)">
               <i-lucide-folder-output class="size-4 text-on-surface-muted" />

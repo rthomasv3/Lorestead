@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using SylvaNote.Core.Entities;
@@ -224,6 +223,70 @@ namespace SylvaNote.IntegrationTests
 
             // The template keeps its own attachment, untouched.
             Assert.Equal(logo.Id, Assert.Single(db.Attachments.GetForNote(templateRoot.Id)).Id);
+        }
+
+        [Fact]
+        public void DuplicateSubtree_DeepCopiesAsSibling_PreservingType()
+        {
+            using TestDb db = new TestDb();
+            Note root = Items.Note("Recipe", body: "root body");
+            root.Type = NoteType.Template;
+            Note child = Items.Note("Step", body: "child body", parentId: root.Id);
+            db.Notes.Save(root);
+            db.Notes.Save(child);
+
+            string newRootId = db.Notes.DuplicateSubtree(root.Id, "Recipe Copy", "m");
+
+            Note copy = db.Notes.Get(newRootId);
+            Assert.NotEqual(root.Id, newRootId);
+            Assert.Equal("Recipe Copy", copy.Title);
+            Assert.Equal("root body", copy.Body);
+            Assert.Equal(NoteType.Template, copy.Type);
+            Assert.Equal(root.ParentId, copy.ParentId);
+            Assert.Equal("m", copy.Position);
+
+            Note copiedChild = db.Notes.GetAll().Single(n => n.ParentId == newRootId);
+            Assert.NotEqual(child.Id, copiedChild.Id);
+            Assert.Equal("Step", copiedChild.Title);
+            Assert.Equal("child body", copiedChild.Body);
+
+            Assert.Equal("Recipe", db.Notes.Get(root.Id).Title);
+        }
+
+        [Fact]
+        public void DuplicateSubtree_LeavesTrashedDescendantsBehind()
+        {
+            using TestDb db = new TestDb();
+            Note root = Items.Note("Root");
+            Note kept = Items.Note("Kept", parentId: root.Id);
+            Note trashed = Items.Note("Trashed", parentId: root.Id);
+            db.Notes.Save(root);
+            db.Notes.Save(kept);
+            db.Notes.Save(trashed);
+            db.Notes.TrashSubtree(trashed.Id);
+
+            string newRootId = db.Notes.DuplicateSubtree(root.Id, "Root Copy", "m");
+
+            Note copiedChild = db.Notes.GetAll().Single(n => n.ParentId == newRootId);
+            Assert.Equal("Kept", copiedChild.Title);
+        }
+
+        [Fact]
+        public void GetNextChildPosition_ReturnsNearestKeyAbove()
+        {
+            using TestDb db = new TestDb();
+            Note first = Items.Note("First");
+            first.Position = "b";
+            Note second = Items.Note("Second");
+            second.Position = "m";
+            Note last = Items.Note("Last");
+            last.Position = "x";
+            db.Notes.Save(first);
+            db.Notes.Save(second);
+            db.Notes.Save(last);
+
+            Assert.Equal("m", db.Notes.GetNextChildPosition(null, "b"));
+            Assert.Null(db.Notes.GetNextChildPosition(null, "x"));
         }
 
         [Fact]

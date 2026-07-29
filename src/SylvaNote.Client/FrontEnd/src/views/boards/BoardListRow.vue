@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, watch, onMounted, onUnmounted } from 'vue'
 import { combine } from '@atlaskit/pragmatic-drag-and-drop/combine'
 import { draggable, dropTargetForElements, monitorForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter'
 import { setCustomNativeDragPreview } from '@atlaskit/pragmatic-drag-and-drop/element/set-custom-native-drag-preview'
@@ -19,21 +19,34 @@ const contextOpen = ref(false)
 const emit = defineEmits(['select', 'rename', 'rename-done', 'request-delete', 'request-rename', 'drop'])
 
 const row = ref(null)
-const editInput = ref(null)
 const dropEdge = ref(null)
 const dragging = ref(false)
 let cleanup = null
 
-watch(() => props.renaming, async (value) => {
-  if (value) {
-    await nextTick()
-    editInput.value?.focus()
-    editInput.value?.select()
+let renameStartedAt = 0
+
+// The as-child clone hazard (below) bites template refs too: a named ref on the
+// input oscillates on re-render, so a watch awaiting nextTick can find it null
+// and focus nothing. A function ref runs when the element actually attaches -
+// the same mechanism the notes tree's rename input uses.
+function focusEditInput(el) {
+  if (el && document.activeElement !== el) {
+    renameStartedAt = Date.now()
+    el.focus()
+    el.select()
   }
-})
+}
 
 function commitRename(e) {
   if (props.renaming) {
+    // Same hazard as the notes Tree: the context menu restores focus to its
+    // trigger after closing, blurring the input right as the rename starts -
+    // committing here would end the rename before it began. Take focus back.
+    if (Date.now() - renameStartedAt < 200) {
+      e.target.focus()
+      e.target.select()
+      return
+    }
     const value = e.target.value.trim()
     if (value && value !== props.board.name) {
       emit('rename', value)
@@ -129,7 +142,7 @@ onUnmounted(() => {
               dragging ? 'opacity-40' : '',
             ]" @click="emit('select')" @dblclick="emit('request-rename')">
             <!-- <i-lucide-square-kanban class="size-4 shrink-0 text-on-surface-muted" /> -->
-            <input v-if="renaming" ref="editInput" :value="board.name" placeholder="Untitled board"
+            <input v-if="renaming" :ref="focusEditInput" :value="board.name" placeholder="Untitled board"
               class="flex-1 min-w-0 bg-transparent text-sm border-b border-accent outline-none text-on-surface"
               @blur="commitRename" @keydown.enter="$event.target.blur()" @keydown.esc.stop="cancelRename" @click.stop
               @dblclick.stop />
@@ -139,7 +152,10 @@ onUnmounted(() => {
       </div>
     </ContextMenuTrigger>
     <ContextMenuPortal>
-      <ContextMenuContent class="bg-surface-elevated border border-border rounded-lg shadow-lg p-1 min-w-40 z-50">
+      <!-- Same as TreeNode: without this, reka hands focus back to the trigger
+           after the menu closes, stealing it from the rename input. -->
+      <ContextMenuContent class="bg-surface-elevated border border-border rounded-lg shadow-lg p-1 min-w-40 z-50"
+        @closeAutoFocus.prevent>
         <ContextMenuItem :class="menuItemClass" @select="emit('request-rename')">
           <i-lucide-pencil class="size-4 text-on-surface-muted" />
           Rename

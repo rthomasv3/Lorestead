@@ -48,6 +48,10 @@ export async function purgeNote(request) {
   return invoke('purgeNote', { request })
 }
 
+export async function duplicateNote(request) {
+  return invoke('duplicateNote', { request })
+}
+
 export async function createFromTemplate(request) {
   return invoke('createFromTemplate', { request })
 }

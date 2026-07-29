@@ -201,6 +201,30 @@ public sealed class NoteService : INoteService
         return new PurgeNoteResponse { Ok = true };
     }
 
+    public DuplicateNoteResponse Duplicate(DuplicateNoteRequest request)
+    {
+        NoteRepository notes = _repositories.Notes;
+        Note original = GetRequired(notes, request.Id);
+        if (original.Deleted)
+        {
+            throw new InvalidOperationException("Cannot duplicate a trashed note.");
+        }
+
+        string title = string.IsNullOrEmpty(original.Title) ? "Untitled Copy" : original.Title + " Copy";
+        // Directly after the original: bounded above by the nearest sibling key, so
+        // the copy slots between them. Same collision guard as AllocatePosition.
+        string upper = notes.GetNextChildPosition(original.ParentId, original.Position);
+        string position = FractionalIndex.Between(original.Position, upper);
+        while (notes.ChildPositionExists(original.ParentId, position))
+        {
+            position = FractionalIndex.Between(position, upper);
+        }
+
+        string rootId = notes.DuplicateSubtree(request.Id, title, position);
+        _sync.NotifyLocalChange();
+        return new DuplicateNoteResponse { RootId = rootId, Title = title };
+    }
+
     public CreateFromTemplateResponse CreateFromTemplate(CreateFromTemplateRequest request)
     {
         NoteRepository notes = _repositories.Notes;

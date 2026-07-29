@@ -20,6 +20,7 @@ internal static class NoteCommands
         builder.AddFunction("restoreNote", (RestoreNoteRequest request, INoteService notes) => notes.Restore(request));
         builder.AddFunction("restoreNoteAt", (RestoreNoteAtRequest request, INoteService notes) => notes.RestoreAt(request));
         builder.AddFunction("purgeNote", (PurgeNoteRequest request, INoteService notes) => notes.Purge(request));
+        builder.AddFunction("duplicateNote", (DuplicateNoteRequest request, INoteService notes) => notes.Duplicate(request));
         builder.AddFunction("createFromTemplate", (CreateFromTemplateRequest request, INoteService notes) => notes.CreateFromTemplate(request));
         builder.AddFunction("searchNotes", (SearchNotesRequest request, INoteService notes) => notes.Search(request));
         return builder;
