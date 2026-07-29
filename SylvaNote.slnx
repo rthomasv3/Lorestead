@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/Solution Items/">
+    <File Path=".gitignore" />
     <File Path="compose.yaml" />
     <File Path="Dockerfile" />
   </Folder>
