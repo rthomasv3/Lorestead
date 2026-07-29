@@ -1,10 +1,20 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 
 namespace SylvaNote.Server.Services;
 
 public sealed class ServerConfig
 {
+    // Where claude.ai sends the browser back after the authorize redirect. Both
+    // Anthropic domains, overridable for other OAuth-speaking agent hosts.
+    private static readonly string[] DefaultRedirectUris =
+    {
+        "https://claude.ai/api/mcp/auth_callback",
+        "https://claude.com/api/mcp/auth_callback",
+    };
+
     public string Token { get; set; }
     public string DbFilePath { get; set; }
     public string DbKey { get; set; }
@@ -12,6 +22,18 @@ public sealed class ServerConfig
     public int HistoryRetention { get; set; } = 50;
     // How long purge entries stay replayable; a device offline longer full-resyncs.
     public int PurgeRetentionDays { get; set; } = 90;
+    // The externally visible base URL (issuer) - what discovery docs and the
+    // WWW-Authenticate pointer are built from. Set explicitly rather than derived
+    // from the request, because behind a reverse proxy the request lies.
+    public string PublicUrl { get; set; }
+    public string OAuthClientId { get; set; }
+    public string OAuthClientSecret { get; set; }
+    public IReadOnlyList<string> OAuthRedirectUris { get; set; } = DefaultRedirectUris;
+
+    public bool OAuthEnabled
+    {
+        get { return !string.IsNullOrWhiteSpace(OAuthClientId) && !string.IsNullOrWhiteSpace(OAuthClientSecret); }
+    }
 
     public static ServerConfig FromEnvironment()
     {
@@ -41,7 +63,7 @@ public sealed class ServerConfig
         string dbFilePath = Path.Combine(dataDir, "sylvanote.db");
         EnsureWritable(dataDir, dbFilePath);
 
-        return new ServerConfig
+        ServerConfig config = new ServerConfig
         {
             Token = token,
             DbFilePath = dbFilePath,
@@ -49,6 +71,49 @@ public sealed class ServerConfig
             HistoryRetention = ReadClampedInt("SYLVANOTE_HISTORY_RETENTION", 50, 10, 100),
             PurgeRetentionDays = ReadClampedInt("SYLVANOTE_PURGE_RETENTION_DAYS", 90, 1, 3650),
         };
+
+        ReadOAuth(config);
+
+        return config;
+    }
+
+    private static void ReadOAuth(ServerConfig config)
+    {
+        string clientId = Environment.GetEnvironmentVariable("SYLVANOTE_OAUTH_CLIENT_ID");
+        string clientSecret = Environment.GetEnvironmentVariable("SYLVANOTE_OAUTH_CLIENT_SECRET");
+
+        // Half a client is a misconfiguration, not a disabled feature - fail loudly
+        // like the other required variables do.
+        if (string.IsNullOrWhiteSpace(clientId) != string.IsNullOrWhiteSpace(clientSecret))
+        {
+            throw new InvalidOperationException(
+                "SYLVANOTE_OAUTH_CLIENT_ID and SYLVANOTE_OAUTH_CLIENT_SECRET must be set together.");
+        }
+
+        if (!string.IsNullOrWhiteSpace(clientId))
+        {
+            string publicUrl = Environment.GetEnvironmentVariable("SYLVANOTE_PUBLIC_URL");
+
+            if (string.IsNullOrWhiteSpace(publicUrl))
+            {
+                throw new InvalidOperationException(
+                    "SYLVANOTE_PUBLIC_URL is required when OAuth is configured - discovery documents " +
+                    "must name the externally visible URL, which a proxied request cannot supply.");
+            }
+
+            config.OAuthClientId = clientId.Trim();
+            config.OAuthClientSecret = clientSecret.Trim();
+            config.PublicUrl = publicUrl.Trim().TrimEnd('/');
+
+            string redirectUris = Environment.GetEnvironmentVariable("SYLVANOTE_OAUTH_REDIRECT_URIS");
+
+            if (!string.IsNullOrWhiteSpace(redirectUris))
+            {
+                config.OAuthRedirectUris = redirectUris
+                    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                    .ToArray();
+            }
+        }
     }
 
     // A denied write here is almost always bind-mount ownership: the directory

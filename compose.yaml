@@ -13,6 +13,13 @@ services:
       # Optional, shown with defaults:
       # SYLVANOTE_HISTORY_RETENTION: 50   # versions kept per item (10-100)
       # SYLVANOTE_PURGE_RETENTION_DAYS: 90
+      # OAuth for claude.ai custom connectors - the three below enable it together.
+      # Rotating the secret revokes every outstanding token on next start.
+      # SYLVANOTE_OAUTH_CLIENT_ID: sylvanote
+      # SYLVANOTE_OAUTH_CLIENT_SECRET: generate-a-long-random-value
+      # SYLVANOTE_PUBLIC_URL: https://notes.example.com
+      # Optional; defaults to the claude.ai and claude.com callbacks:
+      # SYLVANOTE_OAUTH_REDIRECT_URIS: https://claude.ai/api/mcp/auth_callback,https://claude.com/api/mcp/auth_callback
     volumes:
       # The container runs as non-root uid 1654; on a Linux host the bind-mounted
       # directory must be writable by it: chown -R 1654:1654 ./data

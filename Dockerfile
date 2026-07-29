@@ -7,6 +7,8 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /source
 COPY Directory.Packages.props ./
+# Core embeds the first-run seed icon from the repo-root icon directory.
+COPY icon/ icon/
 COPY src/SylvaNote.Core/ src/SylvaNote.Core/
 COPY src/SylvaNote.Server/ src/SylvaNote.Server/
 RUN dotnet publish src/SylvaNote.Server -c Release -r linux-x64 -o /app \

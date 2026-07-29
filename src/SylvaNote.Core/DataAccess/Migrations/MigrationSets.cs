@@ -20,6 +20,7 @@ namespace SylvaNote.Core.DataAccess.Migrations
             {
                 new Db001_CoreSchema(),
                 new Db004_ServerState(),
+                new Db006_OAuthGrants(),
             };
         }
 

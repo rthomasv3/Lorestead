@@ -1,3 +1,4 @@
+using System;
 using SylvaNote.Core.DataAccess;
 using SylvaNote.Core.DataAccess.Migrations;
 using SylvaNote.Core.Sync;
@@ -23,6 +24,15 @@ internal class Program
         // Startup is the pruning cadence: purge entries are tiny rows, and container
         // restarts (updates, reboots) come far more often than the retention horizon.
         new ChangeLogPruner(connectionManager).PruneExpiredPurgeEntries(config.PurgeRetentionDays);
+
+        if (config.OAuthEnabled)
+        {
+            OAuthGrantRepository grants = new OAuthGrantRepository(connectionManager);
+            grants.DeleteExpired(DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+            // Rotating the client secret in the compose file is the revocation
+            // story: a changed fingerprint wipes every outstanding grant.
+            grants.SyncClientFingerprint(OAuthCrypto.ClientFingerprint(config.OAuthClientId, config.OAuthClientSecret));
+        }
 
         ServerApp.Create(config, connectionManager, args).Run();
     }

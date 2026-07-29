@@ -60,9 +60,12 @@ namespace SylvaNote.IntegrationTests
             using TestDb db = new TestDb(MigrationSets.Server());
             List<string> names = GetSchemaNames(db, "table");
             Assert.Contains("server_state", names);
+            Assert.Contains("oauth_code", names);
+            Assert.Contains("oauth_grant", names);
+            Assert.Contains("oauth_state", names);
             Assert.DoesNotContain("sync_state", names);
             Assert.DoesNotContain("application_settings", names);
-            Assert.Equal(4, GetSchemaVersion(db));
+            Assert.Equal(6, GetSchemaVersion(db));
         }
 
         [Fact]

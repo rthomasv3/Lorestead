@@ -41,6 +41,7 @@ public static class ServerApp
         builder.Services.AddSingleton(connectionManager);
         builder.Services.AddSingleton<ChangeLogRepository>();
         builder.Services.AddSingleton<ServerStateRepository>();
+        builder.Services.AddSingleton<OAuthGrantRepository>();
         builder.Services.AddSingleton(new ChangeIngestor(connectionManager, config.HistoryRetention));
         builder.Services.AddSingleton(new AttachmentRepository(connectionManager, ServerDeviceId, config.HistoryRetention));
 
@@ -66,6 +67,12 @@ public static class ServerApp
         app.MapAttachmentEndpoints();
         app.MapSyncSocket();
         app.MapMcp("/mcp");
+
+        if (config.OAuthEnabled)
+        {
+            app.MapOAuthEndpoints();
+        }
+
         return app;
     }
 }
