@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+    <IsPackable>false</IsPackable>
+    <RootNamespace>Lorestead.IntegrationTests</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <!-- MCP client side for round-tripping the server's /mcp endpoint. -->
+    <PackageReference Include="ModelContextProtocol.Core" />
+    <PackageReference Include="xunit.v3" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Lorestead.Core\Lorestead.Core.csproj" />
+    <ProjectReference Include="..\..\Lorestead.Server\Lorestead.Server.csproj" />
+    <!-- Build ordering only: McpStdioTests spawns this binary by path, so it has to
+         be current, but its assembly must stay out of this graph - bundle_e_sqlite3
+         would fight the server's bundle_e_sqlcipher over batteries_v2 (TestSetup).
+         Without this the test silently ran whatever exe was last built by hand. -->
+    <ProjectReference Include="..\..\Lorestead.Mcp\Lorestead.Mcp.csproj" ReferenceOutputAssembly="false" ExcludeAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Hosting the real server in-process (ServerFixture) needs the ASP.NET runtime. -->
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+</Project>

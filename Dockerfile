@@ -9,9 +9,9 @@ WORKDIR /source
 COPY Directory.Packages.props ./
 # Core embeds the first-run seed icon from the repo-root icon directory.
 COPY icon/ icon/
-COPY src/SylvaNote.Core/ src/SylvaNote.Core/
-COPY src/SylvaNote.Server/ src/SylvaNote.Server/
-RUN dotnet publish src/SylvaNote.Server -c Release -r linux-x64 -o /app \
+COPY src/Lorestead.Core/ src/Lorestead.Core/
+COPY src/Lorestead.Server/ src/Lorestead.Server/
+RUN dotnet publish src/Lorestead.Server -c Release -r linux-x64 -o /app \
     && mkdir /data-seed
 
 # Self-contained AOT binary: chiseled runtime-deps carries only the native libs it
@@ -24,7 +24,7 @@ COPY --from=build /app ./
 # is no shell in this image to fix it up at runtime.
 COPY --from=build --chown=1654:1654 /data-seed /data
 # Port 8080 comes from the base image's HTTP_PORTS default.
-ENV SYLVANOTE_DATA_DIR=/data
+ENV LORESTEAD_DATA_DIR=/data
 VOLUME /data
 EXPOSE 8080
-ENTRYPOINT ["/app/SylvaNote.Server"]
+ENTRYPOINT ["/app/Lorestead.Server"]

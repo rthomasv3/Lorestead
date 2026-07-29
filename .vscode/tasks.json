@@ -7,7 +7,7 @@
             "type": "process",
             "args": [
                 "build",
-                "${workspaceFolder}/src/SylvaNote.Client/SylvaNote.Client.csproj",
+                "${workspaceFolder}/src/Lorestead.Client/Lorestead.Client.csproj",
                 "/property:GenerateFullPaths=true",
                 "/consoleloggerparameters:NoSummary"
             ],
@@ -18,7 +18,7 @@
             "type": "shell",
             "command": "npm run dev",
             "options": {
-                "cwd": "${workspaceFolder}/src/SylvaNote.Client/FrontEnd"
+                "cwd": "${workspaceFolder}/src/Lorestead.Client/FrontEnd"
             },
             "isBackground": true,
             "problemMatcher": {

@@ -1,0 +1,14 @@
+{
+  "profiles": {
+    "Lorestead.Server": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "LORESTEAD_DATA_DIR": "C:\\Users\\Robert\\AppData\\Local\\Temp\\servertest",
+        "LORESTEAD_TOKEN": "test",
+        "LORESTEAD_DB_KEY": "test-key"
+      },
+      "applicationUrl": "http://localhost:5210"
+    }
+  }
+}

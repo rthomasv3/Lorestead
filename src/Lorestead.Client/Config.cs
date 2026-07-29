@@ -1,0 +1,25 @@
+using System.IO;
+using Lorestead.Core.DataAccess;
+
+namespace Lorestead.Client;
+
+public class Config
+{
+    public string DataDirectory { get; set; }
+    public string DbFilePath { get; set; }
+    public string LogFilePath { get; set; }
+
+    public static Config Create()
+    {
+        string dataDirectory = LocalDataPaths.ResolveDataDirectory();
+        Directory.CreateDirectory(dataDirectory);
+        Directory.CreateDirectory(Path.Combine(dataDirectory, "logs"));
+
+        return new Config
+        {
+            DataDirectory = dataDirectory,
+            DbFilePath = LocalDataPaths.GetDatabasePath(dataDirectory),
+            LogFilePath = Path.Combine(dataDirectory, "logs", "lorestead.log"),
+        };
+    }
+}

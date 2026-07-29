@@ -1,0 +1,17 @@
+<Solution>
+  <Folder Name="/Solution Items/">
+    <File Path=".gitignore" />
+    <File Path="compose.yaml" />
+    <File Path="Dockerfile" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/Lorestead.Client/Lorestead.Client.csproj" />
+    <Project Path="src/Lorestead.Core/Lorestead.Core.csproj" />
+    <Project Path="src/Lorestead.Mcp/Lorestead.Mcp.csproj" />
+    <Project Path="src/Lorestead.Server/Lorestead.Server.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="src/tests/Lorestead.IntegrationTests/Lorestead.IntegrationTests.csproj" />
+    <Project Path="src/tests/Lorestead.UnitTests/Lorestead.UnitTests.csproj" />
+  </Folder>
+</Solution>

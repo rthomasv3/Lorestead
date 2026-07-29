@@ -2,13 +2,13 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "SylvaNote.Client (Debug)",
+            "name": "Lorestead.Client (Debug)",
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "dev: frontend + build",
-            "program": "${workspaceFolder}/src/SylvaNote.Client/bin/Debug/net10.0/SylvaNote.Client.dll",
+            "program": "${workspaceFolder}/src/Lorestead.Client/bin/Debug/net10.0/Lorestead.Client.dll",
             "args": [],
-            "cwd": "${workspaceFolder}/src/SylvaNote.Client",
+            "cwd": "${workspaceFolder}/src/Lorestead.Client",
             "stopAtEntry": false,
             "console": "internalConsole"
         }

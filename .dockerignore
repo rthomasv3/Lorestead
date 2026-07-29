@@ -3,8 +3,8 @@
 **/node_modules/
 .git/
 .github/
-src/SylvaNote.Client/
-src/SylvaNote.Mcp/
+src/Lorestead.Client/
+src/Lorestead.Mcp/
 src/tests/
 spikes/
 *.md
