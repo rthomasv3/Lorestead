@@ -1,4 +1,4 @@
-Anything that might belong in this project but is not committed to yet. No structure required - move an idea up to Overview when it graduates, or strike it out when it does not.
+Anything that might belong in this project but you have not committed to yet. No structure required - move an idea up to Overview when it graduates, or strike it out when it does not.
 
 -
 -
@@ -6,4 +6,4 @@ Anything that might belong in this project but is not committed to yet. No struc
 
 ## Parked
 
-Ideas worth keeping but not now, with a line on why they are parked.
+Ideas worth keeping but not now, with a line on why.

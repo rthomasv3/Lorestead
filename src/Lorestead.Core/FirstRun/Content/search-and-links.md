@@ -1,8 +1,8 @@
-There are no tags in Lorestead. That is a deliberate trade: tags decay into a filing system you have to maintain, so search and links carry the weight instead.
+There are no tags in Lorestead. That is a deliberate trade: tags decay into a filing system you have to maintain, so search and links do that work instead.
 
 ## Search
 
-`Ctrl+K` opens search from anywhere. It covers note titles and bodies, task titles and bodies, board and list names, and settings entries. Each result shows where it lives - `Notes > Projects > Ideas`, `Board > List > Task` - with the matched text highlighted. Trashed and template notes are included, and their breadcrumb says so.
+`Ctrl+K` opens search from anywhere. It covers note titles and bodies, task titles and bodies, board and list names, and settings entries. Each result shows where it lives - `Notes > Projects > Ideas`, `Board > List > Task` - with the matched text highlighted. Search includes trashed and template notes, and their breadcrumb says so.
 
 The box above the note tree is a narrower tool: it filters the tree in place, by title and by body text, so you can see matches in context instead of as a list.
 
@@ -10,13 +10,13 @@ The box above the note tree is a narrower tool: it filters the tree in place, by
 
 Type `[[` in any note or task body. A list of note titles appears, along with the current item's attachments. Pick a note and you get a link; pick an attachment and you get an embed. Dragging a note out of the tree and into the editor inserts the same link.
 
-Links are stored by id, not by title:
+A link stores the note's id, not its title:
 
 ```markdown
 [Editor & Markdown](note://019b76da-a800-7000-8000-000000000002)
 ```
 
-Which means renaming a note never breaks a link to it. The visible text is just text - if you rename the target, the link still works and you can update the wording whenever you feel like it.
+So renaming a note never breaks a link to it. The visible text is just text - if you rename the target, the link still works and you can update the wording when you like.
 
 ## Backlinks
 

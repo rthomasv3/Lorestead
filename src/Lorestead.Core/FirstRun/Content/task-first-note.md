@@ -1,4 +1,4 @@
-Use the plus icon above the tree for a note at the top level, or hover any row and use the plus that appears to nest one underneath it.
+The plus icon above the tree makes a top-level note; the plus that appears when you hover a row nests one underneath.
 
 Type something, watch the footer say saved, and press `Ctrl+S` if you are impatient.
 
