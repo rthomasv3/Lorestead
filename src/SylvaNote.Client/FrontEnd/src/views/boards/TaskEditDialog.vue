@@ -190,6 +190,34 @@ function onEditorFocusOut(e) {
   }
 }
 
+// A scrollbar press must scroll, not open the editor. clientWidth/clientHeight
+// exclude scrollbars, so a press in a gutter lands outside the pressed
+// element's client box - checked on e.target so a code block's own horizontal
+// scrollbar is covered too. Keying off where the press started (not the click
+// position) handles dragging the thumb and releasing over the content.
+let scrollbarPress = false
+
+function onReadingMousedown(e) {
+  scrollbarPress = e.offsetX >= e.target.clientWidth || e.offsetY >= e.target.clientHeight
+}
+
+function onReadingClick() {
+  if (!scrollbarPress) {
+    enterEdit()
+  }
+  scrollbarPress = false
+}
+
+// A scrollbar press also focuses the div (it is a tab stop), so focus alone
+// can't mean "start editing". :focus-visible separates the two: Chromium
+// applies it for keyboard focus but not mouse, so Tab from the title still
+// lands in the editor while a mouse press leaves the mode to the click guard.
+function onReadingFocus(e) {
+  if (e.target.matches(':focus-visible')) {
+    enterEdit()
+  }
+}
+
 // Reading mode accepts attachment-card drags too - the editor's own drop target
 // only exists in edit mode, and drag-to-link should not require entering it.
 // The element is behind v-if, so attachment follows the ref.
@@ -395,7 +423,7 @@ function onDialogKeydown(e) {
             <div v-if="!editingBody" ref="readingArea" tabindex="0"
               class="h-64 overflow-y-auto rounded-md border cursor-text px-2.5 py-2 outline-none"
               :class="attachDragOver ? 'border-accent bg-drop-target' : 'border-border/60 hover:border-border'"
-              @click="enterEdit" @focus="enterEdit">
+              @mousedown="onReadingMousedown" @click="onReadingClick" @focus="onReadingFocus">
               <MarkdownPreview v-if="body.trim()" :markdown="body" editable @update:markdown="onBodyChange" />
               <p v-else class="text-sm text-on-surface-muted/60">Click to add a description...</p>
             </div>
