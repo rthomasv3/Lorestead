@@ -12,7 +12,7 @@ namespace Lorestead.Core.Export
     // in one root folder, and every note carries YAML front matter. Nothing here
     // touches the file system - the caller writes the plan out, so the whole shape of
     // an export is unit-testable in memory.
-    public static class MarkdownExportBuilder
+    public static partial class MarkdownExportBuilder
     {
         public const string AttachmentsDirectory = "attachments";
         public const string TemplatesDirectory = "Templates";
@@ -22,9 +22,10 @@ namespace Lorestead.Core.Export
         // Only the parenthesised URL of a markdown link is rewritten; the [Text] half
         // is left exactly as written. A bare note:// url outside a link stays bare -
         // a relative path on its own would not be a link in either target app.
-        private static readonly Regex SchemeLinkPattern = new Regex(
+        [GeneratedRegex(
             @"\((note|attachment)://([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})\)",
-            RegexOptions.CultureInvariant);
+            RegexOptions.CultureInvariant)]
+        private static partial Regex SchemeLinkPattern();
 
         public static ExportLayout Build(ExportSource source)
         {
@@ -231,7 +232,7 @@ namespace Lorestead.Core.Export
 
             if (result.Length > 0)
             {
-                result = SchemeLinkPattern.Replace(result, delegate (Match match)
+                result = SchemeLinkPattern().Replace(result, delegate (Match match)
                 {
                     string replacement = match.Value;
                     Dictionary<string, string> paths = match.Groups[1].Value == "note" ? notePaths : attachmentPaths;

@@ -13,7 +13,7 @@ namespace Lorestead.Core.Import
     // MarkdownExportBuilder. Nothing here touches the file system or the database -
     // the caller supplies the files and the existing notes, and applies the plan -
     // so the whole shape of an import is unit-testable in memory.
-    public static class MarkdownImportBuilder
+    public static partial class MarkdownImportBuilder
     {
         private const string NoteExtension = ".md";
         private const string JoplinResourcesDirectory = "_resources";
@@ -22,22 +22,22 @@ namespace Lorestead.Core.Import
         // untouched and lands in the report instead of failing the import.
         private const long MaxAttachmentBytes = 100L * 1024 * 1024;
 
-        private static readonly Regex MarkdownLinkPattern = new Regex(
-            @"\]\(([^)\n]*)\)", RegexOptions.CultureInvariant);
+        [GeneratedRegex(@"\]\(([^)\n]*)\)", RegexOptions.CultureInvariant)]
+        private static partial Regex MarkdownLinkPattern();
 
-        private static readonly Regex WikiLinkPattern = new Regex(
-            @"(!?)\[\[([^\[\]\n]+)\]\]", RegexOptions.CultureInvariant);
+        [GeneratedRegex(@"(!?)\[\[([^\[\]\n]+)\]\]", RegexOptions.CultureInvariant)]
+        private static partial Regex WikiLinkPattern();
 
-        private static readonly Regex JoplinLinkPattern = new Regex(
-            @"^:/([0-9a-fA-F]{32})$", RegexOptions.CultureInvariant);
+        [GeneratedRegex(@"^:/([0-9a-fA-F]{32})$", RegexOptions.CultureInvariant)]
+        private static partial Regex JoplinLinkPattern();
 
-        private static readonly Regex SchemePattern = new Regex(
-            @"^[a-zA-Z][a-zA-Z0-9+.\-]*:", RegexOptions.CultureInvariant);
+        [GeneratedRegex(@"^[a-zA-Z][a-zA-Z0-9+.\-]*:", RegexOptions.CultureInvariant)]
+        private static partial Regex SchemePattern();
 
         // The " (2)" the export appends when sibling filenames collide, so a
         // re-imported attachment can still match the original it came from.
-        private static readonly Regex CopySuffixPattern = new Regex(
-            @" \(\d+\)$", RegexOptions.CultureInvariant);
+        [GeneratedRegex(@" \(\d+\)$", RegexOptions.CultureInvariant)]
+        private static partial Regex CopySuffixPattern();
 
         private sealed class Node
         {
@@ -528,7 +528,7 @@ namespace Lorestead.Core.Import
 
             if (result.Length > 0)
             {
-                result = MarkdownLinkPattern.Replace(result, delegate (Match match)
+                result = MarkdownLinkPattern().Replace(result, delegate (Match match)
                 {
                     string inside = match.Groups[1].Value;
                     string url = inside;
@@ -546,7 +546,7 @@ namespace Lorestead.Core.Import
                     return rewritten == null ? match.Value : "](" + rewritten + suffix + ")";
                 });
 
-                result = WikiLinkPattern.Replace(result, delegate (Match match)
+                result = WikiLinkPattern().Replace(result, delegate (Match match)
                 {
                     return RewriteWikiLink(match, node, context);
                 });
@@ -561,7 +561,7 @@ namespace Lorestead.Core.Import
 
             if (url.Length > 0)
             {
-                Match joplin = JoplinLinkPattern.Match(url);
+                Match joplin = JoplinLinkPattern().Match(url);
                 if (url.StartsWith("note://", StringComparison.OrdinalIgnoreCase))
                 {
                     if (!context.ValidNoteIds.Contains(url.Substring("note://".Length)))
@@ -592,7 +592,7 @@ namespace Lorestead.Core.Import
                         context.Warnings.Add("Joplin internal link \"" + url + "\" in \"" + node.File.Path + "\" was left as-is.");
                     }
                 }
-                else if (!SchemePattern.IsMatch(url)
+                else if (!SchemePattern().IsMatch(url)
                     && !url.StartsWith("#", StringComparison.Ordinal)
                     && !url.StartsWith("//", StringComparison.Ordinal))
                 {
@@ -816,7 +816,7 @@ namespace Lorestead.Core.Import
             if (node.Existing != null)
             {
                 string name = LastSegment(file.Path);
-                string stripped = CopySuffixPattern.Replace(Stem(name), string.Empty) + Extension(name);
+                string stripped = CopySuffixPattern().Replace(Stem(name), string.Empty) + Extension(name);
                 List<Attachment> owned;
                 if (context.ExistingAttachmentsByNote.TryGetValue(node.Existing.Id, out owned))
                 {

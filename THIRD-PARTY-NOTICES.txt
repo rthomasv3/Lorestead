@@ -68,12 +68,6 @@ nativefiledialog-extended (https://github.com/btzy/nativefiledialog-extended)
   contributors
   License: Zlib (see below)
 
-Microsoft Edge WebView2 Loader (WebView2Loader.dll, Windows only)
-  Copyright (c) Microsoft Corporation. All rights reserved.
-  License: Microsoft Edge WebView2 SDK license, which permits redistribution
-  of the loader as part of an application.
-  https://developer.microsoft.com/microsoft-edge/webview2
-
 
 ================================================================================
 3. JAVASCRIPT / TYPESCRIPT LIBRARIES

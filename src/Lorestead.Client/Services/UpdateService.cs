@@ -38,7 +38,7 @@ public sealed class UpdateService : IUpdateService
     private string _error;
     private bool _started;
 
-    public UpdateService(SettingsRepository settings, EventService events, ILoggingService logger)
+    public UpdateService(SettingsRepository settings, IEventService events, ILoggingService logger)
     {
         _settings = settings;
         _events = events;

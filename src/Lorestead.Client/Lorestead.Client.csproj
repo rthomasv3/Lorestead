@@ -4,6 +4,9 @@
     <OutputType>WinExe</OutputType>
     <TargetFramework>net10.0</TargetFramework>
     <RootNamespace>Lorestead.Client</RootNamespace>
+    <!-- The shipped exe is Lorestead, not Lorestead.Client; set here rather than on the
+         publish command line because CLI properties are global and would rename Core too. -->
+    <AssemblyName>Lorestead</AssemblyName>
     <PublishAot>true</PublishAot>
     <InvariantGlobalization>true</InvariantGlobalization>
     <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>

@@ -11,7 +11,24 @@ env:
   IMAGE_NAME: rthomasv3/lorestead-server
 
 jobs:
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+    steps:
+      - name: Derive version from the tag
+        id: meta
+        run: |
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+          else
+            # 0.0.1, not 0.0.0: Velopack rejects pack versions below 0.0.1.
+            VERSION="0.0.1-ci.${GITHUB_RUN_NUMBER}"
+          fi
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+
   docker:
+    needs: version
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -19,11 +36,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Derive version and image tags
+      - name: Derive image tags
         id: meta
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
         run: |
           if [ "$GITHUB_REF_TYPE" = "tag" ]; then
-            VERSION="${GITHUB_REF_NAME#v}"
             TAGS="${IMAGE_NAME}:${VERSION},ghcr.io/${IMAGE_NAME}:${VERSION}"
             # A hyphen marks a pre-release (semver); only stable versions move :latest.
             case "$VERSION" in
@@ -31,10 +49,8 @@ jobs:
               *) TAGS="${TAGS},${IMAGE_NAME}:latest,ghcr.io/${IMAGE_NAME}:latest" ;;
             esac
           else
-            VERSION="0.0.0-ci.${GITHUB_RUN_NUMBER}"
             TAGS="${IMAGE_NAME}:test,ghcr.io/${IMAGE_NAME}:test"
           fi
-          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
           echo "tags=${TAGS}" >> "$GITHUB_OUTPUT"
 
       - uses: docker/setup-buildx-action@v3
@@ -58,11 +74,85 @@ jobs:
           context: .
           platforms: linux/amd64
           push: true
-          build-args: APP_VERSION=${{ steps.meta.outputs.version }}
+          build-args: APP_VERSION=${{ needs.version.outputs.version }}
           tags: ${{ steps.meta.outputs.tags }}
           # The source label links the GHCR package to the repo.
           labels: |
             org.opencontainers.image.source=https://github.com/rthomasv3/Lorestead
             org.opencontainers.image.description=Lorestead sync server
             org.opencontainers.image.licenses=MIT
-            org.opencontainers.image.version=${{ steps.meta.outputs.version }}
+            org.opencontainers.image.version=${{ needs.version.outputs.version }}
+
+  windows:
+    needs: version
+    runs-on: windows-latest
+    permissions:
+      # azure/login authenticates via OIDC federation; no client secret exists.
+      id-token: write
+      contents: read
+    env:
+      # vpk targets an older runtime than the repo's .NET 10; roll-forward bridges that.
+      DOTNET_ROLL_FORWARD: Major
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: npm
+          cache-dependency-path: src/Lorestead.Client/FrontEnd/package-lock.json
+
+      - name: Install vpk
+        # Keep the CLI on the same version as the Velopack library reference.
+        run: dotnet tool install -g vpk --version 1.2.0
+
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Write signing metadata
+        shell: pwsh
+        run: |
+          $metadata = [ordered]@{
+            Endpoint = '${{ secrets.SIGNING_ENDPOINT }}'
+            CodeSigningAccountName = '${{ secrets.SIGNING_ACCOUNT_NAME }}'
+            CertificateProfileName = '${{ secrets.SIGNING_PROFILE_NAME }}'
+          } | ConvertTo-Json
+          Set-Content -Path build/windows/signing-metadata.json -Value $metadata
+
+      - name: Download existing release feed
+        # Enables delta package generation; fails harmlessly before the first release.
+        # Skipped on dispatch dry runs - their 0.0.0-ci version is lower than the
+        # feed's latest, which vpk pack rejects.
+        if: github.ref_type == 'tag'
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path build/windows/output -Force | Out-Null
+          vpk download github `
+            --repoUrl https://github.com/rthomasv3/Lorestead `
+            --channel win-x64 `
+            --pre true `
+            --outputDir build/windows/output
+
+      - name: Build Windows installer with Velopack
+        shell: pwsh
+        run: |
+          cd build/windows
+          ./build-velopack.ps1 -Version ${{ needs.version.outputs.version }} -SignFile signing-metadata.json
+
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-x64
+          path: build/windows/output
+          if-no-files-found: error

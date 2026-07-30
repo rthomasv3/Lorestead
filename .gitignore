@@ -4,6 +4,8 @@ CLAUDE.md
 bin/
 obj/
 publish/
+build/windows/tmp/
+build/windows/output/
 .vs/
 data/
 .codex/

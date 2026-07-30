@@ -9,22 +9,25 @@ namespace Lorestead.Core.DataAccess
     // Derived backlinks index (data.md): rebuilt from the markdown source on every save,
     // never in the change log. Link targets that don't exist locally are skipped - broken
     // links render broken in the body; the index only tracks resolvable targets.
-    public static class NoteLinkRebuilder
+    public static partial class NoteLinkRebuilder
     {
         private const string Ellipsis = "...";
         private const int DefaultSnippetRadius = 60;
 
-        private static readonly Regex LinkPattern = new Regex(
+        [GeneratedRegex(
             @"note://([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})",
-            RegexOptions.CultureInvariant);
+            RegexOptions.CultureInvariant)]
+        private static partial Regex LinkPattern();
 
         // The same link, with its markdown wrapper, so a snippet can show the link
         // text a reader would actually see rather than a raw uuid.
-        private static readonly Regex MarkdownLinkPattern = new Regex(
+        [GeneratedRegex(
             @"!?\[([^\]]*)\]\(note://([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})\)",
-            RegexOptions.CultureInvariant);
+            RegexOptions.CultureInvariant)]
+        private static partial Regex MarkdownLinkPattern();
 
-        private static readonly Regex WhitespaceRuns = new Regex(@"\s+", RegexOptions.CultureInvariant);
+        [GeneratedRegex(@"\s+", RegexOptions.CultureInvariant)]
+        private static partial Regex WhitespaceRuns();
 
         public static void RebuildForNoteWithin(SqliteConnection connection, SqliteTransaction transaction, string noteId, string body)
         {
@@ -41,7 +44,7 @@ namespace Lorestead.Core.DataAccess
             List<string> targets = new List<string>();
             if (!string.IsNullOrEmpty(body))
             {
-                foreach (Match match in LinkPattern.Matches(body))
+                foreach (Match match in LinkPattern().Matches(body))
                 {
                     string id = match.Groups[1].Value.ToLowerInvariant();
                     if (!targets.Contains(id))
@@ -62,13 +65,13 @@ namespace Lorestead.Core.DataAccess
 
             if (!string.IsNullOrWhiteSpace(body) && !string.IsNullOrEmpty(targetNoteId))
             {
-                string collapsed = WhitespaceRuns.Replace(body, " ").Trim();
+                string collapsed = WhitespaceRuns().Replace(body, " ").Trim();
                 StringBuilder flattened = new StringBuilder();
                 int targetStart = -1;
                 int targetEnd = 0;
                 int cursor = 0;
 
-                foreach (Match match in MarkdownLinkPattern.Matches(collapsed))
+                foreach (Match match in MarkdownLinkPattern().Matches(collapsed))
                 {
                     flattened.Append(collapsed, cursor, match.Index - cursor);
                     string text = match.Groups[1].Value;

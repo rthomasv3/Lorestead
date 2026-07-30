@@ -29,7 +29,7 @@ public sealed class DataVersionWatcher : IChangeWatcher, IDisposable
         ConnectionManager connectionManager,
         SyncStateRepository syncState,
         ISyncService sync,
-        EventService events,
+        IEventService events,
         ILoggingService logger)
     {
         _connectionManager = connectionManager;

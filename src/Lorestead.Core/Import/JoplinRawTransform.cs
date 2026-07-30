@@ -15,7 +15,7 @@ namespace Lorestead.Core.Import
     // as lorestead-ids, which makes RAW re-imports merge and lets note-to-note
     // :/id links resolve; the MD front matter export can do neither
     // (features/import.md).
-    public static class JoplinRawTransform
+    public static partial class JoplinRawTransform
     {
         public sealed class Result
         {
@@ -31,14 +31,14 @@ namespace Lorestead.Core.Import
         private const int TypeNotebook = 2;
         private const int TypeResource = 4;
 
-        private static readonly Regex HexIdPattern = new Regex(
-            @"^[0-9a-fA-F]{32}$", RegexOptions.CultureInvariant);
+        [GeneratedRegex(@"^[0-9a-fA-F]{32}$", RegexOptions.CultureInvariant)]
+        private static partial Regex HexIdPattern();
 
-        private static readonly Regex MetadataLinePattern = new Regex(
-            @"^[A-Za-z_][A-Za-z0-9_]*:( .*)?$", RegexOptions.CultureInvariant);
+        [GeneratedRegex(@"^[A-Za-z_][A-Za-z0-9_]*:( .*)?$", RegexOptions.CultureInvariant)]
+        private static partial Regex MetadataLinePattern();
 
-        private static readonly Regex InternalLinkPattern = new Regex(
-            @":/([0-9a-fA-F]{32})", RegexOptions.CultureInvariant);
+        [GeneratedRegex(@":/([0-9a-fA-F]{32})", RegexOptions.CultureInvariant)]
+        private static partial Regex InternalLinkPattern();
 
         private sealed class RawItem
         {
@@ -84,7 +84,7 @@ namespace Lorestead.Core.Import
                     // id, and ends in a metadata trailer. One that does not fit means
                     // this is some other folder of markdown - leave it alone.
                     string stem = path.Substring(0, path.Length - 3);
-                    RawItem item = path.IndexOf('/') < 0 && HexIdPattern.IsMatch(stem)
+                    RawItem item = path.IndexOf('/') < 0 && HexIdPattern().IsMatch(stem)
                         ? ParseItem(stem, file.Content)
                         : null;
                     if (item == null)
@@ -253,7 +253,7 @@ namespace Lorestead.Core.Import
                 string stem = Stem(name);
 
                 RawItem meta;
-                if (HexIdPattern.IsMatch(stem) && resourceMeta.TryGetValue(stem, out meta)
+                if (HexIdPattern().IsMatch(stem) && resourceMeta.TryGetValue(stem, out meta)
                     && !string.IsNullOrEmpty(meta.Title))
                 {
                     string extension = Extension(name);
@@ -264,7 +264,7 @@ namespace Lorestead.Core.Import
                 string unique = ExportFileName.Unique(Stem(sanitized), Extension(sanitized), used);
                 string path = ResourcesDirectory + "/" + unique;
 
-                if (HexIdPattern.IsMatch(stem))
+                if (HexIdPattern().IsMatch(stem))
                 {
                     resourcePathById[stem] = path;
                 }
@@ -402,7 +402,7 @@ namespace Lorestead.Core.Import
 
             if (result.Length > 0)
             {
-                result = InternalLinkPattern.Replace(result, delegate (Match match)
+                result = InternalLinkPattern().Replace(result, delegate (Match match)
                 {
                     string id = match.Groups[1].Value;
                     string replacement = match.Value;
@@ -455,7 +455,7 @@ namespace Lorestead.Core.Import
                 end--;
             }
             int start = end;
-            while (start > 0 && MetadataLinePattern.IsMatch(lines[start - 1]))
+            while (start > 0 && MetadataLinePattern().IsMatch(lines[start - 1]))
             {
                 start--;
             }

@@ -50,7 +50,7 @@ public sealed class SyncEngine : ISyncService, IDisposable
         ConnectionManager connectionManager,
         SettingsRepository settings,
         SyncCredentialStore credentials,
-        EventService events,
+        IEventService events,
         ILoggingService logger)
     {
         _connectionManager = connectionManager;
