@@ -160,3 +160,62 @@ jobs:
           name: windows-x64
           path: build/windows/output
           if-no-files-found: error
+
+  linux:
+    needs: version
+    # Jammy is deliberate, not just old: the AppImage bundles this runner's
+    # webkit2gtk-4.1 binaries, so its glibc sets the compatibility floor.
+    runs-on: ubuntu-22.04
+    env:
+      # vpk targets an older runtime than the repo's .NET 10; roll-forward bridges that.
+      DOTNET_ROLL_FORWARD: Major
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install webkit build dependencies
+        # Same package set as build/linux/Dockerfile so local docker builds and
+        # CI harvest identical webkit binaries. squashfs-tools: vpk shells out
+        # to mksquashfs to assemble the AppImage.
+        run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev squashfs-tools
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.x
+          cache: npm
+          cache-dependency-path: src/Lorestead.Client/FrontEnd/package-lock.json
+
+      - name: Install vpk
+        # Keep the CLI on the same version as the Velopack library reference.
+        run: dotnet tool install -g vpk --version 1.2.0
+
+      - name: Download existing release feed
+        # Enables delta package generation; fails harmlessly before the first release.
+        # Skipped on dispatch dry runs - their ci version is lower than the feed's
+        # latest, which vpk pack rejects.
+        if: github.ref_type == 'tag'
+        continue-on-error: true
+        run: |
+          mkdir -p build/linux/output
+          vpk download github \
+            --repoUrl https://github.com/rthomasv3/Lorestead \
+            --channel linux-x64 \
+            --pre true \
+            --outputDir build/linux/output
+
+      - name: Build Linux AppImage with Velopack
+        run: |
+          cd build/linux
+          bash build-velopack.sh --version ${{ needs.version.outputs.version }}
+
+      - name: Upload Linux artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-x64
+          path: build/linux/output
+          if-no-files-found: error

@@ -6,6 +6,8 @@ obj/
 publish/
 build/windows/tmp/
 build/windows/output/
+build/linux/tmp/
+build/linux/output/
 .vs/
 data/
 .codex/
