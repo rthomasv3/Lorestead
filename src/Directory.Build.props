@@ -1,0 +1,17 @@
+<Project>
+
+  <!-- The release tag (v1.2.3) is the only place the version exists (distribution.md).
+       MinVer derives every build's version from the nearest tag; untagged history reads
+       0.0.0-alpha.0.<height>. -->
+  <PropertyGroup>
+    <MinVerTagPrefix>v</MinVerTagPrefix>
+    <!-- About, /status, and the MCP handshake all show InformationalVersion; keep it the
+         plain semver the tag names rather than letting the SDK append +<commit-sha>. -->
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MinVer" PrivateAssets="all" />
+  </ItemGroup>
+
+</Project>

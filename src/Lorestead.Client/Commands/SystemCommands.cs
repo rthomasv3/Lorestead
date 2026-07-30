@@ -1,3 +1,5 @@
+using System;
+using System.IO;
 using System.Reflection;
 using Galdr.Native;
 using Lorestead.Client.Commands.Contracts;
@@ -20,12 +22,23 @@ internal static class SystemCommands
             Text = logger.ReadLog(),
         });
 
+        builder.AddFunction("getThirdPartyNotices", () => new GetThirdPartyNoticesResponse
+        {
+            Text = GetThirdPartyNotices(),
+        });
+
         return builder;
+    }
+
+    private static string GetThirdPartyNotices()
+    {
+        string path = Path.Combine(AppContext.BaseDirectory, "THIRD-PARTY-NOTICES.txt");
+        return File.Exists(path) ? File.ReadAllText(path) : "THIRD-PARTY-NOTICES.txt was not found beside the application.";
     }
 
     private static string GetVersion()
     {
-        // Auto-stamped by the build (MinVer from Phase 9 on); never manually synced.
+        // Auto-stamped by the build (MinVer); never manually synced.
         AssemblyInformationalVersionAttribute attribute =
             typeof(SystemCommands).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>();
         return attribute == null ? "dev" : attribute.InformationalVersion;

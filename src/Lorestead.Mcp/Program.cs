@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Reflection;
 using System.Threading.Tasks;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
@@ -66,7 +67,9 @@ internal static class Program
                     {
                         Name = "lorestead",
                         Title = "Lorestead (" + build + ")",
-                        Version = typeof(Program).Assembly.GetName().Version.ToString(),
+                        // InformationalVersion carries the MinVer-stamped semver; the
+                        // assembly version it would otherwise read stays Major.0.0.0.
+                        Version = GetVersion(),
                     },
                     // Which database this is talking to is the one thing a caller
                     // cannot see and the one thing that has actually gone wrong
@@ -88,5 +91,12 @@ internal static class Program
         }
 
         return exitCode;
+    }
+
+    private static string GetVersion()
+    {
+        AssemblyInformationalVersionAttribute attribute =
+            typeof(Program).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>();
+        return attribute == null ? "dev" : attribute.InformationalVersion;
     }
 }

@@ -2,7 +2,8 @@
 import { ref, computed, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import { useSettingsStore, ACCENTS } from '../stores/settingsStore'
 import { useSyncStore } from '../stores/syncStore'
-import { getAbout, getLog } from '../services/systemService'
+import { getAbout, getLog, getThirdPartyNotices } from '../services/systemService'
+import { DialogRoot, DialogPortal, DialogOverlay, DialogContent, DialogTitle } from 'reka-ui'
 import { MD_TOGGLES } from '../utils/settingsIndex.js'
 import SelectMenu from '../components/SelectMenu.vue'
 import Toggle from '../components/Toggle.vue'
@@ -142,6 +143,19 @@ function cancelTokenEdit() {
 }
 
 const about = ref(null)
+
+const noticesOpen = ref(false)
+const noticesText = ref('')
+async function openNotices() {
+  try {
+    const result = await getThirdPartyNotices()
+    noticesText.value = result?.text ?? ''
+  } catch {
+    // The dialog still opens; an empty body beats a dead link.
+    noticesText.value = ''
+  }
+  noticesOpen.value = true
+}
 
 const logOpen = ref(false)
 const logText = ref('')
@@ -385,9 +399,30 @@ onMounted(async () => {
             </div>
           </div>
           <p class="text-xs text-on-surface-muted">
-            Free and open source. Third-party notices ship with packaged builds.
+            Free and open source. View the
+            <button type="button" class="underline hover:text-on-surface" @click="openNotices">third-party notices</button>
+            for bundled software.
           </p>
         </div>
+
+        <DialogRoot :open="noticesOpen" @update:open="noticesOpen = $event">
+          <DialogPortal>
+            <DialogOverlay class="fixed inset-0 bg-black/40 z-40 dialog-fade" />
+            <DialogContent
+              class="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-2xl max-h-[80vh] flex flex-col rounded-lg border border-border bg-surface-elevated p-5 shadow-xl dialog-fade">
+              <div class="flex items-center gap-2 mb-3">
+                <DialogTitle class="flex-1 font-semibold">Third-party notices</DialogTitle>
+                <HoverTip text="Close" side="bottom">
+                  <button type="button" class="p-2 rounded-md hover:bg-surface-alt" @click="noticesOpen = false">
+                    <i-lucide-x class="size-4" />
+                  </button>
+                </HoverTip>
+              </div>
+              <pre
+                class="flex-1 min-h-0 font-mono text-xs bg-surface-alt border border-border rounded-md p-3 overflow-auto whitespace-pre-wrap">{{ noticesText || 'THIRD-PARTY-NOTICES.txt could not be read.' }}</pre>
+            </DialogContent>
+          </DialogPortal>
+        </DialogRoot>
 
         <div class="flex flex-col gap-3">
           <button id="settings-logs" type="button" class="flex items-center gap-2 text-sm font-semibold text-left"

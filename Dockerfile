@@ -7,6 +7,11 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /source
 COPY Directory.Packages.props ./
+# src-level build props carry MinVer; without .git in the context it stamps
+# 0.0.0-alpha.0 - the release workflow overrides via MinVerVersionOverride.
+COPY src/Directory.Build.props src/
+# The server csproj copies these into /app beside the binary.
+COPY LICENSE.txt THIRD-PARTY-NOTICES.txt ./
 # Core embeds the first-run seed icon from the repo-root icon directory.
 COPY icon/ icon/
 COPY src/Lorestead.Core/ src/Lorestead.Core/

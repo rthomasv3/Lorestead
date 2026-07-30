@@ -20,6 +20,12 @@
     <ProjectReference Include="..\Lorestead.Core\Lorestead.Core.csproj" />
   </ItemGroup>
 
+  <!-- Ship beside the binaries on every platform (distribution.md); About reads the notices. -->
+  <ItemGroup>
+    <Content Include="..\..\LICENSE.txt" Link="LICENSE.txt" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\THIRD-PARTY-NOTICES.txt" Link="THIRD-PARTY-NOTICES.txt" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
   <PropertyGroup>
     <FrontEndDir>$(MSBuildProjectDirectory)/FrontEnd</FrontEndDir>
     <FrontEndDist>$(FrontEndDir)/dist</FrontEndDist>
