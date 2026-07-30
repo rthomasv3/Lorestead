@@ -16,7 +16,11 @@ COPY LICENSE.txt THIRD-PARTY-NOTICES.txt ./
 COPY icon/ icon/
 COPY src/Lorestead.Core/ src/Lorestead.Core/
 COPY src/Lorestead.Server/ src/Lorestead.Server/
+# The release workflow passes the tag's version; without it (local builds, no
+# .git in the context) MinVer warns and stamps 0.0.0-alpha.0.
+ARG APP_VERSION=
 RUN dotnet publish src/Lorestead.Server -c Release -r linux-x64 -o /app \
+    ${APP_VERSION:+-p:MinVerVersionOverride=$APP_VERSION} \
     && mkdir /data-seed
 
 # Self-contained AOT binary: chiseled runtime-deps carries only the native libs it
