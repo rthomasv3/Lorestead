@@ -219,3 +219,112 @@ jobs:
           name: linux-x64
           path: build/linux/output
           if-no-files-found: error
+
+  macos:
+    needs: version
+    runs-on: macos-latest
+    env:
+      # vpk targets an older runtime than the repo's .NET 10; roll-forward bridges that.
+      DOTNET_ROLL_FORWARD: Major
+      KEYCHAIN_PATH: /tmp/lorestead-build.keychain-db
+      NOTARY_PROFILE: lorestead-notary
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.x
+          cache: npm
+          cache-dependency-path: src/Lorestead.Client/FrontEnd/package-lock.json
+
+      - name: Install vpk
+        # Keep the CLI on the same version as the Velopack library reference.
+        run: dotnet tool install -g vpk --version 1.2.0
+
+      - name: Create keychain and import Developer ID certs
+        env:
+          APP_CERT_P12_B64: ${{ secrets.MACOS_DEVID_APP_CERT_P12 }}
+          APP_CERT_PASSWORD: ${{ secrets.MACOS_DEVID_APP_CERT_PASSWORD }}
+          INSTALLER_CERT_P12_B64: ${{ secrets.MACOS_DEVID_INSTALLER_CERT_P12 }}
+          INSTALLER_CERT_PASSWORD: ${{ secrets.MACOS_DEVID_INSTALLER_CERT_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.MACOS_KEYCHAIN_PASSWORD }}
+        run: |
+          echo "$APP_CERT_P12_B64" | base64 --decode > /tmp/app-cert.p12
+          echo "$INSTALLER_CERT_P12_B64" | base64 --decode > /tmp/installer-cert.p12
+
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+          security import /tmp/app-cert.p12 -P "$APP_CERT_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+          security import /tmp/installer-cert.p12 -P "$INSTALLER_CERT_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+
+          # Put the new keychain first in the search list so codesign finds our identities.
+          EXISTING=$(security list-keychains -d user | xargs)
+          security list-keychains -d user -s "$KEYCHAIN_PATH" $EXISTING
+
+          # Permit codesign/productbuild to use private keys without GUI prompt.
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+          # Wipe the p12 files on disk; the keys are now in the keychain only.
+          rm -f /tmp/app-cert.p12 /tmp/installer-cert.p12
+
+          echo "--- available signing identities ---"
+          security find-identity -v "$KEYCHAIN_PATH"
+
+      - name: Store notarization credentials
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+        run: |
+          xcrun notarytool store-credentials "$NOTARY_PROFILE" \
+            --apple-id "$APPLE_ID" \
+            --team-id "$APPLE_TEAM_ID" \
+            --password "$APPLE_APP_PASSWORD" \
+            --keychain "$KEYCHAIN_PATH"
+
+      - name: Download existing release feed
+        # Enables delta package generation; fails harmlessly before the first release.
+        # Skipped on dispatch dry runs - their ci version is lower than the feed's
+        # latest, which vpk pack rejects.
+        if: github.ref_type == 'tag'
+        continue-on-error: true
+        run: |
+          mkdir -p build/macos/output
+          vpk download github \
+            --repoUrl https://github.com/rthomasv3/Lorestead \
+            --channel osx-arm64 \
+            --pre true \
+            --outputDir build/macos/output
+
+      - name: Build macOS package with Velopack
+        env:
+          SIGN_APP_IDENTITY: ${{ secrets.MACOS_SIGN_APP_IDENTITY }}
+          SIGN_INSTALL_IDENTITY: ${{ secrets.MACOS_SIGN_INSTALL_IDENTITY }}
+        run: |
+          cd build/macos
+          bash build-velopack.sh --version ${{ needs.version.outputs.version }} \
+            --sign-app-identity "$SIGN_APP_IDENTITY" \
+            --sign-install-identity "$SIGN_INSTALL_IDENTITY" \
+            --notary-profile "$NOTARY_PROFILE" \
+            --keychain "$KEYCHAIN_PATH"
+
+      - name: Upload macOS artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: osx-arm64
+          path: build/macos/output
+          if-no-files-found: error
+
+      - name: Cleanup keychain
+        if: always()
+        run: |
+          security delete-keychain "$KEYCHAIN_PATH" || true
+          rm -f /tmp/app-cert.p12 /tmp/installer-cert.p12

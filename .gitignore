@@ -8,6 +8,8 @@ build/windows/tmp/
 build/windows/output/
 build/linux/tmp/
 build/linux/output/
+build/macos/tmp/
+build/macos/output/
 .vs/
 data/
 .codex/
