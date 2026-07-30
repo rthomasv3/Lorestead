@@ -86,6 +86,10 @@ jobs:
   windows:
     needs: version
     runs-on: windows-latest
+    # Pins the OIDC subject to repo:...:environment:release for every trigger, so one
+    # Azure federated credential covers dispatch dry runs and tag pushes alike
+    # (per-tag ref subjects cannot be wildcarded on the Azure side).
+    environment: release
     permissions:
       # azure/login authenticates via OIDC federation; no client secret exists.
       id-token: write
