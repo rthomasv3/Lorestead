@@ -19,6 +19,10 @@ internal class Program
     [STAThread]
     static void Main(string[] args)
     {
+        // Velopack's install/update hooks must run before anything else - during an
+        // install or update event this exits the process without reaching the app.
+        Velopack.VelopackApp.Build().Run();
+
         // Explicit provider init: the reflection-based auto-init is not AOT-reliable,
         // and this host's provider is plain SQLite (bundle_e_sqlite3).
         SQLitePCL.Batteries_V2.Init();
@@ -48,6 +52,7 @@ internal class Program
             .AddSingleton<IBoardService, BoardService>()
             .AddSingleton<ISyncService, SyncEngine>()
             .AddSingleton<IChangeWatcher, DataVersionWatcher>()
+            .AddSingleton<IUpdateService, UpdateService>()
             .OnBeforeStartup(() =>
             {
                 // Startup survives a broken DB so Settings (and its Logs section) still
@@ -72,6 +77,7 @@ internal class Program
                 RestoreWindow(serviceProvider, logger);
                 serviceProvider.GetRequiredService<ISyncService>().Start();
                 serviceProvider.GetRequiredService<IChangeWatcher>().Start();
+                serviceProvider.GetRequiredService<IUpdateService>().Start();
             })
             .OnWindowChanged((galdr, context, serviceProvider) => SaveWindow(context, serviceProvider, logger))
             .OnCommandError((context, serviceProvider) =>
@@ -101,6 +107,7 @@ internal class Program
 
         builder.AddSettingsCommands();
         builder.AddSyncCommands();
+        builder.AddUpdateCommands();
         builder.AddSystemCommands();
         builder.AddNoteCommands();
         builder.AddAttachmentCommands();
