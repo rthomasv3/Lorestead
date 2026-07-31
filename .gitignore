@@ -12,4 +12,5 @@ build/macos/tmp/
 build/macos/output/
 .vs/
 data/
+server-dev-data/
 .codex/

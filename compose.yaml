@@ -2,8 +2,7 @@
 # proxy (caddy, traefik, nginx) in front of it.
 services:
   lorestead:
-    image: lorestead-server
-    build: .
+    image: rthomasv3/lorestead-server:latest
     ports:
       - "8080:8080"
     environment:
@@ -21,7 +20,10 @@ services:
       # Optional; defaults to the claude.ai and claude.com callbacks:
       # LORESTEAD_OAUTH_REDIRECT_URIS: https://claude.ai/api/mcp/auth_callback,https://claude.com/api/mcp/auth_callback
     volumes:
-      # The container runs as non-root uid 1654; on a Linux host the bind-mounted
-      # directory must be writable by it: chown -R 1654:1654 ./data
-      - ./data:/data
+      # A named volume rather than a bind mount: the container runs as non-root
+      # uid 1654, and a named volume picks up that ownership on its own.
+      - lorestead-data:/data
     restart: unless-stopped
+
+volumes:
+  lorestead-data:

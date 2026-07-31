@@ -25,7 +25,9 @@ Then, in another shell:
 dotnet run -c Debug
 ```
 
-Debug serves the UI from the Vite dev server at `http://localhost:5174`.
+Debug serves the UI from the Vite dev server at `http://localhost:5174`. Opening
+that URL in a plain browser (no C# host) installs a mock backend, so UI work
+runs without the desktop shell.
 
 **Release (one shot):**
 
@@ -40,15 +42,19 @@ app serves from disk. No separate front-end step is needed.
 
 ```
 Lorestead.Client.csproj      App project (net10.0, AOT, front-end build wired in)
-Program.cs           GaldrBuilder setup, error/exception logging hooks
-Config.cs            Resolves the per-user app-data paths (log file)
-Services/            C# services (ILoggingService + FileLoggingService)
+Program.cs           GaldrBuilder composition root, error/exception logging hooks
+Config.cs            Resolves the per-user app-data paths (database, logs)
+Services/            C# services behind the invoke bridge (notes, boards, sync,
+                     import/export, attachments, updates, logging)
 FrontEnd/            Vue 3 + Vite + Tailwind front end
   src/
+    components/      Shared components (editor, dialogs, tree, fields)
+    composables/     Shared composition functions
+    dev/             Mock backend for browser-only UI work
     services/        Thin wrappers over the galdrInvoke bridge (invoke.js)
-    stores/          Pinia stores (themeStore.js)
-    utils/           Helpers (platform.js)
-    views/           Route components (DashboardView.vue)
+    stores/          Pinia stores (notes, boards, settings, sync, updates)
+    utils/           Helpers (formatting, toolbar, platform)
+    views/           Route components (notes/, boards/, SettingsView.vue)
     router.js        vue-router (hash history)
     style.css        Tailwind + theme tokens (light/dark)
 ```
@@ -57,7 +63,7 @@ FrontEnd/            Vue 3 + Vite + Tailwind front end
 
 - **Icons:** use any Lucide icon as a component on demand, e.g.
   `<i-lucide-sparkles />`. Add more `@iconify-json/*` collections to use other sets.
-- **Theme:** `themeStore` follows the OS by default and persists a manual override
-  to `localStorage`, toggling a `light`/`dark` class on `<html>`.
-- **Logging:** `FileLoggingService` writes to `log.txt` in the per-user app-data
-  directory; command and unhandled exceptions are logged automatically.
+- **Theme:** theme and accent live in the application settings (database); a copy
+  is cached in `localStorage` only for the first paint before the database loads.
+- **Logging:** `FileLoggingService` writes to `logs/lorestead.log` in the per-user
+  app-data directory; command and unhandled exceptions are logged automatically.
