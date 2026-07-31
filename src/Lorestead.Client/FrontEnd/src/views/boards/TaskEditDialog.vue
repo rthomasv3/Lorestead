@@ -2,7 +2,7 @@
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { dropTargetForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter'
 import { useRouter } from 'vue-router'
-import { DialogRoot, DialogPortal, DialogOverlay, DialogContent, DialogTitle, VisuallyHidden } from 'reka-ui'
+import { DialogRoot, DialogPortal, DialogOverlay, DialogContent, DialogTitle, VisuallyHidden, PopoverRoot, PopoverAnchor, PopoverPortal, PopoverContent } from 'reka-ui'
 import MarkdownEditor from '../../components/MarkdownEditor.vue'
 import MarkdownPreview from '../../components/MarkdownPreview.vue'
 import AttachmentCard from '../../components/AttachmentCard.vue'
@@ -477,35 +477,45 @@ function onDialogKeydown(e) {
 
           <div>
             <div class="text-sm font-medium text-on-surface-muted mb-1.5 ml-1">Linked notes</div>
-            <div class="relative">
-              <div
-                class="flex flex-wrap items-center gap-1.5 rounded-md border border-border px-2 py-1.5 min-h-9 focus-within:border-accent">
-                <span v-for="note in linkedNotes" :key="note.id"
-                  class="flex items-center gap-1 rounded bg-accent-soft text-sm px-1.5 py-0.5">
-                  <button class="hover:text-accent truncate max-w-48" :title="note.title || 'Untitled'"
-                    @click="openLinkedNote(note.id)">{{ note.title || 'Untitled' }}</button>
-                  <HoverTip text="Remove link">
-                    <button class="text-on-surface-muted hover:text-on-surface" @click="removeLink(note.id)">
-                      <i-lucide-x class="size-3" />
-                    </button>
-                  </HoverTip>
-                </span>
-                <input v-model="linkQuery" placeholder="Link a note..."
-                  class="flex-1 min-w-24 bg-transparent text-sm outline-none placeholder:text-on-surface-muted/60"
-                  @keydown="onLinkKeydown" @focus="linkInputFocused = true" @blur="linkInputFocused = false" />
-              </div>
-              <div v-if="linkInputFocused && linkSuggestions.length > 0"
-                class="absolute left-0 right-0 top-full mt-1 z-10 rounded-lg border border-border bg-surface-elevated shadow-lg p-1 max-h-48 overflow-y-auto">
-                <!-- Selection follows the mouse, so hovering a row selects it and
-                     there is no separate hover state to paint. -->
-                <button v-for="(note, index) in linkSuggestions" :key="note.id"
-                  class="w-full text-left rounded-md px-2.5 py-1.5 text-sm truncate"
-                  :class="index === linkIndex ? 'bg-accent-soft' : ''"
-                  @mouseenter="linkIndex = index" @mousedown.prevent="addLink(note)">
-                  {{ note.title || 'Untitled' }}
-                </button>
-              </div>
-            </div>
+            <!-- A popover rather than an absolute dropdown: positioned inside the
+                 dialog's scroll area the list extended the scrollable content, so
+                 opening it scrolled the dialog and cut the list off. The portal
+                 takes it out of that flow entirely; focus stays in the input, so
+                 both auto-focus hops are suppressed. -->
+            <PopoverRoot :open="linkInputFocused && linkSuggestions.length > 0">
+              <PopoverAnchor as-child>
+                <div
+                  class="flex flex-wrap items-center gap-1.5 rounded-md border border-border px-2 py-1.5 min-h-9 focus-within:border-accent">
+                  <span v-for="note in linkedNotes" :key="note.id"
+                    class="flex items-center gap-1 rounded bg-accent-soft text-sm px-1.5 py-0.5">
+                    <button class="hover:text-accent truncate max-w-48" :title="note.title || 'Untitled'"
+                      @click="openLinkedNote(note.id)">{{ note.title || 'Untitled' }}</button>
+                    <HoverTip text="Remove link">
+                      <button class="text-on-surface-muted hover:text-on-surface" @click="removeLink(note.id)">
+                        <i-lucide-x class="size-3" />
+                      </button>
+                    </HoverTip>
+                  </span>
+                  <input v-model="linkQuery" placeholder="Link a note..."
+                    class="flex-1 min-w-24 bg-transparent text-sm outline-none placeholder:text-on-surface-muted/60"
+                    @keydown="onLinkKeydown" @focus="linkInputFocused = true" @blur="linkInputFocused = false" />
+                </div>
+              </PopoverAnchor>
+              <PopoverPortal>
+                <PopoverContent side="bottom" align="start" :side-offset="4"
+                  class="z-[60] w-[var(--reka-popover-trigger-width)] rounded-lg border border-border bg-surface-elevated shadow-lg p-1 max-h-48 overflow-y-auto"
+                  @open-auto-focus.prevent @close-auto-focus.prevent>
+                  <!-- Selection follows the mouse, so hovering a row selects it and
+                       there is no separate hover state to paint. -->
+                  <button v-for="(note, index) in linkSuggestions" :key="note.id"
+                    class="w-full text-left rounded-md px-2.5 py-1.5 text-sm truncate"
+                    :class="index === linkIndex ? 'bg-accent-soft' : ''"
+                    @mouseenter="linkIndex = index" @mousedown.prevent="addLink(note)">
+                    {{ note.title || 'Untitled' }}
+                  </button>
+                </PopoverContent>
+              </PopoverPortal>
+            </PopoverRoot>
           </div>
         </div>
 

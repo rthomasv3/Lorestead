@@ -1,6 +1,6 @@
 <script setup>
 import { ref, watch, onMounted, onUnmounted, computed, nextTick } from 'vue'
-import { EditorView, keymap, lineNumbers, highlightActiveLine, placeholder, Decoration, ViewPlugin } from '@codemirror/view'
+import { EditorView, keymap, lineNumbers, highlightActiveLine, placeholder, Decoration, ViewPlugin, tooltips } from '@codemirror/view'
 import { EditorState, EditorSelection, Compartment, RangeSetBuilder } from '@codemirror/state'
 import { defaultKeymap, history, historyKeymap } from '@codemirror/commands'
 import { markdown } from '@codemirror/lang-markdown'
@@ -441,6 +441,13 @@ function createView() {
         matchHighlighter,
         markdown(),
         autocompletion({ override: [linkCompletions], icons: false }),
+        // Parented to the body: the task dialog's centering transform makes the
+        // popup's default fixed positioning resolve against the dialog, so
+        // CodeMirror detects the transformed ancestor and falls back to absolute
+        // inside the editor - where the dialog's fixed-height description box
+        // clips it. The container copies the editor's theme classes, so the
+        // popup styling above still applies.
+        tooltips({ parent: document.body }),
         syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
         underscoreEmphasis,
         EditorView.lineWrapping,
