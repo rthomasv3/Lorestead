@@ -3,6 +3,7 @@ import { useRouter } from 'vue-router'
 import { TooltipProvider } from 'reka-ui'
 import { useSettingsStore } from './stores/settingsStore'
 import { useSyncStore } from './stores/syncStore'
+import { useUpdatesStore } from './stores/updatesStore'
 import { useNotesStore } from './stores/notesStore'
 import { useBoardsStore } from './stores/boardsStore'
 import Sidebar from './components/Sidebar.vue'
@@ -10,6 +11,7 @@ import SearchDialog from './components/SearchDialog.vue'
 
 useSettingsStore().init()
 useSyncStore().init()
+useUpdatesStore().init()
 
 const router = useRouter()
 const notes = useNotesStore()

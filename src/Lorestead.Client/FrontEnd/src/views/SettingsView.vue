@@ -2,6 +2,8 @@
 import { ref, computed, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import { useSettingsStore, ACCENTS } from '../stores/settingsStore'
 import { useSyncStore } from '../stores/syncStore'
+import { useUpdatesStore } from '../stores/updatesStore'
+import { formatTimestamp } from '../utils/dateFormat.js'
 import { getAbout, getLog, getThirdPartyNotices } from '../services/systemService'
 import { DialogRoot, DialogPortal, DialogOverlay, DialogContent, DialogTitle } from 'reka-ui'
 import { MD_TOGGLES } from '../utils/settingsIndex.js'
@@ -14,6 +16,7 @@ import HoverTip from '../components/HoverTip.vue'
 
 const store = useSettingsStore()
 const sync = useSyncStore()
+const updates = useUpdatesStore()
 
 const THEME_OPTIONS = [
   { value: 'system', label: 'System' },
@@ -172,10 +175,19 @@ async function refreshLog() {
   }
 }
 
+// Status is the fresher source after a check; the settings column only covers
+// the window before the first status arrives.
 const lastChecked = computed(() => {
-  const value = store.application.lastUpdateCheckAt
-  return value ? new Date(value).toLocaleString() : 'Never'
+  const value = updates.status?.lastCheckedAt ?? store.application.lastUpdateCheckAt
+  return value ? formatTimestamp(value, store.application.dateFormat, store.application.timeFormat) : 'Never'
 })
+
+const updatesBusy = computed(() => updates.checking || updates.downloading)
+
+// True whenever a download is staged: VelopackApp auto-applies staged updates
+// at the next launch (on by default), independent of the auto-update toggle -
+// the toggle only governs pre-downloading.
+const autoApplyPending = computed(() => !!updates.status?.downloaded && !updates.downloading)
 
 onMounted(async () => {
   syncInputs()
@@ -283,13 +295,44 @@ onMounted(async () => {
 
           <div class="flex items-center gap-3">
             <span class="text-sm text-on-surface-muted w-44 shrink-0"></span>
-            <HoverTip text="Available in packaged builds" side="bottom" wrap>
+            <Button v-if="updates.status?.supported" :disabled="updatesBusy" @click="updates.check()">
+              <i-lucide-refresh-cw class="size-4" :class="updates.checking ? 'animate-spin' : ''" />
+              Check for updates
+            </Button>
+            <HoverTip v-else text="Available in packaged builds" side="bottom" wrap>
               <Button disabled>
                 <i-lucide-refresh-cw class="size-4" />
                 Check for updates
               </Button>
             </HoverTip>
             <span class="text-xs text-on-surface-muted">Last checked: {{ lastChecked }}</span>
+          </div>
+
+          <div v-if="updates.status?.updateAvailable" class="flex items-center gap-3">
+            <span class="text-sm text-on-surface-muted w-44 shrink-0"></span>
+            <Button :disabled="updatesBusy" @click="updates.relaunch()">
+              <i-lucide-rotate-ccw class="size-4" />
+              Relaunch to Update
+            </Button>
+            <span class="text-xs text-on-surface-muted">Version {{ updates.status.version }} available</span>
+          </div>
+
+          <div v-if="updates.downloading" class="flex items-center gap-3">
+            <span class="text-sm text-on-surface-muted w-44 shrink-0"></span>
+            <div class="w-64 h-1.5 rounded-full bg-surface-alt border border-border overflow-hidden">
+              <div class="h-full bg-accent-strong transition-[width] duration-200" :style="{ width: `${updates.progress}%` }" />
+            </div>
+            <span class="text-xs text-on-surface-muted tabular-nums">{{ updates.progress }}%</span>
+          </div>
+
+          <div v-if="autoApplyPending" class="flex items-center gap-3">
+            <span class="text-sm text-on-surface-muted w-44 shrink-0"></span>
+            <span class="text-xs text-on-surface-muted">The update will apply automatically on the next restart</span>
+          </div>
+
+          <div v-if="updates.status?.error" class="flex items-center gap-3">
+            <span class="text-sm text-on-surface-muted w-44 shrink-0"></span>
+            <span class="text-xs text-rose-500">{{ updates.status.error }}</span>
           </div>
         </div>
 
