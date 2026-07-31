@@ -15,6 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.meta.outputs.version }}
+      prerelease: ${{ steps.meta.outputs.prerelease }}
     steps:
       - name: Derive version from the tag
         id: meta
@@ -25,7 +26,14 @@ jobs:
             # 0.0.1, not 0.0.0: Velopack rejects pack versions below 0.0.1.
             VERSION="0.0.1-ci.${GITHUB_RUN_NUMBER}"
           fi
+          # A hyphen marks a semver pre-release. Alphas must be flagged prerelease
+          # on GitHub so stable clients' GithubSource skips them during update checks.
+          case "$VERSION" in
+            *-*) PRERELEASE=true ;;
+            *)   PRERELEASE=false ;;
+          esac
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "prerelease=${PRERELEASE}" >> "$GITHUB_OUTPUT"
 
   docker:
     needs: version
@@ -139,6 +147,10 @@ jobs:
         # feed's latest, which vpk pack rejects.
         if: github.ref_type == 'tag'
         continue-on-error: true
+        env:
+          # Not strictly required once the repo is public, but unauthenticated
+          # API calls rate-limit per IP (60/hr) and runners share IP pools.
+          VPK_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Path build/windows/output -Force | Out-Null
@@ -200,6 +212,10 @@ jobs:
         # latest, which vpk pack rejects.
         if: github.ref_type == 'tag'
         continue-on-error: true
+        env:
+          # Not strictly required once the repo is public, but unauthenticated
+          # API calls rate-limit per IP (60/hr) and runners share IP pools.
+          VPK_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           mkdir -p build/linux/output
           vpk download github \
@@ -296,6 +312,10 @@ jobs:
         # latest, which vpk pack rejects.
         if: github.ref_type == 'tag'
         continue-on-error: true
+        env:
+          # Not strictly required once the repo is public, but unauthenticated
+          # API calls rate-limit per IP (60/hr) and runners share IP pools.
+          VPK_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           mkdir -p build/macos/output
           vpk download github \
@@ -328,3 +348,73 @@ jobs:
         run: |
           security delete-keychain "$KEYCHAIN_PATH" || true
           rm -f /tmp/app-cert.p12 /tmp/installer-cert.p12
+
+  release:
+    # Fan-in: only real tag pushes publish a release; dispatch dry runs stop at
+    # artifacts. Docker is a dependency so a broken server image blocks the
+    # client release too - a tag means everything for that version shipped.
+    if: github.ref_type == 'tag'
+    needs: [version, docker, windows, linux, macos]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      # vpk targets an older runtime than the repo's .NET 10; roll-forward bridges that.
+      DOTNET_ROLL_FORWARD: Major
+      VPK_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Install vpk
+        # Keep the CLI on the same version as the Velopack library reference.
+        run: dotnet tool install -g vpk --version 1.2.0
+
+      - name: Download Windows artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-x64
+          path: packages/windows-x64
+
+      - name: Download Linux artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: linux-x64
+          path: packages/linux-x64
+
+      - name: Download macOS artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: osx-arm64
+          path: packages/osx-arm64
+
+      - name: Publish GitHub release
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+          PRERELEASE: ${{ needs.version.outputs.prerelease }}
+        # vpk creates the release as a draft and flips it live only on --publish,
+        # so the last upload publishes atomically with every channel's assets
+        # present. --merge lets uploads two and three join the draft the first
+        # created (matched on tag; --tag is required because vpk would otherwise
+        # tag the release with the bare semver, without the v prefix). Each
+        # upload reads assets.<channel>.json from its outputDir, so only files
+        # built this run are attached - not the old nupkg the legs downloaded
+        # for delta generation. Re-running this job after a partial failure
+        # needs the draft release deleted first: vpk refuses to merge into a
+        # channel whose releases.json asset already exists.
+        run: |
+          upload() {
+            vpk upload github \
+              --repoUrl https://github.com/rthomasv3/Lorestead \
+              --channel "$1" \
+              --outputDir "packages/$2" \
+              --tag "$GITHUB_REF_NAME" \
+              --releaseName "Lorestead ${VERSION}" \
+              --pre "$PRERELEASE" \
+              --merge "${@:3}"
+          }
+          upload win-x64 windows-x64
+          upload linux-x64 linux-x64
+          upload osx-arm64 osx-arm64 --publish
