@@ -37,6 +37,8 @@ namespace Lorestead.Core.Sync
         {
             SyncCycleResult result = new SyncCycleResult();
 
+            await EnsureServerIdentity(result);
+
             try
             {
                 await Drain(result);
@@ -55,6 +57,35 @@ namespace Lorestead.Core.Sync
             await BackfillMissingBlobs(result);
 
             return result;
+        }
+
+        // Guards the seq bookkeeping against a server it does not belong to. A
+        // different server id means the instance was replaced; a cursor ahead of the
+        // monotonic allocator means the same instance lost history (backup restore).
+        // Either way local seqs are foreign to what now answers, so everything
+        // becomes pending again and the cycle re-uploads and reconciles (LWW). An
+        // empty stored id adopts silently: existing state is presumed to belong to
+        // the server it has been talking to (upgrade in place).
+        private async Task EnsureServerIdentity(SyncCycleResult result)
+        {
+            StatusResponse status = await _server.GetStatus();
+
+            if (!string.IsNullOrEmpty(status.ServerId))
+            {
+                SyncState state = _syncState.Get();
+                bool replaced = !string.IsNullOrEmpty(state.ServerId) && state.ServerId != status.ServerId;
+                bool rolledBack = state.LastSeenSeq > status.LastAssignedSeq;
+
+                if (replaced || rolledBack)
+                {
+                    new ResyncRepository(_connectionManager).ResetForServerAdoption(status.ServerId);
+                    result.Adopted = true;
+                }
+                else if (string.IsNullOrEmpty(state.ServerId))
+                {
+                    _syncState.SaveServerId(status.ServerId);
+                }
+            }
         }
 
         private async Task Drain(SyncCycleResult result)

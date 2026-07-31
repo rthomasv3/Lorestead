@@ -35,5 +35,23 @@ namespace Lorestead.Core.DataAccess
             wipe.ExecuteNonQuery();
             transaction.Commit();
         }
+
+        // Server adoption (features/sync.md): the opposite of the wipe above - all
+        // local data survives, only the seq bookkeeping is discarded so the next
+        // drain re-uploads the full retained history to the server that now answers.
+        // Nulling seq makes every entry pending; the applier's seq dedup keeps the
+        // follow-up pull from double-applying what the drain just pushed.
+        public void ResetForServerAdoption(string serverId)
+        {
+            using SqliteConnection connection = _connectionManager.CreateConnection();
+            using SqliteTransaction transaction = connection.BeginTransaction();
+            using SqliteCommand reset = connection.CreateCommand();
+            reset.CommandText = @"
+                UPDATE change_log SET seq = NULL;
+                UPDATE sync_state SET last_seen_seq = 0, server_id = @server_id;";
+            reset.Parameters.AddWithValue("@server_id", serverId);
+            reset.ExecuteNonQuery();
+            transaction.Commit();
+        }
     }
 }

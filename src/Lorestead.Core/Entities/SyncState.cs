@@ -4,5 +4,6 @@ namespace Lorestead.Core.Entities
     {
         public long LastSeenSeq { get; set; }
         public string DeviceId { get; set; }
+        public string ServerId { get; set; }
     }
 }

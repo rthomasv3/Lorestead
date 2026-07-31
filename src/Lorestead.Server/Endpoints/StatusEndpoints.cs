@@ -1,5 +1,6 @@
 using System.Reflection;
 using Microsoft.AspNetCore.Builder;
+using Lorestead.Core.DataAccess;
 using Lorestead.Core.Sync;
 
 namespace Lorestead.Server.Endpoints;
@@ -13,10 +14,16 @@ public static class StatusEndpoints
         string appVersion = typeof(StatusEndpoints).Assembly
             .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "0.0.0";
 
-        app.MapGet("/status", () => new StatusResponse
+        // ServerId and LastAssignedSeq drive the client's server-adoption check.
+        // LastAssignedSeq (not MAX(seq)) because the allocator is monotonic while
+        // the log tail can be pruned - a legitimate client cursor can never be
+        // ahead of it, so ahead means the server lost history.
+        app.MapGet("/status", (ServerStateRepository serverState) => new StatusResponse
         {
             AppVersion = appVersion,
             ProtocolVersion = SyncProtocol.Version,
+            ServerId = serverState.GetServerId(),
+            LastAssignedSeq = serverState.GetLastAssignedSeq(),
         });
     }
 }

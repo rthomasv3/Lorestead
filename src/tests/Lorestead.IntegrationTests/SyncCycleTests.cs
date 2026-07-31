@@ -183,6 +183,91 @@ namespace Lorestead.IntegrationTests
             }
         }
 
+        // The redeployed-stack scenario: a client with fully synced state meets a
+        // brand-new server instance. The id mismatch must trigger the adoption reset
+        // and the full history must reach the new server - not crash on foreign seqs.
+        [Fact]
+        public async Task SwitchingToAFreshServerAdoptsAndReuploadsEverything()
+        {
+            using ServerFixture oldServer = new ServerFixture();
+            using TestDb deviceA = new TestDb();
+            using HttpClient httpA = new HttpClient();
+            SyncCycle oldCycle = CycleFor(deviceA, oldServer, httpA);
+
+            Note first = Items.Note("First", "body one");
+            Note second = Items.Note("Second", "body two");
+            deviceA.Notes.Save(first);
+            deviceA.Notes.Save(second);
+            await oldCycle.Run();
+
+            Note edited = deviceA.Notes.Get(first.Id);
+            edited.Title = "First edited";
+            deviceA.Notes.Save(edited);
+            await oldCycle.Run();
+
+            string oldServerId = new ServerStateRepository(oldServer.ConnectionManager).GetServerId();
+            Assert.Equal(oldServerId, deviceA.SyncState.Get().ServerId);
+            Assert.Empty(deviceA.ChangeLog.GetPending());
+
+            using ServerFixture newServer = new ServerFixture();
+            using HttpClient httpNew = new HttpClient();
+            SyncCycle newCycle = CycleFor(deviceA, newServer, httpNew);
+            SyncCycleResult adoption = await newCycle.Run();
+
+            string newServerId = new ServerStateRepository(newServer.ConnectionManager).GetServerId();
+            Assert.True(adoption.Adopted);
+            Assert.NotEqual(oldServerId, newServerId);
+            Assert.Equal(newServerId, deviceA.SyncState.Get().ServerId);
+            Assert.Empty(deviceA.ChangeLog.GetPending());
+
+            using TestDb deviceB = new TestDb();
+            using HttpClient httpB = new HttpClient();
+            SyncCycle cycleB = CycleFor(deviceB, newServer, httpB);
+            await cycleB.Run();
+
+            Assert.Equal("First edited", deviceB.Notes.Get(first.Id).Title);
+            Assert.Equal("Second", deviceB.Notes.Get(second.Id).Title);
+        }
+
+        // Same server id but the monotonic allocator is behind the client's cursor:
+        // the instance was restored from an older backup. The rollback guard must
+        // trigger the same adoption reset so the lost history is restored.
+        [Fact]
+        public async Task ServerRestoredFromOlderBackupTriggersAdoption()
+        {
+            using ServerFixture server = new ServerFixture();
+            using TestDb deviceA = new TestDb();
+            using HttpClient httpA = new HttpClient();
+            SyncCycle cycleA = CycleFor(deviceA, server, httpA);
+
+            Note note = Items.Note("Survives the rollback");
+            deviceA.Notes.Save(note);
+            await cycleA.Run();
+            Assert.True(deviceA.SyncState.Get().LastSeenSeq > 0);
+
+            using (Microsoft.Data.Sqlite.SqliteConnection connection = server.ConnectionManager.CreateConnection())
+            using (Microsoft.Data.Sqlite.SqliteCommand rollback = connection.CreateCommand())
+            {
+                rollback.CommandText = @"
+                    DELETE FROM change_log;
+                    DELETE FROM note;
+                    UPDATE server_state SET last_assigned_seq = 0;";
+                rollback.ExecuteNonQuery();
+            }
+
+            SyncCycleResult adoption = await cycleA.Run();
+
+            Assert.True(adoption.Adopted);
+            Assert.Empty(deviceA.ChangeLog.GetPending());
+
+            using TestDb deviceB = new TestDb();
+            using HttpClient httpB = new HttpClient();
+            SyncCycle cycleB = CycleFor(deviceB, server, httpB);
+            await cycleB.Run();
+
+            Assert.Equal("Survives the rollback", deviceB.Notes.Get(note.Id).Title);
+        }
+
         private static SyncCycle CycleFor(TestDb db, ServerFixture server, HttpClient http)
         {
             db.SyncState.EnsureInitializedWithDevice(db.DeviceId);

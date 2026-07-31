@@ -37,8 +37,9 @@ namespace Lorestead.IntegrationTests
             Assert.Contains("task_fts_update", triggers);
 
             Assert.Contains("remember_cursor_position", GetColumnNames(db, "editor_settings"));
+            Assert.Contains("server_id", GetColumnNames(db, "sync_state"));
 
-            Assert.Equal(5, GetSchemaVersion(db));
+            Assert.Equal(8, GetSchemaVersion(db));
         }
 
         [Fact]
@@ -65,7 +66,10 @@ namespace Lorestead.IntegrationTests
             Assert.Contains("oauth_state", names);
             Assert.DoesNotContain("sync_state", names);
             Assert.DoesNotContain("application_settings", names);
-            Assert.Equal(6, GetSchemaVersion(db));
+            // The instance id is born with the schema, never empty afterwards.
+            Assert.Contains("server_id", GetColumnNames(db, "server_state"));
+            Assert.NotEqual("", ScalarString(db, "SELECT server_id FROM server_state WHERE id = 1"));
+            Assert.Equal(7, GetSchemaVersion(db));
         }
 
         [Fact]
@@ -79,7 +83,7 @@ namespace Lorestead.IntegrationTests
                 migrator.Add(migration);
             }
             migrator.Run(connection);
-            Assert.Equal(5, GetSchemaVersion(db));
+            Assert.Equal(8, GetSchemaVersion(db));
         }
 
         private static List<string> GetSchemaNames(TestDb db, string type)
@@ -109,6 +113,14 @@ namespace Lorestead.IntegrationTests
                 names.Add(reader.GetString(1));
             }
             return names;
+        }
+
+        private static string ScalarString(TestDb db, string sql)
+        {
+            using SqliteConnection connection = db.ConnectionManager.CreateConnection();
+            using SqliteCommand select = connection.CreateCommand();
+            select.CommandText = sql;
+            return (string)select.ExecuteScalar();
         }
 
         private static int GetSchemaVersion(TestDb db)

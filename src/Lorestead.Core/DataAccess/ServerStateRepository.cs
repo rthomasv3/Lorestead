@@ -19,6 +19,22 @@ namespace Lorestead.Core.DataAccess
             return (long)select.ExecuteScalar();
         }
 
+        public string GetServerId()
+        {
+            using SqliteConnection connection = _connectionManager.CreateConnection();
+            using SqliteCommand select = connection.CreateCommand();
+            select.CommandText = "SELECT server_id FROM server_state WHERE id = 1";
+            return (string)select.ExecuteScalar();
+        }
+
+        public long GetLastAssignedSeq()
+        {
+            using SqliteConnection connection = _connectionManager.CreateConnection();
+            using SqliteCommand select = connection.CreateCommand();
+            select.CommandText = "SELECT last_assigned_seq FROM server_state WHERE id = 1";
+            return (long)select.ExecuteScalar();
+        }
+
         // Monotonic allocation: seqs are never reused even when the log tail is
         // deleted, or a cursor at the reused position would silently skip the entry.
         public static long NextSeqWithin(SqliteConnection connection, SqliteTransaction transaction)

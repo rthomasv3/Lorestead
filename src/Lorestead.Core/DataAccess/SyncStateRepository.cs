@@ -44,7 +44,7 @@ namespace Lorestead.Core.DataAccess
             SyncState state = null;
             using SqliteConnection connection = _connectionManager.CreateConnection();
             using SqliteCommand select = connection.CreateCommand();
-            select.CommandText = "SELECT last_seen_seq, device_id FROM sync_state LIMIT 1";
+            select.CommandText = "SELECT last_seen_seq, device_id, server_id FROM sync_state LIMIT 1";
             using SqliteDataReader reader = select.ExecuteReader();
             if (reader.Read())
             {
@@ -52,9 +52,19 @@ namespace Lorestead.Core.DataAccess
                 {
                     LastSeenSeq = reader.GetInt64(0),
                     DeviceId = reader.GetString(1),
+                    ServerId = reader.GetString(2),
                 };
             }
             return state;
+        }
+
+        public void SaveServerId(string serverId)
+        {
+            using SqliteConnection connection = _connectionManager.CreateConnection();
+            using SqliteCommand update = connection.CreateCommand();
+            update.CommandText = "UPDATE sync_state SET server_id = @server_id";
+            update.Parameters.AddWithValue("@server_id", serverId);
+            update.ExecuteNonQuery();
         }
 
         public static void AdvanceLastSeenSeqWithin(SqliteConnection connection, SqliteTransaction transaction, long seq)

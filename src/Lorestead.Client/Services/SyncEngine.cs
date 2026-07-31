@@ -221,6 +221,11 @@ public sealed class SyncEngine : ISyncService, IDisposable
                 SyncCycle cycle = new SyncCycle(_connectionManager, state.DeviceId, server, settings.HistoryRetention);
                 SyncCycleResult result = await cycle.Run();
 
+                if (result.Adopted)
+                {
+                    _logger.Info("Sync", "Server changed - re-uploaded the local history to the new server");
+                }
+
                 lock (_statusLock)
                 {
                     _lastSyncAt = DateTime.UtcNow.ToString("O", CultureInfo.InvariantCulture);

@@ -21,6 +21,7 @@ namespace Lorestead.Core.DataAccess.Migrations
                 new Db001_CoreSchema(),
                 new Db004_ServerState(),
                 new Db006_OAuthGrants(),
+                new Db007_ServerIdentity(),
             };
         }
 
@@ -32,6 +33,7 @@ namespace Lorestead.Core.DataAccess.Migrations
                 new Db002_ClientState(),
                 new Db003_AttachmentThumbnail(),
                 new Db005_RememberCursorPosition(),
+                new Db008_SyncServerId(),
             };
         }
     }
