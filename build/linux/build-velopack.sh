@@ -310,6 +310,12 @@ export APPDIR="\${APPDIR:-\${HERE}}"
 # Bundled webkit/gtk plus the .NET native libs all resolve from here.
 export LD_LIBRARY_PATH="\${APPDIR}/usr/lib:\${LD_LIBRARY_PATH:-}"
 
+# The bundled GTK cannot read the host theme (no gsettings schemas or portal
+# from inside the AppDir), so prefers-color-scheme -- what the app's System
+# theme consults -- would always resolve light. Default to dark to match the
+# app; override with GTK_THEME=Adwaita:light.
+export GTK_THEME="\${GTK_THEME:-Adwaita:dark}"
+
 # MCP dispatch: \`<AppImage> --mcp <args>\` execs the bundled MCP server with
 # stdio inherited, so the AppImage file itself is the stable path an agent
 # config points at (decisions.md 2026-07-29).
