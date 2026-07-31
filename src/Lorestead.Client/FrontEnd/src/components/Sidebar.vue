@@ -61,7 +61,7 @@ function openSearch() {
         <span class="w-4 shrink-0 flex justify-center">
           <AppLogo class="size-7" />
         </span>
-        <span class="font-semibold shrink-0 whitespace-nowrap">Lorestead</span>
+        <span class="text-lg font-semibold shrink-0 whitespace-nowrap">Lorestead</span>
       </div>
     </div>
 
