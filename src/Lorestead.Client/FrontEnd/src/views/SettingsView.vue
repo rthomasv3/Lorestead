@@ -184,6 +184,13 @@ const lastChecked = computed(() => {
 
 const updatesBusy = computed(() => updates.checking || updates.downloading)
 
+// A check that finds nothing must still say so - a clicked button that only
+// bumps the timestamp reads as broken. Only claimed when a check has actually
+// happened and nothing contradicts it.
+const upToDate = computed(() =>
+  !!updates.status?.supported && !updates.status?.updateAvailable && !updates.status?.error &&
+  !!(updates.status?.lastCheckedAt ?? store.application.lastUpdateCheckAt))
+
 // True whenever a download is staged: VelopackApp auto-applies staged updates
 // at the next launch (on by default), independent of the auto-update toggle -
 // the toggle only governs pre-downloading.
@@ -305,7 +312,7 @@ onMounted(async () => {
                 Check for updates
               </Button>
             </HoverTip>
-            <span class="text-xs text-on-surface-muted">Last checked: {{ lastChecked }}</span>
+            <span class="text-xs text-on-surface-muted">Last checked: {{ lastChecked }}<template v-if="upToDate"> - You're on the latest version</template></span>
           </div>
 
           <div v-if="updates.status?.updateAvailable" class="flex items-center gap-3">
