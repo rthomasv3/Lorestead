@@ -18,17 +18,22 @@ function section(name, anchor, labels) {
 // this list sits beside MD_TOGGLES so the toggles cannot be indexed under a name
 // the page does not use - the two drifted apart once already, and the index also
 // missed a whole section, which made it unfindable.
+// Every section indexes itself (label === section, collapsed breadcrumb) - the
+// search matches labels only, so a section without a self-entry is unfindable
+// by its own name.
 export const SETTINGS_INDEX = [
   ...section('Application', 'settings-application', [
+    'Application',
     'Theme', 'Accent', 'Date format', 'Time format', 'History retention', 'Trash retention',
     'New note focus', 'New task focus', 'Check for updates', 'Auto-update',
   ]),
   ...section('Editor', 'settings-editor', [
+    'Editor',
     'Font size', 'Font family', 'Spellcheck', 'Show line count', 'Highlight active line',
     'Remember cursor position', 'Autosave debounce', 'Markdown extensions',
     ...MD_TOGGLES.map((toggle) => toggle.label),
   ]),
-  ...section('Sync server', 'settings-sync', ['Status', 'Server URL', 'Token', 'Sync now']),
+  ...section('Sync server', 'settings-sync', ['Sync server', 'Status', 'Server URL', 'Token', 'Sync now']),
   ...section('About', 'settings-about', ['About']),
   ...section('Logs', 'settings-logs', ['Logs']),
 ]

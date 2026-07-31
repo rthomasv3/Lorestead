@@ -129,10 +129,15 @@ function titleParts(label) {
   ].filter((p) => p.text)
 }
 
+const list = ref(null)
+
 function move(delta) {
   const count = results.value.length
   if (count === 0) return
   selectedIndex.value = (selectedIndex.value + delta + count) % count
+  nextTick(() => {
+    list.value?.children[selectedIndex.value]?.scrollIntoView({ block: 'nearest' })
+  })
 }
 
 async function choose(result) {
@@ -212,13 +217,16 @@ onUnmounted(() => {
           </button>
         </div>
 
-        <div v-if="results.length > 0" class="max-h-80 overflow-y-auto p-1.5">
+        <div v-if="results.length > 0" ref="list" class="max-h-80 overflow-y-auto p-1.5">
           <!-- Selection follows the mouse, so hovering a row selects it and there
-               is no separate hover state to paint. -->
+               is no separate hover state to paint. mousemove rather than
+               mouseenter: a keyboard move scrolls the list under a stationary
+               cursor, and the mouseenter that fires on whatever lands under the
+               pointer would yank the selection straight back. -->
           <button v-for="(result, index) in results" :key="result.key"
             class="w-full text-left rounded-md px-2.5 py-2 flex flex-col gap-0.5"
             :class="index === selectedIndex ? 'bg-accent-soft' : ''"
-            @mouseenter="selectedIndex = index" @click="choose(result)">
+            @mousemove="selectedIndex = index" @click="choose(result)">
             <span class="flex items-center gap-1 text-sm min-w-0">
               <template v-for="(part, i) in result.breadcrumb" :key="i">
                 <span v-if="i > 0" class="text-on-surface-muted/50 shrink-0">›</span>
