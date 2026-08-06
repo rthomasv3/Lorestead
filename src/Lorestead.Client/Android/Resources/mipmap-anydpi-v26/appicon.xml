@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Adaptive icon (API 26+): the launcher masks these layers into its own shape.
+     Foreground pngs are packed from the shared icon\ dir by the csproj; the flat
+     background matches the parchment tile so its masked corners are invisible.
+     API 24/25 fall back to the classic mipmap appicon.png. -->
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+  <background android:drawable="@color/appicon_background" />
+  <foreground android:drawable="@mipmap/appicon_foreground" />
+</adaptive-icon>

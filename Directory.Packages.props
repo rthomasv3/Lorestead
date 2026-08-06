@@ -5,7 +5,7 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageVersion Include="Devlooped.CredentialManager" Version="2.7.0" />
-    <PackageVersion Include="Galdr.Native" Version="2.0.1" />
+    <PackageVersion Include="Galdr.Native" Version="3.0.0-dev6" />
     <PackageVersion Include="GaldrJson" Version="1.2.2" />
     <PackageVersion Include="GaldrJson.AspNetCore" Version="1.2.1" />
     <!-- Provider-less core: each host picks its own SQLitePCLRaw bundle so the client
@@ -21,6 +21,15 @@
          for AOT), AspNetCore adds MapMcp for the server's streamable HTTP transport. -->
     <PackageVersion Include="ModelContextProtocol.Core" Version="1.4.1" />
     <PackageVersion Include="ModelContextProtocol.AspNetCore" Version="1.4.1" />
+    <!-- Mobile-only secure storage (Keychain / Keystore) behind SyncCredentialStore's
+         mobile branch; a class library over the platform bindings, no MAUI app model. -->
+    <PackageVersion Include="Microsoft.Maui.Essentials" Version="10.0.90" />
+    <!-- Transitive pin: Essentials asks for core-ktx 1.16 while another chain lifts
+         AndroidX Core to 1.19; AndroidX merged the ktx classes into core, so the
+         mismatched pair defines the same Kotlin classes twice and D8 fails
+         ("Type androidx.core.* is defined multiple times"). Keep in lockstep with
+         whatever Xamarin.AndroidX.Core resolves to. -->
+    <PackageVersion Include="Xamarin.AndroidX.Core.Core.Ktx" Version="1.19.0.1" />
     <!-- Version stamping from git tags at build time; the repo carries no version of its own. -->
     <PackageVersion Include="MinVer" Version="7.0.0" />
     <!-- Installer + updates against GitHub Releases (distribution.md). Keep the vpk CLI

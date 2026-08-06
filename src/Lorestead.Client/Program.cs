@@ -1,9 +1,7 @@
 using System;
 using System.Globalization;
-using System.IO;
 using System.Runtime.InteropServices;
 using Galdr.Native;
-using Microsoft.Extensions.DependencyInjection;
 using Lorestead.Client.Commands;
 using Lorestead.Client.Services;
 using Lorestead.Client.Services.Abstractions;
@@ -11,17 +9,20 @@ using Lorestead.Core.DataAccess;
 using Lorestead.Core.DataAccess.Migrations;
 using Lorestead.Core.Entities;
 using Lorestead.Core.FirstRun;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Lorestead.Client;
 
 internal class Program
 {
     [STAThread]
-    static void Main(string[] args)
+    internal static void Main(string[] args)
     {
+#if !ANDROID && !IOS
         // Velopack's install/update hooks must run before anything else - during an
         // install or update event this exits the process without reaching the app.
         Velopack.VelopackApp.Build().Run();
+#endif
 
         // Explicit provider init: the reflection-based auto-init is not AOT-reliable,
         // and this host's provider is plain SQLite (bundle_e_sqlite3).
@@ -31,12 +32,21 @@ internal class Program
         FileLoggingService logger = new FileLoggingService(config);
         ConnectionManager connectionManager = new ConnectionManager();
 
-        GaldrBuilder builder = new GaldrBuilder()
+        using Galdr.Native.Galdr galdr = new GaldrBuilder()
             .SetTitle("Lorestead")
             .SetSize(1200, 800)
             .SetMinSize(800, 600)
             .UseSingleInstance("lorestead")
             .EnableSpellChecking("en_US", "en_GB")
+            .AddSettingsCommands()
+            .AddSyncCommands()
+            .AddUpdateCommands()
+            .AddSystemCommands()
+            .AddNoteCommands()
+            .AddAttachmentCommands()
+            .AddBoardCommands()
+            .AddExportCommands()
+            .AddImportCommands()
             .AddSingleton(config)
             .AddSingleton<ILoggingService>(logger)
             .AddSingleton(connectionManager)
@@ -53,6 +63,7 @@ internal class Program
             .AddSingleton<ISyncService, SyncEngine>()
             .AddSingleton<IChangeWatcher, DataVersionWatcher>()
             .AddSingleton<IUpdateService, UpdateService>()
+            .SetContentProvider(new MultiplatformContent(devServerPort: 5174, hostname: "lorestead.localhost"))
             .OnBeforeStartup(() =>
             {
                 // Startup survives a broken DB so Settings (and its Logs section) still
@@ -79,6 +90,16 @@ internal class Program
                 serviceProvider.GetRequiredService<IChangeWatcher>().Start();
                 serviceProvider.GetRequiredService<IUpdateService>().Start();
             })
+            .OnBackground(serviceProvider =>
+            {
+                serviceProvider.GetRequiredService<ISyncService>().Pause();
+                serviceProvider.GetRequiredService<IChangeWatcher>().Pause();
+            })
+            .OnResume(serviceProvider =>
+            {
+                serviceProvider.GetRequiredService<ISyncService>().Resume();
+                serviceProvider.GetRequiredService<IChangeWatcher>().Resume();
+            })
             .OnWindowChanged((galdr, context, serviceProvider) => SaveWindow(context, serviceProvider, logger))
             .OnCommandError((context, serviceProvider) =>
             {
@@ -103,29 +124,9 @@ internal class Program
 
                     log.Error(source, message, context.Exception);
                 }
-            });
-
-        builder.AddSettingsCommands();
-        builder.AddSyncCommands();
-        builder.AddUpdateCommands();
-        builder.AddSystemCommands();
-        builder.AddNoteCommands();
-        builder.AddAttachmentCommands();
-        builder.AddBoardCommands();
-        builder.AddExportCommands();
-        builder.AddImportCommands();
-
-//-:cnd:noEmit
-#if DEBUG
-        builder.SetDebug(true)
-               .SetContentProvider(new UrlContent("http://localhost:5174"));
-#else
-        string wwwroot = Path.Combine(AppContext.BaseDirectory, "wwwroot");
-        builder.SetContentProvider(new FolderContent(wwwroot, hostname: "lorestead.localhost"));
-#endif
-        //+:cnd:noEmit
-
-        using Galdr.Native.Galdr galdr = builder.Build().Run();
+            })
+            .Build()
+            .Run();
     }
 
     static void PurgeExpiredTrash(ConnectionManager connectionManager, string deviceId)

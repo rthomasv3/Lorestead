@@ -6,6 +6,8 @@ namespace Lorestead.Client.Services.Abstractions;
 public interface ISyncService
 {
     void Start();
+    void Pause();
+    void Resume();
     void NotifyLocalChange();
     GetSyncStatusResponse GetStatus();
     Task<GetSyncStatusResponse> SyncNow();

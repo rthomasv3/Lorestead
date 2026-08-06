@@ -1,3 +1,64 @@
+#if ANDROID || IOS
+using System;
+using Lorestead.Client.Services.Abstractions;
+using Microsoft.Maui.Storage;
+
+namespace Lorestead.Client.Services;
+
+// Mobile counterpart to the desktop credential store: MAUI Essentials SecureStorage
+// (iOS Keychain / Android Keystore-encrypted preferences). Devlooped.CredentialManager
+// has no mobile backend - its macOS interop even breaks the iOS native link - so the
+// two implementations split on platform while the consumer surface stays identical.
+// SecureStorage's API is async-only; blocking on it here is safe because Galdr
+// dispatches commands to the thread pool and the sync engine runs on background
+// threads - there is no UI SynchronizationContext to deadlock against.
+public sealed class SyncCredentialStore
+{
+    private const string Key = "lorestead-sync-token";
+
+    private readonly ILoggingService _logger;
+
+    public SyncCredentialStore(ILoggingService logger)
+    {
+        _logger = logger;
+    }
+
+    // Null when no token is stored or secure storage is unavailable - the engine
+    // reports the latter through the Settings status label, never a popup.
+    public string GetToken()
+    {
+        string token = null;
+
+        try
+        {
+            token = SecureStorage.Default.GetAsync(Key).GetAwaiter().GetResult();
+        }
+        catch (Exception ex)
+        {
+            _logger.Error("Sync", "Reading the sync token from secure storage failed", ex);
+        }
+
+        return token;
+    }
+
+    public bool HasToken()
+    {
+        return !string.IsNullOrEmpty(GetToken());
+    }
+
+    public void SaveToken(string token)
+    {
+        if (string.IsNullOrEmpty(token))
+        {
+            SecureStorage.Default.Remove(Key);
+        }
+        else
+        {
+            SecureStorage.Default.SetAsync(Key, token).GetAwaiter().GetResult();
+        }
+    }
+}
+#else
 using System;
 using GitCredentialManager;
 using Lorestead.Client.Services.Abstractions;
@@ -87,3 +148,4 @@ public sealed class SyncCredentialStore
         return _store;
     }
 }
+#endif

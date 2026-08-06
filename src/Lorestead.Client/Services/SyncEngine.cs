@@ -37,7 +37,10 @@ public sealed class SyncEngine : ISyncService, IDisposable
     private readonly SemaphoreSlim _syncRequested = new SemaphoreSlim(0);
     private readonly CancellationTokenSource _shutdown = new CancellationTokenSource();
     private readonly object _statusLock = new object();
+    private readonly object _pauseLock = new object();
     private readonly Timer _localChangeTimer;
+    // Non-null while paused; completing it is what resumes the parked loops.
+    private TaskCompletionSource<bool> _resumeSignal;
     private ClientWebSocket _socket;
     private volatile int _hintRetryDelaySeconds = 5;
     private bool _started;
@@ -68,6 +71,59 @@ public sealed class SyncEngine : ISyncService, IDisposable
             _started = true;
             Task.Run(() => SyncLoop(_shutdown.Token));
             Task.Run(() => HintLoop(_shutdown.Token));
+            RequestSync();
+        }
+    }
+
+    // Mobile lifecycle: the OS is about to suspend the process. Park both loops,
+    // cancel the debounce timer, close the hint socket deliberately (suspension
+    // would kill it anyway - this way resume starts clean instead of from a socket
+    // error), and run one last cycle so pending local changes get pushed in the
+    // suspension grace window. Harmless if called twice or before Start.
+    public void Pause()
+    {
+        lock (_pauseLock)
+        {
+            if (_resumeSignal != null)
+            {
+                return;
+            }
+
+            _resumeSignal = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        }
+
+        _localChangeTimer.Change(Timeout.Infinite, Timeout.Infinite);
+
+        try
+        {
+            _socket?.Abort();
+        }
+        catch (ObjectDisposedException)
+        {
+            // Same race as Reconfigure - a dead socket already achieves the goal.
+        }
+
+        // Best-effort: the OS may suspend mid-cycle; the outbox keeps anything
+        // unsent for the next cycle, so an interrupted push costs nothing.
+        _ = RunCycle();
+    }
+
+    // Mobile lifecycle: back in the foreground. Unpark the loops and kick an
+    // immediate cycle - the hint loop reconnects right away rather than waiting
+    // out its backoff. Harmless without a matching Pause.
+    public void Resume()
+    {
+        TaskCompletionSource<bool> signal;
+
+        lock (_pauseLock)
+        {
+            signal = _resumeSignal;
+            _resumeSignal = null;
+        }
+
+        if (signal != null)
+        {
+            signal.TrySetResult(true);
             RequestSync();
         }
     }
@@ -139,6 +195,38 @@ public sealed class SyncEngine : ISyncService, IDisposable
         _syncRequested.Release();
     }
 
+    private bool IsPaused
+    {
+        get
+        {
+            lock (_pauseLock)
+            {
+                return _resumeSignal != null;
+            }
+        }
+    }
+
+    // Parks the caller until Resume; loops call this at the top of each iteration.
+    private async Task WaitWhilePaused(CancellationToken cancellation)
+    {
+        while (true)
+        {
+            Task resumeTask;
+
+            lock (_pauseLock)
+            {
+                resumeTask = _resumeSignal?.Task;
+            }
+
+            if (resumeTask == null)
+            {
+                return;
+            }
+
+            await resumeTask.WaitAsync(cancellation);
+        }
+    }
+
     // A config change aborts the socket so the hint loop reconnects against the new
     // server, and kicks an immediate cycle so the Settings page gets fast feedback.
     private void Reconfigure()
@@ -164,6 +252,7 @@ public sealed class SyncEngine : ISyncService, IDisposable
         {
             while (!cancellation.IsCancellationRequested)
             {
+                await WaitWhilePaused(cancellation);
                 await _syncRequested.WaitAsync(cancellation);
 
                 // Collapse a burst of triggers into one cycle.
@@ -341,6 +430,8 @@ public sealed class SyncEngine : ISyncService, IDisposable
         {
             while (!cancellation.IsCancellationRequested)
             {
+                await WaitWhilePaused(cancellation);
+
                 string url = null;
                 string token = null;
 
@@ -389,10 +480,16 @@ public sealed class SyncEngine : ISyncService, IDisposable
 
                     _socket = null;
                     SetConnected(false);
-                    int delay = _hintRetryDelaySeconds;
-                    await Task.Delay(TimeSpan.FromSeconds(delay), cancellation);
-                    // Capped low because the badge recovers with the reconnect.
-                    _hintRetryDelaySeconds = Math.Min(delay * 2, 30);
+
+                    // A pause-triggered abort skips the backoff: the loop parks at the
+                    // top of the next iteration and reconnects immediately on resume.
+                    if (!IsPaused)
+                    {
+                        int delay = _hintRetryDelaySeconds;
+                        await Task.Delay(TimeSpan.FromSeconds(delay), cancellation);
+                        // Capped low because the badge recovers with the reconnect.
+                        _hintRetryDelaySeconds = Math.Min(delay * 2, 30);
+                    }
                 }
             }
         }

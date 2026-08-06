@@ -1,3 +1,55 @@
+#if ANDROID || IOS
+using System.Threading.Tasks;
+using Galdr.Native;
+using Lorestead.Client.Commands.Contracts;
+using Lorestead.Client.Services.Abstractions;
+using Lorestead.Core.DataAccess;
+
+namespace Lorestead.Client.Services;
+
+// Mobile stub: Velopack is a desktop updater (UpdateManager's constructor throws
+// PlatformNotSupportedException on Android/iOS), and mobile updates ship through the
+// app stores anyway - so the package is desktop-only. Supported=false is the entire
+// mobile story, the same signal a desktop dev run (non-Velopack install) sends, so
+// the frontend already renders this state.
+public sealed class UpdateService : IUpdateService
+{
+    private readonly SettingsRepository _settings;
+
+    public UpdateService(SettingsRepository settings, IEventService events, ILoggingService logger)
+    {
+        _settings = settings;
+    }
+
+    public void Start()
+    {
+    }
+
+    public GetUpdateStatusResponse GetStatus()
+    {
+        return new GetUpdateStatusResponse
+        {
+            Supported = false,
+            LastCheckedAt = _settings.GetApplication().LastUpdateCheckAt,
+        };
+    }
+
+    public Task<GetUpdateStatusResponse> CheckForUpdate()
+    {
+        return Task.FromResult(GetStatus());
+    }
+
+    public Task<GetUpdateStatusResponse> DownloadUpdate()
+    {
+        return Task.FromResult(GetStatus());
+    }
+
+    public GetUpdateStatusResponse ApplyUpdateAndRestart()
+    {
+        return GetStatus();
+    }
+}
+#else
 using System;
 using System.Globalization;
 using System.IO;
@@ -282,3 +334,4 @@ public sealed class UpdateService : IUpdateService
         return attribute == null ? "dev" : attribute.InformationalVersion;
     }
 }
+#endif

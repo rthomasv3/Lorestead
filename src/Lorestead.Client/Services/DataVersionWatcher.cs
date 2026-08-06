@@ -23,6 +23,9 @@ public sealed class DataVersionWatcher : IChangeWatcher, IDisposable
     private readonly IEventService _events;
     private readonly ILoggingService _logger;
     private readonly CancellationTokenSource _shutdown = new CancellationTokenSource();
+    private readonly object _pauseLock = new object();
+    // Non-null while paused; completing it is what resumes the parked loop.
+    private TaskCompletionSource<bool> _resumeSignal;
     private bool _started;
 
     public DataVersionWatcher(
@@ -48,9 +51,58 @@ public sealed class DataVersionWatcher : IChangeWatcher, IDisposable
         }
     }
 
+    // Mobile lifecycle: park the poll loop while the OS has the app suspended.
+    // Harmless if called twice or before Start.
+    public void Pause()
+    {
+        lock (_pauseLock)
+        {
+            if (_resumeSignal == null)
+            {
+                _resumeSignal = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+            }
+        }
+    }
+
+    // Mobile lifecycle: unpark the poll loop. The next data_version read picks up
+    // anything that changed while suspended. Harmless without a matching Pause.
+    public void Resume()
+    {
+        TaskCompletionSource<bool> signal;
+
+        lock (_pauseLock)
+        {
+            signal = _resumeSignal;
+            _resumeSignal = null;
+        }
+
+        signal?.TrySetResult(true);
+    }
+
     public void Dispose()
     {
         _shutdown.Cancel();
+    }
+
+    // Parks the caller until Resume; the loop calls this at the top of each iteration.
+    private async Task WaitWhilePaused(CancellationToken cancellation)
+    {
+        while (true)
+        {
+            Task resumeTask;
+
+            lock (_pauseLock)
+            {
+                resumeTask = _resumeSignal?.Task;
+            }
+
+            if (resumeTask == null)
+            {
+                return;
+            }
+
+            await resumeTask.WaitAsync(cancellation);
+        }
     }
 
     private async Task WatchLoop(CancellationToken cancellation)
@@ -74,6 +126,7 @@ public sealed class DataVersionWatcher : IChangeWatcher, IDisposable
 
             while (!cancellation.IsCancellationRequested)
             {
+                await WaitWhilePaused(cancellation);
                 await Task.Delay(PollIntervalMs, cancellation);
 
                 try

@@ -1,31 +1,148 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <OutputType>WinExe</OutputType>
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFrameworks>net10.0;net10.0-android;net10.0-ios</TargetFrameworks>
     <RootNamespace>Lorestead.Client</RootNamespace>
     <!-- The shipped exe is Lorestead, not Lorestead.Client; set here rather than on the
          publish command line because CLI properties are global and would rename Core too. -->
     <AssemblyName>Lorestead</AssemblyName>
-    <PublishAot>true</PublishAot>
     <InvariantGlobalization>true</InvariantGlobalization>
     <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
     <CompilerGeneratedFilesOutputPath>obj/Generated</CompilerGeneratedFilesOutputPath>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <_LoresteadPlatform>$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)'))</_LoresteadPlatform>
+    <!-- WinExe keeps the console window off the desktop app; the mobile SDKs key
+         "this is an application" off plain Exe. -->
+    <OutputType Condition="'$(_LoresteadPlatform)' == ''">WinExe</OutputType>
+    <OutputType Condition="'$(_LoresteadPlatform)' != ''">Exe</OutputType>
+    <!-- NativeAOT is desktop-only; Android uses Mono AOT and iOS Mono AOT/interpreter. -->
+    <PublishAot Condition="'$(_LoresteadPlatform)' == ''">true</PublishAot>
+  </PropertyGroup>
+
+  <!-- Full trimming for mobile Release builds. Besides smaller packages, this is
+       currently load-bearing: GaldrJson 1.2.2's runtime lib carries the source
+       generator (referencing Microsoft.CodeAnalysis), and Mono AOT chokes on those
+       types unless the trimmer removes them first. -->
+  <PropertyGroup Condition="'$(_LoresteadPlatform)' != '' And '$(Configuration)' == 'Release'">
+    <TrimMode>full</TrimMode>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(_LoresteadPlatform)' == 'android'">
+    <SupportedOSPlatformVersion>24</SupportedOSPlatformVersion>
+    <ApplicationId>io.github.rthomasv3.Lorestead</ApplicationId>
+    <ApplicationVersion>1</ApplicationVersion>
+    <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
+    <AndroidManifest>Android\AndroidManifest.xml</AndroidManifest>
+    <!-- Android sources live under Android\ rather than the project root. -->
+    <MonoAndroidResourcePrefix>Android\Resources</MonoAndroidResourcePrefix>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(_LoresteadPlatform)' == 'ios'">
+    <!-- 14.0 for the storyboard-less UILaunchScreen launch screen. -->
+    <SupportedOSPlatformVersion>14.0</SupportedOSPlatformVersion>
+    <!-- Debug builds run on the Mono interpreter instead of AOT: fast builds, Hot
+         Reload, no AOT compiler in the inner loop. Release still AOT-compiles. -->
+    <UseInterpreter Condition="'$(Configuration)' == 'Debug'">true</UseInterpreter>
+    <!-- Workload wants Xcode 26.5 exactly; the paired Mac has 26.6. Benign skew. -->
+    <ValidateXcodeVersion>false</ValidateXcodeVersion>
+    <CodesignKey>Apple Development: Created via API (RZUPRU6G24)</CodesignKey>
+    <CodesignProvision>VS: WildCard Development</CodesignProvision>
+    <ProvisioningType>automatic</ProvisioningType>
+  </PropertyGroup>
+
+  <!-- Visual Studio's unified run-target device picker (emulators/devices per
+       platform) is driven by these project capabilities — the same set MAUI's
+       SingleProject mode declares. Without them, a multi-targeted project only shows
+       the plain desktop run target. _KeepLaunchProfiles stops the Android SDK from
+       stripping the LaunchProfiles capability it depends on. -->
+  <PropertyGroup>
+    <_KeepLaunchProfiles>true</_KeepLaunchProfiles>
+  </PropertyGroup>
+
   <ItemGroup>
-    <PackageReference Include="Devlooped.CredentialManager" />
+    <!-- "Maui" is the gate on VS's device-aware run-target picker: its activation
+         expression is ((MultiPlatformSupport & Maui) | (Maui & LaunchProfiles)).
+         Capability-only — no MAUI SDK, packages, or build logic involved. -->
+    <ProjectCapability Include="Maui" />
+    <ProjectCapability Include="MauiSingleProject" />
+    <ProjectCapability Include="LaunchProfiles" />
+    <ProjectCapability Include="LaunchProfilesGroupByPlatformFilters" />
+    <ProjectCapability Include="SingleTargetBuildForStartupProjects" />
+  </ItemGroup>
+
+  <!-- The MainActivity stub is the only platform-specific source file. -->
+  <ItemGroup Condition="'$(_LoresteadPlatform)' != 'android'">
+    <Compile Remove="Android\**" />
+  </ItemGroup>
+
+  <!-- Launcher icons packed straight from the shared icon\ dir (single source of
+       truth, rendered from icon.svg by build\render-icons.ps1) — no copies in the
+       project tree. LogicalName does the real work: the resource-path computation
+       prefers it and the invalid-filename check reads ONLY it (falling back to the
+       raw source path, whose hyphens are illegal in resource names — Link alone
+       fails that check). Link is kept for solution-explorer display. -->
+  <ItemGroup Condition="'$(_LoresteadPlatform)' == 'android'">
+    <AndroidResource Include="..\..\icon\icon-48.png" Link="Android\Resources\mipmap-mdpi\appicon.png" LogicalName="Android\Resources\mipmap-mdpi\appicon.png" />
+    <AndroidResource Include="..\..\icon\icon-72.png" Link="Android\Resources\mipmap-hdpi\appicon.png" LogicalName="Android\Resources\mipmap-hdpi\appicon.png" />
+    <AndroidResource Include="..\..\icon\icon-96.png" Link="Android\Resources\mipmap-xhdpi\appicon.png" LogicalName="Android\Resources\mipmap-xhdpi\appicon.png" />
+    <AndroidResource Include="..\..\icon\icon-144.png" Link="Android\Resources\mipmap-xxhdpi\appicon.png" LogicalName="Android\Resources\mipmap-xxhdpi\appicon.png" />
+    <AndroidResource Include="..\..\icon\icon-192.png" Link="Android\Resources\mipmap-xxxhdpi\appicon.png" LogicalName="Android\Resources\mipmap-xxxhdpi\appicon.png" />
+    <!-- Adaptive-icon foreground layers (mipmap-anydpi-v26\appicon.xml composes them
+         with the flat background color for API 26+ launchers). -->
+    <AndroidResource Include="..\..\icon\icon-fg-108.png" Link="Android\Resources\mipmap-mdpi\appicon_foreground.png" LogicalName="Android\Resources\mipmap-mdpi\appicon_foreground.png" />
+    <AndroidResource Include="..\..\icon\icon-fg-162.png" Link="Android\Resources\mipmap-hdpi\appicon_foreground.png" LogicalName="Android\Resources\mipmap-hdpi\appicon_foreground.png" />
+    <AndroidResource Include="..\..\icon\icon-fg-216.png" Link="Android\Resources\mipmap-xhdpi\appicon_foreground.png" LogicalName="Android\Resources\mipmap-xhdpi\appicon_foreground.png" />
+    <AndroidResource Include="..\..\icon\icon-fg-324.png" Link="Android\Resources\mipmap-xxhdpi\appicon_foreground.png" LogicalName="Android\Resources\mipmap-xxhdpi\appicon_foreground.png" />
+    <AndroidResource Include="..\..\icon\icon-fg-432.png" Link="Android\Resources\mipmap-xxxhdpi\appicon_foreground.png" LogicalName="Android\Resources\mipmap-xxxhdpi\appicon_foreground.png" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(_LoresteadPlatform)' == 'ios'">
+    <!-- iOS sources live under iOS\ rather than the project root. Link satisfies the
+         build's app-manifest detection; the explicit LogicalName metadata is what
+         VS's iOS debug/deploy provider searches for (it does not consider Link). -->
+    <None Update="iOS\Info.plist" Link="Info.plist" LogicalName="Info.plist" />
+    <!-- App icon renders Linked into the asset catalog from the shared icon\ dir;
+         only Contents.json (which maps them to slots) lives in the project tree. -->
+    <ImageAsset Include="..\..\icon\icon-20.png" Link="iOS\Assets.xcassets\AppIcon.appiconset\icon-20.png" />
+    <ImageAsset Include="..\..\icon\icon-29.png" Link="iOS\Assets.xcassets\AppIcon.appiconset\icon-29.png" />
+    <ImageAsset Include="..\..\icon\icon-40.png" Link="iOS\Assets.xcassets\AppIcon.appiconset\icon-40.png" />
+    <ImageAsset Include="..\..\icon\icon-58.png" Link="iOS\Assets.xcassets\AppIcon.appiconset\icon-58.png" />
+    <ImageAsset Include="..\..\icon\icon-60.png" Link="iOS\Assets.xcassets\AppIcon.appiconset\icon-60.png" />
+    <ImageAsset Include="..\..\icon\icon-76.png" Link="iOS\Assets.xcassets\AppIcon.appiconset\icon-76.png" />
+    <ImageAsset Include="..\..\icon\icon-80.png" Link="iOS\Assets.xcassets\AppIcon.appiconset\icon-80.png" />
+    <ImageAsset Include="..\..\icon\icon-87.png" Link="iOS\Assets.xcassets\AppIcon.appiconset\icon-87.png" />
+    <ImageAsset Include="..\..\icon\icon-120.png" Link="iOS\Assets.xcassets\AppIcon.appiconset\icon-120.png" />
+    <ImageAsset Include="..\..\icon\icon-152.png" Link="iOS\Assets.xcassets\AppIcon.appiconset\icon-152.png" />
+    <ImageAsset Include="..\..\icon\icon-167.png" Link="iOS\Assets.xcassets\AppIcon.appiconset\icon-167.png" />
+    <ImageAsset Include="..\..\icon\icon-180.png" Link="iOS\Assets.xcassets\AppIcon.appiconset\icon-180.png" />
+    <ImageAsset Include="..\..\icon\icon-1024.png" Link="iOS\Assets.xcassets\AppIcon.appiconset\icon-1024.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Desktop-only: its macOS interop DllImports System.framework, which does not
+         exist on iOS — the iOS build turns that into "-framework System" and the
+         native link fails. SyncCredentialStore has a mobile stub until a
+         Keystore/Keychain backend exists. -->
+    <PackageReference Include="Devlooped.CredentialManager" Condition="'$(_LoresteadPlatform)' == ''" />
+    <!-- Mobile counterpart to CredentialManager: SecureStorage (Keychain / Keystore). -->
+    <PackageReference Include="Microsoft.Maui.Essentials" Condition="'$(_LoresteadPlatform)' != ''" />
     <PackageReference Include="Galdr.Native" />
     <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" />
-    <PackageReference Include="Velopack" />
+    <!-- Desktop-only: mobile updates ship through the app stores; UpdateService and
+         Program.cs guard their Velopack usage with #if. -->
+    <PackageReference Include="Velopack" Condition="'$(_LoresteadPlatform)' == ''" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Lorestead.Core\Lorestead.Core.csproj" />
   </ItemGroup>
 
-  <!-- Ship beside the binaries on every platform (distribution.md); About reads the notices. -->
-  <ItemGroup>
+  <!-- Ship beside the binaries on desktop (distribution.md); About reads the notices.
+       Mobile bundles have no file-beside-the-exe concept — About's notices are a known
+       gap there. -->
+  <ItemGroup Condition="'$(_LoresteadPlatform)' == ''">
     <Content Include="..\..\LICENSE.txt" Link="LICENSE.txt" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="..\..\THIRD-PARTY-NOTICES.txt" Link="THIRD-PARTY-NOTICES.txt" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
@@ -33,7 +150,7 @@
   <PropertyGroup>
     <FrontEndDir>$(MSBuildProjectDirectory)/FrontEnd</FrontEndDir>
     <FrontEndDist>$(FrontEndDir)/dist</FrontEndDist>
-    <ApplicationIcon>..\..\icon\icon.ico</ApplicationIcon>
+    <ApplicationIcon Condition="'$(_LoresteadPlatform)' == ''">..\..\icon\icon.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
@@ -51,10 +168,30 @@
     <Exec Command="npm run build" WorkingDirectory="$(FrontEndDir)" />
   </Target>
 
-  <Target Name="StageFrontEnd" BeforeTargets="AssignTargetPaths" DependsOnTargets="EnsureFrontEndBuilt" Condition="'$(Configuration)' == 'Release'">
+  <!-- Release staging of the built frontend, per platform: desktop copies dist beside
+       the exe as wwwroot, Android ships it as assets under wwwroot/, iOS bundles it
+       under wwwroot/ (the Assets\ / Resources\ Link prefixes are stripped by each
+       SDK). These are the paths MultiplatformContent's bundled fallback serves.
+       Items are created inside targets (not at evaluation) because dist may not
+       exist until EnsureFrontEndBuilt runs npm. -->
+  <Target Name="StageFrontEnd" BeforeTargets="AssignTargetPaths" DependsOnTargets="EnsureFrontEndBuilt" Condition="'$(Configuration)' == 'Release' And '$(_LoresteadPlatform)' == ''">
     <ItemGroup>
       <_GaldrDist Include="$(FrontEndDist)/**/*.*" />
       <Content Include="@(_GaldrDist)" CopyToOutputDirectory="PreserveNewest" TargetPath="wwwroot/%(_GaldrDist.RecursiveDir)%(_GaldrDist.Filename)%(_GaldrDist.Extension)" />
+    </ItemGroup>
+  </Target>
+
+  <Target Name="StageFrontEndAndroid" BeforeTargets="_ComputeAndroidAssetsPaths" DependsOnTargets="EnsureFrontEndBuilt" Condition="'$(Configuration)' == 'Release' And '$(_LoresteadPlatform)' == 'android'">
+    <ItemGroup>
+      <_GaldrDist Include="$(FrontEndDist)/**/*.*" />
+      <AndroidAsset Include="@(_GaldrDist)" Link="Assets\wwwroot\%(_GaldrDist.RecursiveDir)%(_GaldrDist.Filename)%(_GaldrDist.Extension)" />
+    </ItemGroup>
+  </Target>
+
+  <Target Name="StageFrontEndIos" BeforeTargets="_CollectBundleResources" DependsOnTargets="EnsureFrontEndBuilt" Condition="'$(Configuration)' == 'Release' And '$(_LoresteadPlatform)' == 'ios'">
+    <ItemGroup>
+      <_GaldrDist Include="$(FrontEndDist)/**/*.*" />
+      <BundleResource Include="@(_GaldrDist)" Link="Resources\wwwroot\%(_GaldrDist.RecursiveDir)%(_GaldrDist.Filename)%(_GaldrDist.Extension)" />
     </ItemGroup>
   </Target>
 
