@@ -55,7 +55,7 @@ function onContextOpenChange(open) {
     <ContextMenuRoot v-if="hasContext" @update:open="onContextOpenChange">
       <ContextMenuTrigger as-child>
         <button :ref="setRef" :tabindex="focused ? 0 : -1" @mousedown="onMousedown" @click="onClick" @dblclick="onDblClick"
-          class="group w-full text-left py-1.5 pr-3 transition-colors flex items-center gap-2" :class="[
+          class="group w-full text-left py-1.5 pr-3 transition-colors flex items-center gap-2 select-none-touch" :class="[
             contextOpen ? 'bg-on-surface/5' : dropTarget ? 'bg-drop-target' : selected ? 'bg-accent-soft' : 'hover:bg-hover-wash',
             dragged ? 'opacity-30' : '',
           ]" :style="{ paddingLeft: indent }">
@@ -76,7 +76,7 @@ function onContextOpenChange(open) {
       </ContextMenuPortal>
     </ContextMenuRoot>
     <button v-else :ref="setRef" :tabindex="focused ? 0 : -1" @mousedown="onMousedown" @click="onClick" @dblclick="onDblClick"
-      class="group w-full text-left py-1.5 pr-3 transition-colors flex items-center gap-2" :class="[
+      class="group w-full text-left py-1.5 pr-3 transition-colors flex items-center gap-2 select-none-touch" :class="[
         dropTarget ? 'bg-drop-target' : selected ? 'bg-accent-soft' : 'hover:bg-hover-wash',
         dragged ? 'opacity-30' : '',
       ]" :style="{ paddingLeft: indent }">

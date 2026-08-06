@@ -21,7 +21,7 @@ const tabs = [
 <template>
   <!-- pb-safe on the nav itself so the bar's background extends under the
        iPhone home indicator / Android gesture area. -->
-  <nav class="md:hidden shrink-0 border-t border-border bg-surface flex items-stretch pb-safe">
+  <nav class="md:hidden shrink-0 border-t border-border bg-surface flex items-stretch pb-safe select-none-touch">
     <button v-for="tab in tabs" :key="tab.name" type="button"
       class="flex-1 flex flex-col items-center justify-center gap-0.5 pt-2 pb-1.5 text-[11px]"
       :class="route.name === tab.name ? 'text-accent' : 'text-on-surface-muted'"

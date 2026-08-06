@@ -12,6 +12,17 @@
     padding-bottom: var(--galdr-inset-bottom, 0px);
 }
 
+/* For interactive chrome (tree rows, list rows, nav) whose text is a label, not
+   content: without this, a touch long-press starts selecting the label (and iOS
+   shows its copy callout) instead of leaving the gesture to the app - the
+   context menu on these rows is a long-press away. Content surfaces (editor,
+   preview, inputs) keep normal selection. */
+@utility select-none-touch {
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+}
+
 :root {
     --ui-scale: 1rem;
 }

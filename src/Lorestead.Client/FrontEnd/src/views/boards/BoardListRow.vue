@@ -136,7 +136,7 @@ onUnmounted(() => {
              on-surface wash on hover. py-1.5 rather than a fixed height, which is what the tree does:
              the two rows then derive the same height from the same text instead of
              agreeing on a number that only holds at today's type scale. -->
-          <button class="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-left transition-colors"
+          <button class="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-left transition-colors select-none-touch"
             :class="[
               contextOpen ? 'bg-on-surface/5' : selected ? 'bg-accent-soft' : 'hover:bg-hover-wash',
               dragging ? 'opacity-40' : '',
