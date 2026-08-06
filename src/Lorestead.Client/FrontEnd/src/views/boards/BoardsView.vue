@@ -7,11 +7,14 @@ import KanbanBoard from './KanbanBoard.vue'
 import TaskEditDialog from './TaskEditDialog.vue'
 import ConfirmDialog from '../../components/ConfirmDialog.vue'
 import EmptyState from '../../components/EmptyState.vue'
+import Button from '../../components/Button.vue'
 import { useBoardsStore } from '../../stores/boardsStore.js'
+import { useIsMobile } from '../../composables/useIsMobile.js'
 
 const route = useRoute()
 const router = useRouter()
 const boardsStore = useBoardsStore()
+const isMobile = useIsMobile()
 
 // The route param IS the selection, same contract as NotesView: every source
 // pushes /boards/:id and this watcher does the fetch. The name guard skips the
@@ -59,7 +62,7 @@ onUnmounted(() => boardsStore.clearContent())
 
 <template>
   <div class="flex-1 flex min-h-0">
-    <SplitterGroup direction="horizontal" auto-save-id="lorestead-boards-layout">
+    <SplitterGroup v-if="!isMobile" direction="horizontal" auto-save-id="lorestead-boards-layout">
       <SplitterPanel :default-size="18" :min-size="12" class="border-r border-border bg-surface">
         <BoardListPanel @request-delete="(board) => (pendingDeleteBoard = board)" />
       </SplitterPanel>
@@ -75,6 +78,27 @@ onUnmounted(() => boardsStore.clearContent())
           @request-delete-task="(task) => (pendingDeleteTask = task)" />
       </SplitterPanel>
     </SplitterGroup>
+
+    <!-- Mobile (below md): list -> detail. Bare route is the board list full
+         screen; the param route is the board with a minimal top bar. Column
+         paging and the top-bar kebab arrive with the boards step. -->
+    <div v-else class="flex-1 min-w-0 flex flex-col min-h-0">
+      <BoardListPanel v-if="!route.params.id" @request-delete="(board) => (pendingDeleteBoard = board)" />
+
+      <template v-else>
+        <div class="flex items-center gap-1 px-1.5 h-11 shrink-0 border-b border-border">
+          <Button variant="ghost" size="icon" aria-label="Back" @click="router.back()">
+            <i-lucide-arrow-left class="size-5" />
+          </Button>
+          <span class="flex-1 min-w-0 truncate text-sm font-medium">
+            {{ boardsStore.selectedBoard?.name || 'Untitled board' }}
+          </span>
+        </div>
+        <KanbanBoard class="flex-1 min-h-0" @open-task="openTask"
+          @request-delete-column="(column) => (pendingDeleteColumn = column)"
+          @request-delete-task="(task) => (pendingDeleteTask = task)" />
+      </template>
+    </div>
 
     <ConfirmDialog :open="pendingDeleteBoard !== null" title="Delete board?"
       :message="`&quot;${pendingDeleteBoard?.name || 'Untitled board'}&quot; and all of its lists and tasks will be deleted.`"

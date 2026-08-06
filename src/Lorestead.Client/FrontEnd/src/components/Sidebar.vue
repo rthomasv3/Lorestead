@@ -65,7 +65,7 @@ function openSearch() {
        out under the row's edge as the rail animates instead of disappearing
        in the frame the rail starts moving. -->
   <nav
-    class="shrink-0 border-r border-border flex flex-col bg-surface transition-[width] duration-200 ease-out overflow-hidden"
+    class="hidden md:flex shrink-0 border-r border-border flex-col bg-surface transition-[width] duration-200 ease-out overflow-hidden"
     :class="collapsed ? 'w-[3.4375rem]' : 'w-52'">
     <!-- Same geometry as a nav row - px-2 outside, px-2.5 and a 1px border
          inside - so the header sits on the sidebar's one icon column. The mark

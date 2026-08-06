@@ -1,5 +1,17 @@
 @import "tailwindcss";
 
+/* Safe-area utilities, fed by the Galdr shell's inset variables (0 on desktop
+   and in a browser). pt-safe drops content below the status bar / notch;
+   pb-safe extends a bottom bar's background under the home indicator /
+   gesture area. */
+@utility pt-safe {
+    padding-top: var(--galdr-inset-top, 0px);
+}
+
+@utility pb-safe {
+    padding-bottom: var(--galdr-inset-bottom, 0px);
+}
+
 :root {
     --ui-scale: 1rem;
 }

@@ -3,6 +3,7 @@ import { createWebHashHistory, createRouter } from 'vue-router'
 
 const NotesView = () => import('./views/notes/NotesView.vue')
 const BoardsView = () => import('./views/boards/BoardsView.vue')
+const SearchView = () => import('./views/SearchView.vue')
 const SettingsView = () => import('./views/SettingsView.vue')
 
 const routes = [
@@ -11,6 +12,8 @@ const routes = [
   // alike. Optional so the bare section route is the nothing-selected state.
   { path: '/notes/:id?', name: 'notes', component: NotesView },
   { path: '/boards/:id?', name: 'boards', component: BoardsView },
+  // Mobile's Search tab; renders as a plain page at desktop widths too.
+  { path: '/search', name: 'search', component: SearchView },
   { path: '/settings', name: 'settings', component: SettingsView },
 ]
 

@@ -17,6 +17,7 @@ import EmptyState from '../../components/EmptyState.vue'
 import { useNotesStore } from '../../stores/notesStore.js'
 import { useSettingsStore } from '../../stores/settingsStore.js'
 import { useScrollSync } from '../../composables/useScrollSync.js'
+import { useIsMobile } from '../../composables/useIsMobile.js'
 import { formatTimestamp } from '../../utils/dateFormat.js'
 import { exportNote } from '../../services/exportService.js'
 import { TOOLBAR_ACTIONS } from '../../utils/editorToolbar.js'
@@ -26,6 +27,7 @@ const route = useRoute()
 const router = useRouter()
 const notesStore = useNotesStore()
 const settingsStore = useSettingsStore()
+const isMobile = useIsMobile()
 
 // The route param IS the selection (decisions.md): every navigation source -
 // tree click, search, wiki-link, backlink - pushes /notes/:id, and this watcher
@@ -70,6 +72,11 @@ let saveTimer = null
 // on selectedId instead, opening a note reads as "new document" while the old
 // note's text is still loaded, and the remembered offset gets clamped to that.
 const editingNoteId = ref(null)
+
+// The editor only exists once a note is loaded; a focus request that beats the
+// fetch (tree click routing to a note from the empty state) waits for it in
+// this flag. Declared before the watch below - it runs immediately at setup.
+let pendingEditorFocus = false
 
 // The store keeps only the selection across route changes - content is dropped on
 // unmount and refetched on mount - so on remount this fires with null (empty
@@ -155,10 +162,6 @@ const modifiedLabel = computed(() => {
   const stamp = formatTimestamp(iso, app.dateFormat, app.timeFormat)
   return stamp ? `Last updated ${stamp}` : ''
 })
-
-// The editor only exists once a note is loaded; a request that beats the fetch
-// (tree click routing to a note from the empty state) waits for it instead.
-let pendingEditorFocus = false
 
 function onEditorFocusRequest() {
   if (editorRef.value) {
@@ -313,7 +316,7 @@ onMounted(() => {
 
 <template>
   <div class="flex-1 flex min-h-0">
-    <SplitterGroup direction="horizontal" auto-save-id="lorestead-notes-layout">
+    <SplitterGroup v-if="!isMobile" direction="horizontal" auto-save-id="lorestead-notes-layout">
       <SplitterPanel :default-size="22" :min-size="14" class="border-r border-border bg-surface">
         <NotesTreePanel ref="treePanel" @request-delete="onRequestDelete" @request-purge="onRequestPurge"
           @request-restore="onRequestRestore" @request-template="onRequestTemplate" />
@@ -422,6 +425,33 @@ onMounted(() => {
         </div>
       </SplitterPanel>
     </SplitterGroup>
+
+    <!-- Mobile (below md): list -> detail. The bare route is the tree full
+         screen; the param route is the editor full screen with a minimal top
+         bar. Same script, same state - only the panes differ. The editor's
+         toolbar, preview, and tool panels arrive with the editor-screen step. -->
+    <div v-else class="flex-1 min-w-0 flex flex-col min-h-0">
+      <NotesTreePanel v-if="!route.params.id" ref="treePanel" @request-delete="onRequestDelete"
+        @request-purge="onRequestPurge" @request-restore="onRequestRestore" @request-template="onRequestTemplate" />
+
+      <template v-else>
+        <div class="flex items-center gap-1 px-1.5 h-11 shrink-0 border-b border-border">
+          <Button variant="ghost" size="icon" aria-label="Back" @click="router.back()">
+            <i-lucide-arrow-left class="size-5" />
+          </Button>
+          <span class="flex-1 min-w-0 truncate text-sm font-medium">
+            {{ currentNote?.title || 'Untitled' }}
+          </span>
+          <span v-if="readonly"
+            class="shrink-0 text-xs text-on-surface-muted border border-border rounded px-1.5 py-0.5 mr-1">
+            Read-only
+          </span>
+        </div>
+        <MarkdownEditor ref="editorRef" :model-value="body" :readonly="readonly"
+          :attachments="notesStore.currentAttachments" :document-key="editingNoteId ?? ''" remember-cursor
+          class="flex-1 min-h-0" @update:model-value="onBodyChange" @save="flush" />
+      </template>
+    </div>
 
     <!-- Dialogs -->
     <ConfirmDialog :open="pendingTrash !== null" title="Move to Trash?" :message="pendingTrash && hasChildren(pendingTrash)

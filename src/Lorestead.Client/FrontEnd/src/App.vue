@@ -1,5 +1,6 @@
 <script setup>
-import { useRouter } from 'vue-router'
+import { computed } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { TooltipProvider } from 'reka-ui'
 import { useSettingsStore } from './stores/settingsStore'
 import { useSyncStore } from './stores/syncStore'
@@ -7,15 +8,21 @@ import { useUpdatesStore } from './stores/updatesStore'
 import { useNotesStore } from './stores/notesStore'
 import { useBoardsStore } from './stores/boardsStore'
 import Sidebar from './components/Sidebar.vue'
+import BottomNav from './components/BottomNav.vue'
 import SearchDialog from './components/SearchDialog.vue'
 
 useSettingsStore().init()
 useSyncStore().init()
 useUpdatesStore().init()
 
+const route = useRoute()
 const router = useRouter()
 const notes = useNotesStore()
 const boards = useBoardsStore()
+
+// The tab bar shows on top-level screens only - detail screens (note editor,
+// single board) carry an id param and get the bottom edge for their own use.
+const showTabBar = computed(() => !route.params.id)
 
 // A note:// link clicked in any preview - notes editor or task dialog. Handled here
 // rather than in MarkdownPreview because the jump crosses routes, and it is the
@@ -61,11 +68,16 @@ window.addEventListener('boards:changed', () => {
        HoverTip drives its own timer and never reads the flag, but this is not
        something to leave resting on that. -->
   <TooltipProvider :skip-delay-duration="0">
-    <div class="h-screen flex bg-surface text-on-surface">
+    <!-- Column below md (content over the tab bar), row at md+ (sidebar beside
+         content). The sidebar hides itself below md; the tab bar is md:hidden.
+         The top safe-area inset is consumed once here (pt-safe) so every screen
+         clears the status bar / notch; the tab bar pads its own bottom inset. -->
+    <div class="h-screen flex flex-col md:flex-row bg-surface text-on-surface pt-safe">
       <Sidebar />
       <main class="flex-1 min-w-0 flex flex-col min-h-0 bg-surface [view-transition-name:main-view]">
         <router-view />
       </main>
+      <BottomNav v-if="showTabBar" />
       <SearchDialog />
     </div>
   </TooltipProvider>
