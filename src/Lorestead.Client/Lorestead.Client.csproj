@@ -153,6 +153,11 @@
     <ApplicationIcon Condition="'$(_LoresteadPlatform)' == ''">..\..\icon\icon.ico</ApplicationIcon>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(TargetFramework)'=='net10.0-ios'">
+    <CodesignKey>Apple Development: Created via API (RZUPRU6G24)</CodesignKey>
+    <CodesignProvision>VS: WildCard Development</CodesignProvision>
+  </PropertyGroup>
+
   <ItemGroup>
     <FrontEndSource Include="$(FrontEndDir)/src/**/*" />
     <FrontEndSource Include="$(FrontEndDir)/index.html" />

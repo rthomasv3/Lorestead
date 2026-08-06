@@ -21,13 +21,19 @@ public static class LocalDataPaths
         string overridden = Environment.GetEnvironmentVariable(OverrideVariable);
         string resolved;
 
-        if (string.IsNullOrWhiteSpace(overridden))
+        if (!string.IsNullOrWhiteSpace(overridden))
         {
-            resolved = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), DirectoryName);
+            resolved = overridden;
+        }
+        else if (OperatingSystem.IsAndroid() || OperatingSystem.IsIOS())
+        {
+            // On a physical mobile devices the container root ($HOME/UserProfile)
+            // is read-only, so using Documents instead
+            resolved = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), DirectoryName);
         }
         else
         {
-            resolved = overridden;
+            resolved = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), DirectoryName);
         }
 
         return resolved;
