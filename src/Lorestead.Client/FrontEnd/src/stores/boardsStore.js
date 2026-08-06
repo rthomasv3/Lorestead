@@ -67,10 +67,11 @@ export const useBoardsStore = defineStore('boards', () => {
     tasks.value = []
   }
 
+  // Selection is route-driven: the caller navigates to the new board's route,
+  // and the view's param watcher does the select.
   async function createBoard(name = '') {
     const response = await boardService.createBoard({ name })
     await load()
-    await select(response.board.id)
     return response.board
   }
 

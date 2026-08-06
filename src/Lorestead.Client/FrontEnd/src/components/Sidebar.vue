@@ -1,6 +1,8 @@
 <script setup>
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useNotesStore } from '../stores/notesStore.js'
+import { useBoardsStore } from '../stores/boardsStore.js'
 import HoverTip from './HoverTip.vue'
 import TextField from './TextField.vue'
 import NavButton from './NavButton.vue'
@@ -17,6 +19,8 @@ const STORAGE_KEY = 'Lorestead-sidebar-collapsed'
 
 const route = useRoute()
 const router = useRouter()
+const notesStore = useNotesStore()
+const boardsStore = useBoardsStore()
 const collapsed = ref(localStorage.getItem(STORAGE_KEY) === '1')
 
 function toggle() {
@@ -24,13 +28,26 @@ function toggle() {
   localStorage.setItem(STORAGE_KEY, collapsed.value ? '1' : '0')
 }
 
-const items = [
-  { to: '/notes', label: 'Notes', icon: IconNotebookText },
-  { to: '/boards', label: 'Boards', icon: IconSquareKanban },
-]
+// Selection rides in the route, so returning to a section goes back through the
+// last selected item's route - the stores still hold the last id after the view
+// unmounts, which is what keeps "come back and it's still open" working.
+const items = computed(() => [
+  {
+    section: '/notes',
+    to: notesStore.selectedId ? `/notes/${notesStore.selectedId}` : '/notes',
+    label: 'Notes',
+    icon: IconNotebookText,
+  },
+  {
+    section: '/boards',
+    to: boardsStore.selectedBoardId ? `/boards/${boardsStore.selectedBoardId}` : '/boards',
+    label: 'Boards',
+    icon: IconSquareKanban,
+  },
+])
 
-function isActive(to) {
-  return route.path === to || route.path.startsWith(to + '/')
+function isActive(section) {
+  return route.path === section || route.path.startsWith(section + '/')
 }
 
 function openSearch() {
@@ -75,8 +92,8 @@ function openSearch() {
           :hotkey="shortcut('mod', 'K')" @click="openSearch" />
       </HoverTip>
 
-      <HoverTip v-for="item in items" :key="item.to" :text="item.label" :disabled="!collapsed">
-        <NavButton :icon="item.icon" :label="item.label" :active="isActive(item.to)" @click="router.push(item.to)" />
+      <HoverTip v-for="item in items" :key="item.section" :text="item.label" :disabled="!collapsed">
+        <NavButton :icon="item.icon" :label="item.label" :active="isActive(item.section)" @click="router.push(item.to)" />
       </HoverTip>
 
       <div class="flex-1" />

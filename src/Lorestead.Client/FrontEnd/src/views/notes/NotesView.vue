@@ -1,5 +1,6 @@
 <script setup>
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { SplitterGroup, SplitterPanel, SplitterResizeHandle, DialogRoot, DialogPortal, DialogOverlay, DialogContent, DialogTitle, DialogDescription } from 'reka-ui'
 import HoverTip from '../../components/HoverTip.vue'
 import NotesTreePanel from './NotesTreePanel.vue'
@@ -21,8 +22,25 @@ import { exportNote } from '../../services/exportService.js'
 import { TOOLBAR_ACTIONS } from '../../utils/editorToolbar.js'
 import { shortcut } from '../../utils/platform.js'
 
+const route = useRoute()
+const router = useRouter()
 const notesStore = useNotesStore()
 const settingsStore = useSettingsStore()
+
+// The route param IS the selection (decisions.md): every navigation source -
+// tree click, search, wiki-link, backlink - pushes /notes/:id, and this watcher
+// is the one place that turns it into a fetch. The name guard matters on the
+// way out: leaving the section changes params before this view unmounts, and
+// reacting to that would wipe the selection the sidebar link needs.
+watch(() => route.params.id || null, (id) => {
+  if (route.name === 'notes') notesStore.select(id)
+}, { immediate: true })
+
+// The routed note vanishing from the summaries (purged here, deleted by sync or
+// an agent) invalidates the route itself - fall back to the bare section.
+watch(() => notesStore.loaded && !!route.params.id && !notesStore.byId.get(route.params.id), (gone) => {
+  if (gone && route.name === 'notes') router.replace('/notes')
+}, { immediate: true })
 
 const treePanel = ref(null)
 const editorRef = ref(null)
@@ -65,6 +83,14 @@ watch(currentNote, async (note) => {
   body.value = note?.body ?? ''
   dirty.value = false
   clearTimeout(saveTimer)
+  // A focus request that arrived while the editor wasn't rendered (opening from
+  // the empty state - navigation resolves before the note fetch) lands here.
+  if (note && pendingEditorFocus) {
+    pendingEditorFocus = false
+    nextTick(() => editorRef.value?.focus())
+  } else if (!note) {
+    pendingEditorFocus = false
+  }
 }, { immediate: true })
 
 // An agent edit to the open note (data_version watcher) reloads it only while the
@@ -130,8 +156,16 @@ const modifiedLabel = computed(() => {
   return stamp ? `Last updated ${stamp}` : ''
 })
 
+// The editor only exists once a note is loaded; a request that beats the fetch
+// (tree click routing to a note from the empty state) waits for it instead.
+let pendingEditorFocus = false
+
 function onEditorFocusRequest() {
-  editorRef.value?.focus()
+  if (editorRef.value) {
+    editorRef.value.focus()
+  } else {
+    pendingEditorFocus = true
+  }
 }
 
 // Esc is the way back out of the document. Not when CodeMirror already used the
@@ -231,7 +265,7 @@ function onRequestTemplate({ parentId }) {
 }
 
 function onTemplateCreated(rootId) {
-  if (rootId) notesStore.select(rootId)
+  if (rootId) router.push(`/notes/${rootId}`)
 }
 
 // --- Toolbar ---
@@ -269,10 +303,9 @@ watch(
 
 onMounted(() => {
   if (!notesStore.loaded) notesStore.load()
-  // Everything for the selected note - body, attachments, backlinks - is fetched
-  // fresh on every mount; the store carries no content across routes (decisions.md).
-  // select() awaits any save still in flight from the unmount flush.
-  if (notesStore.selectedId) notesStore.select(notesStore.selectedId)
+  // Content is fetched fresh on every mount via the route param watcher above -
+  // the store carries no content across routes (decisions.md), and select()
+  // awaits any save still in flight from the unmount flush.
   // History is not part of getNote, so the reopened panel loads its own data.
   if (notesStore.toolOpen === 'history') notesStore.loadHistory()
 })

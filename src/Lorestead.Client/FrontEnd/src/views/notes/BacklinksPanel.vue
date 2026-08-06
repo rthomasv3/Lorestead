@@ -8,16 +8,15 @@ const router = useRouter()
 const notesStore = useNotesStore()
 const boardsStore = useBoardsStore()
 
-// Same jump as a search result: notes select in the tree, tasks open their board
-// with the dialog request queued.
+// Same jump as a search result: both land on the target's route (unified
+// routing), tasks with the dialog request queued for BoardsView to pick up.
 async function open(backlink) {
   if (backlink.noteId) {
     notesStore.reveal(backlink.noteId)
-    await notesStore.select(backlink.noteId)
+    await router.push(`/notes/${backlink.noteId}`)
   } else {
-    await boardsStore.select(backlink.boardId)
     boardsStore.openTaskRequest = backlink.taskId
-    await router.push('/boards')
+    await router.push(`/boards/${backlink.boardId}`)
   }
 }
 </script>

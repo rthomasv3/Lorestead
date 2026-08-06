@@ -1,5 +1,6 @@
 <script setup>
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 import BoardListRow from './BoardListRow.vue'
 import Button from '../../components/Button.vue'
 import HoverTip from '../../components/HoverTip.vue'
@@ -8,11 +9,14 @@ import { useBoardsStore } from '../../stores/boardsStore.js'
 
 const emit = defineEmits(['request-delete'])
 
+const router = useRouter()
 const boardsStore = useBoardsStore()
 const renamingId = ref(null)
 
 async function addBoard() {
   const board = await boardsStore.createBoard()
+  // Selection is the route (unified routing); the view's param watcher fetches.
+  await router.push(`/boards/${board.id}`)
   renamingId.value = board.id
 }
 
@@ -57,7 +61,7 @@ function onKeydown(e) {
     <div class="flex-1 min-h-0 overflow-y-auto pb-2 flex flex-col">
       <BoardListRow v-for="board in boardsStore.boards" :key="board.id" :board="board"
         :selected="board.id === boardsStore.selectedBoardId" :renaming="renamingId === board.id"
-        @select="boardsStore.select(board.id)" @rename="(name) => onRename(board.id, name)"
+        @select="router.push(`/boards/${board.id}`)" @rename="(name) => onRename(board.id, name)"
         @rename-done="renamingId = null" @request-rename="renamingId = board.id"
         @request-delete="emit('request-delete', board)" @drop="onDrop" />
 

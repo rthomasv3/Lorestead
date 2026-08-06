@@ -23,9 +23,8 @@ const boards = useBoardsStore()
 window.addEventListener('note:navigate', async (event) => {
   const id = event.detail?.id
   if (!id) return
-  await router.push('/notes')
   notes.reveal(id)
-  notes.select(id)
+  await router.push(`/notes/${id}`)
 })
 
 // Pulled remote changes land here; only already-loaded data refreshes. The open

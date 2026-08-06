@@ -365,9 +365,8 @@ function onLinkKeydown(e) {
 async function openLinkedNote(id) {
   await flush()
   emit('update:open', false)
-  await router.push('/notes')
   notesStore.reveal(id)
-  notesStore.select(id)
+  await router.push(`/notes/${id}`)
 }
 
 // --- Footer ---

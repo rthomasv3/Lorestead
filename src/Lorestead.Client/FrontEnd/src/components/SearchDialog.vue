@@ -144,16 +144,15 @@ async function choose(result) {
   open.value = false
   if (!result) return
   if (result.kind === 'note') {
-    await router.push('/notes')
+    // Selection rides in the route (unified routing) - the view's param watcher
+    // does the fetch; reveal expands the tree down to the landing row.
     notesStore.reveal(result.id)
-    notesStore.select(result.id)
+    await router.push(`/notes/${result.id}`)
   } else if (result.kind === 'task') {
-    await boardsStore.select(result.boardId)
     boardsStore.openTaskRequest = result.id
-    await router.push('/boards')
+    await router.push(`/boards/${result.boardId}`)
   } else if (result.kind === 'board') {
-    await boardsStore.select(result.id)
-    await router.push('/boards')
+    await router.push(`/boards/${result.id}`)
   } else {
     await router.push('/settings')
     setTimeout(() => {

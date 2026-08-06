@@ -1,5 +1,6 @@
 <script setup>
 import { ref, watch, onMounted, onUnmounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { SplitterGroup, SplitterPanel, SplitterResizeHandle } from 'reka-ui'
 import BoardListPanel from './BoardListPanel.vue'
 import KanbanBoard from './KanbanBoard.vue'
@@ -8,7 +9,22 @@ import ConfirmDialog from '../../components/ConfirmDialog.vue'
 import EmptyState from '../../components/EmptyState.vue'
 import { useBoardsStore } from '../../stores/boardsStore.js'
 
+const route = useRoute()
+const router = useRouter()
 const boardsStore = useBoardsStore()
+
+// The route param IS the selection, same contract as NotesView: every source
+// pushes /boards/:id and this watcher does the fetch. The name guard skips the
+// param change that comes from leaving the section (it fires before unmount).
+watch(() => route.params.id || null, (id) => {
+  if (route.name === 'boards') boardsStore.select(id)
+}, { immediate: true })
+
+// The routed board vanishing (deleted here, by sync, or by an agent) invalidates
+// the route - fall back to the bare section, which shows the empty state.
+watch(() => boardsStore.loaded && !!route.params.id && !boardsStore.boards.some((b) => b.id === route.params.id), (gone) => {
+  if (gone && route.name === 'boards') router.replace('/boards')
+}, { immediate: true })
 
 const pendingDeleteBoard = ref(null)
 const pendingDeleteColumn = ref(null)
@@ -34,9 +50,8 @@ watch(() => boardsStore.openTaskRequest, (taskId) => {
 
 onMounted(() => {
   if (!boardsStore.loaded) boardsStore.load()
-  // Columns and tasks are fetched fresh on every mount - the store carries no
-  // content across routes (decisions.md); refreshBoard no-ops with no selection.
-  boardsStore.refreshBoard()
+  // Columns and tasks are fetched fresh on every mount through the route param
+  // watcher above - the store carries no content across routes (decisions.md).
 })
 
 onUnmounted(() => boardsStore.clearContent())

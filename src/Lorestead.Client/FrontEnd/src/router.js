@@ -7,8 +7,10 @@ const SettingsView = () => import('./views/SettingsView.vue')
 
 const routes = [
   { path: '/', redirect: '/notes' },
-  { path: '/notes', name: 'notes', component: NotesView },
-  { path: '/boards', name: 'boards', component: BoardsView },
+  // The id param is the selection - one source of truth on desktop and mobile
+  // alike. Optional so the bare section route is the nothing-selected state.
+  { path: '/notes/:id?', name: 'notes', component: NotesView },
+  { path: '/boards/:id?', name: 'boards', component: BoardsView },
   { path: '/settings', name: 'settings', component: SettingsView },
 ]
 

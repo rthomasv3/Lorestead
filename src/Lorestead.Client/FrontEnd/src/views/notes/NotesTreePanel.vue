@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { useRouter } from 'vue-router'
 import {
   ContextMenuItem,
   DropdownMenuRoot,
@@ -22,6 +23,7 @@ import { useSettingsStore } from '../../stores/settingsStore.js'
 
 const emit = defineEmits(['request-delete', 'request-purge', 'request-restore', 'request-template'])
 
+const router = useRouter()
 const notesStore = useNotesStore()
 const settingsStore = useSettingsStore()
 const treeRef = ref(null)
@@ -133,7 +135,10 @@ function expandFiltered() {
 
 async function onSelect(item) {
   if (item.type === 'note') {
-    await notesStore.select(item.noteId)
+    // Selection is the route (unified routing): the view's param watcher does
+    // the fetch. Reselecting the open note is a no-op navigation, and the focus
+    // event still fires for it - same refocus behavior as before.
+    await router.push(`/notes/${item.noteId}`)
     window.dispatchEvent(new CustomEvent('editor:focus'))
   }
 }
@@ -153,7 +158,7 @@ async function addNote(parentId) {
   if (parentId && !notesStore.expandedIds.has(parentId)) {
     notesStore.expandedIds = new Set([...notesStore.expandedIds, parentId])
   }
-  await notesStore.select(note.id)
+  await router.push(`/notes/${note.id}`)
   if (settingsStore.application.newNoteFocus === 'body') {
     window.dispatchEvent(new CustomEvent('editor:focus'))
   } else {
@@ -166,7 +171,7 @@ async function addNote(parentId) {
 
 async function duplicateNote(item) {
   const response = await notesStore.duplicate(item.noteId)
-  await notesStore.select(response.rootId)
+  await router.push(`/notes/${response.rootId}`)
   requestAnimationFrame(() => {
     treeRef.value?.startEditing({ id: response.rootId, label: response.title, type: 'note' })
     treeRef.value?.focusItem(response.rootId)
