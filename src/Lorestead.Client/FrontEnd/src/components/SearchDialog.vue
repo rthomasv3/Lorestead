@@ -1,135 +1,33 @@
 <script setup>
-import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { DialogRoot, DialogPortal, DialogOverlay, DialogContent, DialogTitle, VisuallyHidden } from 'reka-ui'
 import EmptyState from './EmptyState.vue'
-import { SETTINGS_INDEX } from '../utils/settingsIndex.js'
-import { useNotesStore } from '../stores/notesStore.js'
-import { useBoardsStore } from '../stores/boardsStore.js'
+import SearchResults from './SearchResults.vue'
+import { useSearch } from '../composables/useSearch.js'
 
-const router = useRouter()
-const notesStore = useNotesStore()
-const boardsStore = useBoardsStore()
+// The desktop Ctrl+K surface: dialog chrome + keyboard navigation around the
+// shared search machinery. The mobile Search screen (SearchView) wraps the same
+// composable in a full-screen shell.
+const { query, results, reset, ensureLoaded, choose: navigate, snippetParts, titleParts } = useSearch()
 
 const open = ref(false)
-const query = ref('')
-const noteResults = ref([])
-const taskResults = ref([])
-const boardResults = ref([])
 const selectedIndex = ref(0)
 const input = ref(null)
-let searchTimer = null
+const list = ref(null)
 
-const settingsResults = computed(() => {
-  const q = query.value.trim().toLowerCase()
-  if (!q) return []
-  return SETTINGS_INDEX
-    .filter((entry) => entry.label.toLowerCase().includes(q))
-    .map((entry) => ({
-      kind: 'settings',
-      key: `settings:${entry.section}:${entry.label}`,
-      // A section is its own entry where the section is the whole control (About,
-      // Logs); repeating it would read "Settings > About > About".
-      breadcrumb: entry.label === entry.section
-        ? ['Settings', entry.section]
-        : ['Settings', entry.section, entry.label],
-      label: entry.label,
-      anchor: entry.anchor,
-    }))
-})
-
-// Content hits (notes, tasks) first; board/settings name matches after
-// (features/search.md ordering).
-const results = computed(() => [
-  ...noteResults.value.map((r) => ({
-    kind: 'note',
-    key: `note:${r.id}`,
-    id: r.id,
-    breadcrumb: notesStore.pathOf(r.id) ?? ['Notes', r.title || 'Untitled'],
-    label: r.title || 'Untitled',
-    snippet: r.snippet,
-  })),
-  ...taskResults.value.map((r) => ({
-    kind: 'task',
-    key: `task:${r.id}`,
-    id: r.id,
-    boardId: r.boardId,
-    breadcrumb: [r.boardName || 'Untitled board', r.columnName || 'Untitled list', r.title || 'Untitled task'],
-    label: r.title || 'Untitled task',
-    snippet: r.snippet,
-  })),
-  ...boardResults.value.map((r) => ({
-    kind: 'board',
-    key: `board:${r.id}`,
-    id: r.id,
-    breadcrumb: ['Boards', r.title || 'Untitled board'],
-    label: r.title || 'Untitled board',
-  })),
-  ...settingsResults.value,
-])
-
-watch(query, (value) => {
-  clearTimeout(searchTimer)
+watch(query, () => {
   selectedIndex.value = 0
-  if (!value.trim()) {
-    noteResults.value = []
-    taskResults.value = []
-    boardResults.value = []
-    return
-  }
-  searchTimer = setTimeout(async () => {
-    const q = value.trim()
-    const [notes, tasks, boards] = await Promise.all([
-      notesStore.search(q, { includeTrashed: true }),
-      boardsStore.searchTasks(q),
-      boardsStore.searchBoards(q),
-    ])
-    noteResults.value = notes
-    taskResults.value = tasks
-    boardResults.value = boards
-  }, 150)
 })
 
 watch(open, async (value) => {
   if (value) {
-    query.value = ''
-    noteResults.value = []
-    taskResults.value = []
-    boardResults.value = []
+    reset()
     selectedIndex.value = 0
-    if (!notesStore.loaded) notesStore.load()
+    ensureLoaded()
     await nextTick()
     input.value?.focus()
   }
 })
-
-// Splits text into parts, marking FTS "[hit]" markers (Core snippet delimiters).
-function snippetParts(snippet) {
-  const parts = []
-  const pattern = /\[([^\]]*)\]/g
-  let last = 0
-  let match
-  while ((match = pattern.exec(snippet)) !== null) {
-    if (match.index > last) parts.push({ text: snippet.slice(last, match.index), hit: false })
-    parts.push({ text: match[1], hit: true })
-    last = match.index + match[0].length
-  }
-  if (last < snippet.length) parts.push({ text: snippet.slice(last), hit: false })
-  return parts
-}
-
-function titleParts(label) {
-  const q = query.value.trim().toLowerCase()
-  const index = q ? label.toLowerCase().indexOf(q) : -1
-  if (index < 0) return [{ text: label, hit: false }]
-  return [
-    { text: label.slice(0, index), hit: false },
-    { text: label.slice(index, index + q.length), hit: true },
-    { text: label.slice(index + q.length), hit: false },
-  ].filter((p) => p.text)
-}
-
-const list = ref(null)
 
 function move(delta) {
   const count = results.value.length
@@ -143,22 +41,7 @@ function move(delta) {
 async function choose(result) {
   open.value = false
   if (!result) return
-  if (result.kind === 'note') {
-    // Selection rides in the route (unified routing) - the view's param watcher
-    // does the fetch; reveal expands the tree down to the landing row.
-    notesStore.reveal(result.id)
-    await router.push(`/notes/${result.id}`)
-  } else if (result.kind === 'task') {
-    boardsStore.openTaskRequest = result.id
-    await router.push(`/boards/${result.boardId}`)
-  } else if (result.kind === 'board') {
-    await router.push(`/boards/${result.id}`)
-  } else {
-    await router.push('/settings')
-    setTimeout(() => {
-      document.getElementById(result.anchor)?.scrollIntoView({ block: 'start' })
-    }, 100)
-  }
+  await navigate(result)
 }
 
 function onKeydown(e) {
@@ -216,31 +99,11 @@ onUnmounted(() => {
           </button>
         </div>
 
+        <!-- Selection follows the mouse (mousemove -> select), so hovering a row
+             selects it and there is no separate hover state to paint. -->
         <div v-if="results.length > 0" ref="list" class="max-h-80 overflow-y-auto p-1.5">
-          <!-- Selection follows the mouse, so hovering a row selects it and there
-               is no separate hover state to paint. mousemove rather than
-               mouseenter: a keyboard move scrolls the list under a stationary
-               cursor, and the mouseenter that fires on whatever lands under the
-               pointer would yank the selection straight back. -->
-          <button v-for="(result, index) in results" :key="result.key"
-            class="w-full text-left rounded-md px-2.5 py-2 flex flex-col gap-0.5"
-            :class="index === selectedIndex ? 'bg-accent-soft' : ''"
-            @mousemove="selectedIndex = index" @click="choose(result)">
-            <span class="flex items-center gap-1 text-sm min-w-0">
-              <template v-for="(part, i) in result.breadcrumb" :key="i">
-                <span v-if="i > 0" class="text-on-surface-muted/50 shrink-0">›</span>
-                <span v-if="i === result.breadcrumb.length - 1" class="truncate">
-                  <template v-for="(piece, j) in titleParts(part)" :key="j"><span
-                      :class="piece.hit ? 'text-accent font-medium' : ''">{{ piece.text }}</span></template>
-                </span>
-                <span v-else class="text-on-surface-muted shrink-0">{{ part }}</span>
-              </template>
-            </span>
-            <span v-if="result.snippet" class="text-xs text-on-surface-muted truncate">
-              <template v-for="(piece, j) in snippetParts(result.snippet)" :key="j"><span
-                  :class="piece.hit ? 'text-accent' : ''">{{ piece.text }}</span></template>
-            </span>
-          </button>
+          <SearchResults :results="results" :selected-index="selectedIndex" :title-parts="titleParts"
+            :snippet-parts="snippetParts" @select="(i) => (selectedIndex = i)" @choose="choose" />
         </div>
         <EmptyState v-else-if="query.trim()">
           No results

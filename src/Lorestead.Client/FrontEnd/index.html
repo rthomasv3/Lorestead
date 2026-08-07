@@ -3,8 +3,11 @@
     <head>
         <meta charset="UTF-8" />
         <!-- viewport-fit=cover: required for iOS env(safe-area-inset-*) to report
-             real values - the Galdr shell aliases --galdr-inset-* to env() there. -->
-        <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+             real values - the Galdr shell aliases --galdr-inset-* to env() there.
+             maximum-scale/user-scalable: stops iOS auto-zooming inputs whose font
+             is under 16px (and pinch-zoom of the app chrome), matching native app
+             behavior. Standard hybrid-shell viewport (Capacitor ships the same). -->
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
         <link rel="icon" type="image/svg+xml" href="../../../icon/icon.svg" />
         <title>Lorestead</title>
     </head>
