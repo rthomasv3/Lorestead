@@ -27,6 +27,19 @@
     --ui-scale: 1rem;
 }
 
+/* Mobile baseline scale: the desktop-dense type ramp (text-sm body) reads small
+   on phones - native convention is ~17px body text and ~44px touch rows. The
+   whole app is sized in rem, so this one bump scales type, spacing, icons, and
+   touch targets proportionally. A percentage rather than px so it multiplies
+   the browser/system default (16px standard) instead of overriding a user's
+   font-size preference: 106.25% = 17px at the standard base. Single value,
+   tuned on device. Matches the useIsMobile breakpoint. */
+@media (max-width: 767.98px) {
+    :root {
+        --ui-scale: 106.25%;
+    }
+}
+
 html {
     font-size: var(--ui-scale);
 }
