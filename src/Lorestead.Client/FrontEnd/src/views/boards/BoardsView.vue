@@ -38,6 +38,15 @@ function openTask(task) {
   taskDialog.value = { open: true, taskId: task.id, isNew: !!task.isNew }
 }
 
+// The mobile top bar's back is hierarchical, not chronological: closing a board
+// always lands on the board list, even when the board was reached from search.
+// Real back() when the list is the previous entry keeps history clean; replace
+// otherwise, so the OS back gesture still walks true history.
+function closeBoard() {
+  if (window.history.state?.back === '/boards') router.back()
+  else router.replace('/boards')
+}
+
 function columnTaskCount(column) {
   return (boardsStore.tasksByColumn.get(column?.id) ?? []).length
 }
@@ -87,7 +96,7 @@ onUnmounted(() => boardsStore.clearContent())
 
       <template v-else>
         <div class="flex items-center gap-1 px-1.5 h-11 shrink-0 border-b border-border">
-          <Button variant="ghost" size="icon" aria-label="Back" @click="router.back()">
+          <Button variant="ghost" size="icon" aria-label="Back" @click="closeBoard()">
             <i-lucide-arrow-left class="size-5" />
           </Button>
           <span class="flex-1 min-w-0 truncate text-sm font-medium">

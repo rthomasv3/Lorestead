@@ -171,6 +171,15 @@ function onEditorFocusRequest() {
   }
 }
 
+// The mobile top bar's back is hierarchical, not chronological: closing a note
+// always lands on the tree, even when the note was reached from search or a
+// wiki link. Real back() when the tree is the previous entry keeps history
+// clean; replace otherwise, so the OS back gesture still walks true history.
+function closeNote() {
+  if (window.history.state?.back === '/notes') router.back()
+  else router.replace('/notes')
+}
+
 // Esc is the way back out of the document. Not when CodeMirror already used the
 // key - an open `[[` completion closes on the first Esc and only the second one
 // leaves the editor.
@@ -436,7 +445,7 @@ onMounted(() => {
 
       <template v-else>
         <div class="flex items-center gap-1 px-1.5 h-11 shrink-0 border-b border-border">
-          <Button variant="ghost" size="icon" aria-label="Back" @click="router.back()">
+          <Button variant="ghost" size="icon" aria-label="Back" @click="closeNote()">
             <i-lucide-arrow-left class="size-5" />
           </Button>
           <span class="flex-1 min-w-0 truncate text-sm font-medium">
