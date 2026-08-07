@@ -27,6 +27,14 @@
     --ui-scale: 1rem;
 }
 
+/* One height for every page header - notes tree, note edit, boards list,
+   search - via the h-page-header utility this token generates. Screens share
+   the token, so their headers cannot drift apart. Taller at mobile widths for
+   touch and breathing room. */
+@theme {
+    --spacing-page-header: 2.5rem;
+}
+
 /* Mobile baseline scale: the desktop-dense type ramp (text-sm body) reads small
    on phones - native convention is ~17px body text and ~44px touch rows. The
    whole app is sized in rem, so this one bump scales type, spacing, icons, and
@@ -37,6 +45,7 @@
 @media (max-width: 767.98px) {
     :root {
         --ui-scale: 106.25%;
+        --spacing-page-header: 2.75rem;
     }
 }
 

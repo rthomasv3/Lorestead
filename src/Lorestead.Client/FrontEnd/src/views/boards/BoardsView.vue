@@ -95,7 +95,7 @@ onUnmounted(() => boardsStore.clearContent())
       <BoardListPanel v-if="!route.params.id" @request-delete="(board) => (pendingDeleteBoard = board)" />
 
       <template v-else>
-        <div class="flex items-center gap-1 px-1.5 h-11 shrink-0 border-b border-border">
+        <div class="flex items-center gap-1 px-1.5 h-page-header shrink-0 border-b border-border">
           <Button variant="ghost" size="icon" aria-label="Back" @click="closeBoard()">
             <i-lucide-arrow-left class="size-5" />
           </Button>

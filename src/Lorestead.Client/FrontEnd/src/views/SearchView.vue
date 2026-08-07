@@ -37,7 +37,7 @@ onMounted(() => {
 
 <template>
   <div class="flex-1 flex flex-col min-h-0">
-    <div class="flex items-center gap-2.5 px-3.5 h-12 shrink-0 border-b border-border">
+    <div class="flex items-center gap-2.5 px-3.5 h-page-header shrink-0 border-b border-border">
       <i-lucide-search class="size-4 shrink-0 text-on-surface-muted" />
       <input ref="input" v-model="query" placeholder="Search notes, boards, tasks, settings..."
         class="flex-1 min-w-0 bg-transparent text-sm outline-none placeholder:text-on-surface-muted/60" />

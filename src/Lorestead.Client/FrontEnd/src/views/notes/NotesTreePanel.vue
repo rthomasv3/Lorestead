@@ -310,16 +310,17 @@ defineExpose({ treeRef, addNote, focusTree })
 
 <template>
   <div class="h-full flex flex-col min-h-0">
-    <div ref="headerRef" class="flex items-center gap-1 px-2 h-10 shrink-0 border-b border-border">
+    <div ref="headerRef" class="flex items-center gap-2 md:gap-1 px-2 h-page-header shrink-0 border-b border-border">
       <TextField v-model="query" size="small" :icon="IconSearch" placeholder="Filter notes" class="flex-1" />
       <template v-if="!collapsed">
+        <!-- Import/export are file-system idioms - desktop-only. -->
         <HoverTip text="Import notes" side="bottom">
-          <Button variant="ghost" size="icon" @click="openImport()">
+          <Button variant="ghost" size="icon" class="max-md:hidden" @click="openImport()">
             <i-lucide-import class="size-4" />
           </Button>
         </HoverTip>
         <HoverTip text="Export all notes" side="bottom">
-          <Button variant="ghost" size="icon" @click="exportAll()">
+          <Button variant="ghost" size="icon" class="max-md:hidden" @click="exportAll()">
             <i-lucide-folder-output class="size-4" />
           </Button>
         </HoverTip>

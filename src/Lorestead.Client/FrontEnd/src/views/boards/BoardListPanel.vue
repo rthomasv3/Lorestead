@@ -47,7 +47,7 @@ function onKeydown(e) {
 
 <template>
   <div class="h-full flex flex-col min-h-0" tabindex="-1" @keydown="onKeydown">
-    <div class="flex items-center justify-between pl-3 pr-2 h-10 shrink-0 border-b border-border">
+    <div class="flex items-center justify-between pl-3 pr-2 h-page-header shrink-0 border-b border-border">
       <span class="text-sm font-medium">Boards</span>
       <HoverTip text="New board" side="bottom">
         <Button variant="ghost" size="icon" @click="addBoard">

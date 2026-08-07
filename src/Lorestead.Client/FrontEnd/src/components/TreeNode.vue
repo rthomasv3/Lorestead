@@ -55,13 +55,18 @@ function onContextOpenChange(open) {
     <ContextMenuRoot v-if="hasContext" @update:open="onContextOpenChange">
       <ContextMenuTrigger as-child>
         <button :ref="setRef" :tabindex="focused ? 0 : -1" @mousedown="onMousedown" @click="onClick" @dblclick="onDblClick"
-          class="group w-full text-left py-1.5 pr-3 transition-colors flex items-center gap-2 select-none-touch" :class="[
+          class="group w-full text-left py-2 md:py-1.5 pr-3 transition-colors flex items-center gap-2 select-none-touch" :class="[
             contextOpen ? 'bg-on-surface/5' : dropTarget ? 'bg-drop-target' : selected ? 'bg-accent-soft' : 'hover:bg-hover-wash',
             dragged ? 'opacity-30' : '',
           ]" :style="{ paddingLeft: indent }">
-          <i-lucide-chevron-right v-if="isExpandable" aria-hidden="true" @click="onChevronClick"
-            class="w-3 h-3 shrink-0 transition-transform text-on-surface-muted" :class="expanded ? 'rotate-90' : ''" />
-          <span v-else class="w-3 h-3 shrink-0" aria-hidden="true" />
+          <!-- Mobile: a ~36px tap zone around the 12px glyph, bled into the blank
+               indent gutter with negative margins so the visual layout stays put. -->
+          <span v-if="isExpandable" aria-hidden="true" @click="onChevronClick"
+            class="shrink-0 flex items-center justify-center size-9 -my-2 -ml-3 md:size-3 md:my-0 md:ml-0">
+            <i-lucide-chevron-right class="w-3 h-3 transition-transform text-on-surface-muted"
+              :class="expanded ? 'rotate-90' : ''" />
+          </span>
+          <span v-else class="h-3 shrink-0 w-6 md:w-3" aria-hidden="true" />
           <slot name="item" :item="item" :depth="depth" :expanded="expanded" :selected="selected" :editing="editing"
             :commit-edit="tree.commitEdit" :cancel-edit="tree.cancelEdit" :on-edit-blur="tree.onEditBlur" />
           <span v-if="dropTarget && item.dropLabel" class="ml-auto text-xs text-accent shrink-0">{{ item.dropLabel }}</span>
@@ -76,13 +81,16 @@ function onContextOpenChange(open) {
       </ContextMenuPortal>
     </ContextMenuRoot>
     <button v-else :ref="setRef" :tabindex="focused ? 0 : -1" @mousedown="onMousedown" @click="onClick" @dblclick="onDblClick"
-      class="group w-full text-left py-1.5 pr-3 transition-colors flex items-center gap-2 select-none-touch" :class="[
+      class="group w-full text-left py-2 md:py-1.5 pr-3 transition-colors flex items-center gap-2 select-none-touch" :class="[
         dropTarget ? 'bg-drop-target' : selected ? 'bg-accent-soft' : 'hover:bg-hover-wash',
         dragged ? 'opacity-30' : '',
       ]" :style="{ paddingLeft: indent }">
-      <i-lucide-chevron-right v-if="isExpandable" aria-hidden="true" @click="onChevronClick"
-        class="w-3 h-3 shrink-0 transition-transform text-on-surface-muted" :class="expanded ? 'rotate-90' : ''" />
-      <span v-else class="w-3 h-3 shrink-0" aria-hidden="true" />
+      <span v-if="isExpandable" aria-hidden="true" @click="onChevronClick"
+        class="shrink-0 flex items-center justify-center size-9 -my-2 -ml-3 md:size-3 md:my-0 md:ml-0">
+        <i-lucide-chevron-right class="w-3 h-3 transition-transform text-on-surface-muted"
+          :class="expanded ? 'rotate-90' : ''" />
+      </span>
+      <span v-else class="h-3 shrink-0 w-6 md:w-3" aria-hidden="true" />
       <slot name="item" :item="item" :depth="depth" :expanded="expanded" :selected="selected" :editing="editing"
         :commit-edit="tree.commitEdit" :cancel-edit="tree.cancelEdit" :on-edit-blur="tree.onEditBlur" />
       <span v-if="dropTarget && item.dropLabel" class="ml-auto text-xs text-accent shrink-0">{{ item.dropLabel }}</span>
@@ -102,7 +110,7 @@ function onContextOpenChange(open) {
         <slot name="context-menu" v-bind="slotProps" />
       </template>
     </TreeNode>
-    <div v-if="!hasChildren && item.emptyLabel" class="py-1.5 pr-3 text-sm text-on-surface-muted/60"
+    <div v-if="!hasChildren && item.emptyLabel" class="py-2 md:py-1.5 pr-3 text-sm text-on-surface-muted/60"
       :style="{ paddingLeft: `${0.75 + (depth + 1) * 1}rem` }">
       {{ item.emptyLabel }}
     </div>
