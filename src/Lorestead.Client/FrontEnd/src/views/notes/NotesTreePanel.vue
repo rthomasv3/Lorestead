@@ -15,10 +15,12 @@ import EmptyState from '../../components/EmptyState.vue'
 import TextField from '../../components/TextField.vue'
 import HoverTip from '../../components/HoverTip.vue'
 import ImportDialog from './ImportDialog.vue'
+import MoveNoteDialog from './MoveNoteDialog.vue'
 import IconSearch from '~icons/lucide/search'
 import { MENU_ITEM_CLASS as menuItemClass } from '../../utils/menu.js'
 import { exportSubtree, exportAll } from '../../services/exportService.js'
 import { useNotesStore, TEMPLATES_ID, TRASH_ID } from '../../stores/notesStore.js'
+import { useIsMobile } from '../../composables/useIsMobile.js'
 import { useSettingsStore } from '../../stores/settingsStore.js'
 
 const emit = defineEmits(['request-delete', 'request-purge', 'request-restore', 'request-template'])
@@ -26,6 +28,9 @@ const emit = defineEmits(['request-delete', 'request-purge', 'request-restore', 
 const router = useRouter()
 const notesStore = useNotesStore()
 const settingsStore = useSettingsStore()
+// Import/export are file-system idioms - hidden from menus on mobile (the
+// header buttons already hide via max-md:hidden).
+const isMobile = useIsMobile()
 const treeRef = ref(null)
 
 // --- Header ---
@@ -36,6 +41,21 @@ const importParentId = ref(null)
 function openImport(parentId = null) {
   importParentId.value = parentId
   importOpen.value = true
+}
+
+// Move dialog: explicit placement, the only movement path on touch (drag is
+// fine-pointer-gated) and a drag alternative on desktop. Confirms into the
+// same onDrop the drag path uses.
+const moveOpen = ref(false)
+const moveItem = ref(null)
+
+function openMove(item) {
+  moveItem.value = item
+  moveOpen.value = true
+}
+
+function onMoveConfirm({ target, zone }) {
+  if (moveItem.value) onDrop({ source: moveItem.value, target, zone })
 }
 
 // Below this the filter and the four icon buttons no longer share the row, so
@@ -352,11 +372,11 @@ defineExpose({ treeRef, addNote, focusTree })
               <i-lucide-layout-template class="size-4 text-on-surface-muted" />
               New note from template
             </DropdownMenuItem>
-            <DropdownMenuItem :class="menuItemClass" @select="exportAll()">
+            <DropdownMenuItem v-if="!isMobile" :class="menuItemClass" @select="exportAll()">
               <i-lucide-folder-output class="size-4 text-on-surface-muted" />
               Export all notes
             </DropdownMenuItem>
-            <DropdownMenuItem :class="menuItemClass" @select="openImport()">
+            <DropdownMenuItem v-if="!isMobile" :class="menuItemClass" @select="openImport()">
               <i-lucide-import class="size-4 text-on-surface-muted" />
               Import notes
             </DropdownMenuItem>
@@ -366,6 +386,7 @@ defineExpose({ treeRef, addNote, focusTree })
     </div>
 
     <ImportDialog v-model:open="importOpen" :parent-id="importParentId" />
+    <MoveNoteDialog v-model:open="moveOpen" :item="moveItem" @move="onMoveConfirm" />
 
     <div class="flex-1 min-h-0 overflow-y-auto overflow-x-auto pb-2">
       <!-- Above the tree, because that is where the notes are: the message stands
@@ -453,13 +474,17 @@ defineExpose({ treeRef, addNote, focusTree })
               <i-lucide-copy class="size-4 text-on-surface-muted" />
               Duplicate
             </ContextMenuItem>
-            <ContextMenuItem :class="menuItemClass" @select="exportSubtree(item.noteId)">
+            <ContextMenuItem :class="menuItemClass" @select="openMove(item)">
+              <i-lucide-move class="size-4 text-on-surface-muted" />
+              Move...
+            </ContextMenuItem>
+            <ContextMenuItem v-if="!isMobile" :class="menuItemClass" @select="exportSubtree(item.noteId)">
               <i-lucide-folder-output class="size-4 text-on-surface-muted" />
               Export as markdown
             </ContextMenuItem>
             <!-- Templates are excluded: the destination picker only offers live
                  normal notes, so a template target has nothing to preselect. -->
-            <ContextMenuItem v-if="!item.template" :class="menuItemClass" @select="openImport(item.noteId)">
+            <ContextMenuItem v-if="!item.template && !isMobile" :class="menuItemClass" @select="openImport(item.noteId)">
               <i-lucide-import class="size-4 text-on-surface-muted" />
               Import notes
             </ContextMenuItem>

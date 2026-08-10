@@ -6,7 +6,8 @@ import { setCustomNativeDragPreview } from '@atlaskit/pragmatic-drag-and-drop/el
 import { pointerOutsideOfPreview } from '@atlaskit/pragmatic-drag-and-drop/element/pointer-outside-of-preview'
 import { attachClosestEdge, extractClosestEdge } from '@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge'
 import { ContextMenuRoot, ContextMenuTrigger, ContextMenuPortal, ContextMenuContent, ContextMenuItem } from 'reka-ui'
-import { MENU_ITEM_CLASS as menuItemClass } from '../../utils/menu.js'
+import { MENU_ITEM_CLASS as menuItemClass, MENU_PRESS_DELAY } from '../../utils/menu.js'
+import { useFinePointer } from '../../composables/useFinePointer.js'
 
 const props = defineProps({
   board: { type: Object, required: true },
@@ -102,18 +103,22 @@ function attachDnd(element) {
   )
 }
 
-watch(row, (element) => {
+// Drag is a fine-pointer feature, same gate as the notes Tree: touch moves
+// boards through the context menu instead.
+const hasFinePointer = useFinePointer()
+
+watch([row, hasFinePointer], ([element, fine]) => {
   if (cleanup) {
     cleanup()
     cleanup = null
   }
-  if (element) {
+  if (element && fine) {
     cleanup = attachDnd(element)
   }
 })
 
 onMounted(() => {
-  if (!cleanup && row.value) {
+  if (!cleanup && row.value && hasFinePointer.value) {
     cleanup = attachDnd(row.value)
   }
 })
@@ -124,7 +129,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <ContextMenuRoot @update:open="contextOpen = $event">
+  <ContextMenuRoot :press-open-delay="MENU_PRESS_DELAY" @update:open="contextOpen = $event">
     <ContextMenuTrigger as-child>
       <div>
         <div ref="row" class="relative">

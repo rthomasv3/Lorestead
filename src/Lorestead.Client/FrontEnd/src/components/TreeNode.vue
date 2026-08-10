@@ -1,6 +1,7 @@
 <script setup>
 import { inject, computed } from 'vue'
 import { ContextMenuRoot, ContextMenuTrigger, ContextMenuPortal, ContextMenuContent } from 'reka-ui'
+import { MENU_PRESS_DELAY } from '../utils/menu.js'
 
 const props = defineProps({
   item: { type: Object, required: true },
@@ -52,7 +53,7 @@ function onContextOpenChange(open) {
 
 <template>
   <div role="treeitem" :aria-expanded="isExpandable ? expanded : undefined" :aria-selected="selected" class="relative">
-    <ContextMenuRoot v-if="hasContext" @update:open="onContextOpenChange">
+    <ContextMenuRoot v-if="hasContext" :press-open-delay="MENU_PRESS_DELAY" @update:open="onContextOpenChange">
       <ContextMenuTrigger as-child>
         <button :ref="setRef" :tabindex="focused ? 0 : -1" @mousedown="onMousedown" @click="onClick" @dblclick="onDblClick"
           class="group w-full text-left py-2 md:py-1.5 pr-3 transition-colors flex items-center gap-2 select-none-touch" :class="[

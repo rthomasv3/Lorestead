@@ -8,3 +8,9 @@
 // translucent, so it reads on any surface, and matches the tree's selected row.
 export const MENU_ITEM_CLASS =
   'flex items-center gap-2 px-2.5 py-1.5 text-sm rounded-md cursor-default select-none outline-none data-highlighted:bg-accent/10'
+
+// Touch long-press delay for context menus (Reka default: 700ms). Touch drag
+// is disabled (useFinePointer gates dnd registration), so long-press has one
+// owner and this is purely a feel setting - tune freely, applies to the notes
+// tree and board list alike.
+export const MENU_PRESS_DELAY = 450

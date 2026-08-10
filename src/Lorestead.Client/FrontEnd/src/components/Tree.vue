@@ -4,6 +4,7 @@ import { draggable as makeDraggable, dropTargetForElements, monitorForElements }
 import { combine } from '@atlaskit/pragmatic-drag-and-drop/combine'
 import { setCustomNativeDragPreview } from '@atlaskit/pragmatic-drag-and-drop/element/set-custom-native-drag-preview'
 import { pointerOutsideOfPreview } from '@atlaskit/pragmatic-drag-and-drop/element/pointer-outside-of-preview'
+import { useFinePointer } from '../composables/useFinePointer.js'
 import TreeNode from './TreeNode.vue'
 
 const props = defineProps({
@@ -294,6 +295,8 @@ const draggedId = ref(null)
 const lineIndicator = ref(null)
 const dropTargetId = ref(null)
 
+const hasFinePointer = useFinePointer()
+
 let dndCleanup = null
 
 function setRowRef(id, el) {
@@ -337,6 +340,10 @@ function attachDnD() {
     dndCleanup = null
   }
 
+  // Drag is a fine-pointer feature: on touch, the OS long-press lift races the
+  // context menu's long-press and neither survives the other (see the Mobile UI
+  // note) - movement there goes through the Move dialog instead.
+  if (!hasFinePointer.value) return
   if (!props.canDrag || !props.resolveDrop) return
 
   // Prune stale refs
@@ -467,6 +474,10 @@ watch(
   () => attachDnD(),
   { deep: true, flush: 'post' },
 )
+
+// Capability can change at runtime (window moved between screens, mouse
+// plugged into a tablet) - re-evaluate registration when it does.
+watch(hasFinePointer, () => attachDnD(), { flush: 'post' })
 
 onUnmounted(() => {
   if (dndCleanup) {
