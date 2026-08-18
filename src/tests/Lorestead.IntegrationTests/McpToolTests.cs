@@ -72,6 +72,43 @@ namespace Lorestead.IntegrationTests
         }
 
         [Fact]
+        public async Task EditNoteReplacesUniqueTextOnly()
+        {
+            McpCreateResponse created = await _tools.CreateNote("Doc", "alpha beta gamma", null);
+
+            await _tools.EditNote(created.Id, "beta", "BETA", false);
+            Assert.Equal("alpha BETA gamma", _tools.GetNote(created.Id).Body);
+        }
+
+        [Fact]
+        public async Task EditNoteRejectsMissingAndAmbiguousText()
+        {
+            McpCreateResponse created = await _tools.CreateNote("Doc", "one two one", null);
+
+            InvalidOperationException missing = await Assert.ThrowsAsync<InvalidOperationException>(
+                () => _tools.EditNote(created.Id, "three", "x", false));
+            Assert.Contains("not found", missing.Message);
+
+            InvalidOperationException ambiguous = await Assert.ThrowsAsync<InvalidOperationException>(
+                () => _tools.EditNote(created.Id, "one", "x", false));
+            Assert.Contains("2 places", ambiguous.Message);
+
+            // Neither failure may write: the body is untouched and no notification
+            // fired beyond the create's own.
+            Assert.Equal("one two one", _tools.GetNote(created.Id).Body);
+            Assert.Equal(1, _writeNotifications);
+        }
+
+        [Fact]
+        public async Task EditNoteReplaceAllReplacesEveryOccurrence()
+        {
+            McpCreateResponse created = await _tools.CreateNote("Doc", "one two one", null);
+
+            await _tools.EditNote(created.Id, "one", "1", true);
+            Assert.Equal("1 two 1", _tools.GetNote(created.Id).Body);
+        }
+
+        [Fact]
         public async Task AppendToNoteSeparatesWithABlankLine()
         {
             McpCreateResponse created = await _tools.CreateNote("Log", "first entry", null);
@@ -112,6 +149,8 @@ namespace Lorestead.IntegrationTests
 
             Assert.Contains("trash", (await Assert.ThrowsAsync<InvalidOperationException>(
                 () => _tools.UpdateNote(note.Id, "New title", null))).Message);
+            Assert.Contains("trash", (await Assert.ThrowsAsync<InvalidOperationException>(
+                () => _tools.EditNote(note.Id, "body", "text", false))).Message);
             Assert.Contains("trash", (await Assert.ThrowsAsync<InvalidOperationException>(
                 () => _tools.AddAttachment("pic.png", "image/png", data, note.Id, null))).Message);
             Assert.Contains("trash", (await Assert.ThrowsAsync<InvalidOperationException>(
