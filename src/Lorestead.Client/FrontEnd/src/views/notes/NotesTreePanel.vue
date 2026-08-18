@@ -14,6 +14,7 @@ import Button from '../../components/Button.vue'
 import EmptyState from '../../components/EmptyState.vue'
 import TextField from '../../components/TextField.vue'
 import HoverTip from '../../components/HoverTip.vue'
+import TruncatedText from '../../components/TruncatedText.vue'
 import ImportDialog from './ImportDialog.vue'
 import MoveNoteDialog from './MoveNoteDialog.vue'
 import IconSearch from '~icons/lucide/search'
@@ -171,6 +172,10 @@ function onRename({ item, newLabel }) {
 
 function canRename(item) {
   return item.type === 'note' && !item.trashed
+}
+
+function editValueFor(item) {
+  return item.label === 'Untitled' ? '' : item.label
 }
 
 async function addNote(parentId) {
@@ -400,24 +405,23 @@ defineExpose({ treeRef, addNote, focusTree })
 
       <Tree ref="treeRef" :items="visibleItems" :selected-id="notesStore.selectedId"
         :expanded-ids="notesStore.expandedIds" :can-drag="canDrag" :resolve-drop="resolveDrop" :can-rename="canRename"
-        :context-menu-for="contextMenuFor" @select="onSelect" @rename="onRename" @drop="onDrop"
-        @update:expanded-ids="(s) => (notesStore.expandedIds = s)">
-        <template #item="{ item, editing, onEditBlur, cancelEdit }">
+        :edit-value="editValueFor" :context-menu-for="contextMenuFor" @select="onSelect" @rename="onRename"
+        @drop="onDrop" @update:expanded-ids="(s) => (notesStore.expandedIds = s)">
+        <template #item="{ item, editing, editDraft, setEditDraft, onEditBlur, cancelEdit }">
           <template v-if="item.type === 'note'">
             <!-- .prevent on Enter: committing hands focus back to the row button,
                  and Enter's default action is "activate whatever is focused" -
                  applied after the handlers run, so without this the row is
                  activated by the same keystroke that finished the rename. -->
-            <input v-if="editing" :value="item.label === 'Untitled' ? '' : item.label" placeholder="Untitled"
+            <input v-if="editing" :value="editDraft" placeholder="Untitled"
               class="flex-1 min-w-0 bg-transparent text-sm border-b border-accent outline-none"
-              :ref="focusEditInput" @blur="onEditBlur(item, $event)"
+              :ref="focusEditInput" @input="setEditDraft($event.target.value)" @blur="onEditBlur(item, $event)"
               @keydown.enter.prevent="$event.target.blur()" @keydown.esc.stop="cancelEdit()" @click.stop />
             <template v-else>
               <!-- The transparent border matches the rename input's underline, so
                    entering edit mode doesn't grow the row by a pixel. -->
-              <span class="truncate text-sm border-b border-transparent"
-                :class="item.trashed ? 'text-on-surface-muted' : ''">
-                {{ item.label }}</span>
+              <TruncatedText :text="item.label" class="text-sm border-b border-transparent"
+                :class="item.trashed ? 'text-on-surface-muted' : ''" />
               <span v-if="!item.trashed" class="ml-auto shrink-0 hidden group-hover:flex items-center gap-1" @click.stop
                 @dblclick.stop>
                 <HoverTip text="Add child from template" side="bottom">
@@ -442,7 +446,7 @@ defineExpose({ treeRef, addNote, focusTree })
               class="size-4 shrink-0 text-on-surface-muted" />
             <i-lucide-trash-2 v-else class="size-4 shrink-0 text-on-surface-muted" />
             <!-- Templates/Trash never rename, but they share the row height. -->
-            <span class="truncate text-sm text-on-surface-muted border-b border-transparent">{{ item.label }}</span>
+            <TruncatedText :text="item.label" class="text-sm text-on-surface-muted border-b border-transparent" />
           </template>
         </template>
 

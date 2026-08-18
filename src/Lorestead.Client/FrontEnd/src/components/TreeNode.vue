@@ -69,6 +69,7 @@ function onContextOpenChange(open) {
           </span>
           <span v-else class="h-3 shrink-0 w-6 md:w-3" aria-hidden="true" />
           <slot name="item" :item="item" :depth="depth" :expanded="expanded" :selected="selected" :editing="editing"
+            :edit-draft="tree.editDraft.value" :set-edit-draft="tree.setEditDraft"
             :commit-edit="tree.commitEdit" :cancel-edit="tree.cancelEdit" :on-edit-blur="tree.onEditBlur" />
           <span v-if="dropTarget && item.dropLabel" class="ml-auto text-xs text-accent shrink-0">{{ item.dropLabel }}</span>
         </button>
@@ -93,6 +94,7 @@ function onContextOpenChange(open) {
       </span>
       <span v-else class="h-3 shrink-0 w-6 md:w-3" aria-hidden="true" />
       <slot name="item" :item="item" :depth="depth" :expanded="expanded" :selected="selected" :editing="editing"
+        :edit-draft="tree.editDraft.value" :set-edit-draft="tree.setEditDraft"
         :commit-edit="tree.commitEdit" :cancel-edit="tree.cancelEdit" :on-edit-blur="tree.onEditBlur" />
       <span v-if="dropTarget && item.dropLabel" class="ml-auto text-xs text-accent shrink-0">{{ item.dropLabel }}</span>
     </button>

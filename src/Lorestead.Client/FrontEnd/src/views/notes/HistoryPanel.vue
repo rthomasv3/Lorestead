@@ -99,7 +99,12 @@ function toggleGap(index) {
 </script>
 
 <template>
-  <div class="h-full flex flex-col min-h-0 relative overflow-hidden">
+  <!-- overflow-clip, not overflow-hidden: a hidden box still scrolls
+       programmatically, and closing the restore confirm hands focus back to the
+       Restore button on the slid-out detail pane - the browser scrolls this box
+       sideways to reveal it and it stays stuck there, showing the blank detail.
+       clip makes the box unscrollable, so the focus return cannot drag it. -->
+  <div class="h-full flex flex-col min-h-0 relative overflow-clip">
     <!-- List -->
     <div class="absolute inset-0 flex flex-col min-h-0 transition-transform duration-250 ease-[cubic-bezier(0.32,0.72,0,1)]"
       :class="selected ? '-translate-x-full' : 'translate-x-0'">

@@ -25,7 +25,7 @@ There are plenty of good notes apps. Lorestead is for people who want:
 - Simplicity
 - One app for both notes and tasks
 - Their own sync server
-- And AI agents that can work with them on their notes and tasks
+- And AI agents that can work with them on their projects
 
 Tasks link to the notes behind them, so a board card carries *context* without bloating your *context window*. The sync server is a single small container with everything inside it. Agents connect over MCP out of the box, and every edit, yours or an agent's, lands in history with diff and restore, so you can let an agent work without worrying about what it might overwrite.
 
