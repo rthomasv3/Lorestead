@@ -17,6 +17,8 @@ const props = defineProps({
   canDrag: { type: Function, default: null },
   resolveDrop: { type: Function, default: null },
   canRename: { type: Function, default: null },
+  // editValue(item): initial text for the rename input; defaults to item.label.
+  editValue: { type: Function, default: null },
   contextMenuFor: { type: Function, default: null },
   // Controlled expansion: when provided, the parent owns the Set (v-model:expanded-ids)
   // and it survives this component unmounting; otherwise expansion is internal.
@@ -40,13 +42,23 @@ const expanded = computed({
 // --- Inline editing ---
 
 const editingId = ref(null)
+// The rename input binds to this draft, never to item.label: a background load()
+// (sync pull, MCP write, the trailing refresh of a previous rename) replaces the
+// tree items and re-renders mid-edit, and an input whose :value comes from the
+// item gets patched back to the stored label, wiping whatever was typed.
+const editDraft = ref('')
 let editStartedAt = 0
 
 function startEditing(item) {
   if (!props.canRename || props.canRename(item)) {
+    editDraft.value = props.editValue ? props.editValue(item) : item.label
     editingId.value = item.id
     editStartedAt = Date.now()
   }
+}
+
+function setEditDraft(value) {
+  editDraft.value = value
 }
 
 function commitEdit(item, newLabel) {
@@ -480,6 +492,8 @@ provide('tree', {
   selectedId: toRef(props, 'selectedId'),
   expanded,
   editingId,
+  editDraft,
+  setEditDraft,
   focusedId,
   contextMenuItemId,
   draggedId,

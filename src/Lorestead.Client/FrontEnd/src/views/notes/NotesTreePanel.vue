@@ -148,6 +148,10 @@ function canRename(item) {
   return item.type === 'note' && !item.trashed
 }
 
+function editValueFor(item) {
+  return item.label === 'Untitled' ? '' : item.label
+}
+
 async function addNote(parentId) {
   const note = await notesStore.create({ parentId })
   if (parentId && !notesStore.expandedIds.has(parentId)) {
@@ -373,17 +377,17 @@ defineExpose({ treeRef, addNote, focusTree })
 
       <Tree ref="treeRef" :items="visibleItems" :selected-id="notesStore.selectedId"
         :expanded-ids="notesStore.expandedIds" :can-drag="canDrag" :resolve-drop="resolveDrop" :can-rename="canRename"
-        :context-menu-for="contextMenuFor" @select="onSelect" @rename="onRename" @drop="onDrop"
-        @update:expanded-ids="(s) => (notesStore.expandedIds = s)">
-        <template #item="{ item, editing, onEditBlur, cancelEdit }">
+        :edit-value="editValueFor" :context-menu-for="contextMenuFor" @select="onSelect" @rename="onRename"
+        @drop="onDrop" @update:expanded-ids="(s) => (notesStore.expandedIds = s)">
+        <template #item="{ item, editing, editDraft, setEditDraft, onEditBlur, cancelEdit }">
           <template v-if="item.type === 'note'">
             <!-- .prevent on Enter: committing hands focus back to the row button,
                  and Enter's default action is "activate whatever is focused" -
                  applied after the handlers run, so without this the row is
                  activated by the same keystroke that finished the rename. -->
-            <input v-if="editing" :value="item.label === 'Untitled' ? '' : item.label" placeholder="Untitled"
+            <input v-if="editing" :value="editDraft" placeholder="Untitled"
               class="flex-1 min-w-0 bg-transparent text-sm border-b border-accent outline-none"
-              :ref="focusEditInput" @blur="onEditBlur(item, $event)"
+              :ref="focusEditInput" @input="setEditDraft($event.target.value)" @blur="onEditBlur(item, $event)"
               @keydown.enter.prevent="$event.target.blur()" @keydown.esc.stop="cancelEdit()" @click.stop />
             <template v-else>
               <!-- The transparent border matches the rename input's underline, so

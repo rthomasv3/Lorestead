@@ -29,8 +29,14 @@ const areaOver = ref(false)
 const dragging = ref(false)
 let cleanup = null
 
+// The input binds to this draft, not column.name (same fix as the notes tree):
+// a boards:changed refresh re-renders mid-edit, and :value bound to the store
+// name would reset the input to it, wiping whatever was typed.
+const renameDraft = ref('')
+
 watch(() => props.renaming, async (value) => {
   if (value) {
+    renameDraft.value = props.column.name
     await nextTick()
     editInput.value?.focus()
     editInput.value?.select()
@@ -118,9 +124,10 @@ onUnmounted(() => {
 
     <div class="flex flex-col min-h-0 rounded-lg border border-border bg-surface" :class="dragging ? 'opacity-40' : ''">
       <div ref="header" class="group flex items-center gap-1 px-2.5 h-9 shrink-0 cursor-grab">
-        <input v-if="renaming" ref="editInput" :value="column.name" placeholder="Untitled list"
+        <input v-if="renaming" ref="editInput" :value="renameDraft" placeholder="Untitled list"
           class="flex-1 min-w-0 bg-transparent text-sm font-medium border-b border-accent outline-none"
-          @blur="commitRename" @keydown.enter="$event.target.blur()" @keydown.esc.stop="emit('rename-done')" @click.stop
+          @input="renameDraft = $event.target.value" @blur="commitRename"
+          @keydown.enter="$event.target.blur()" @keydown.esc.stop="emit('rename-done')" @click.stop
           @dblclick.stop />
         <template v-else>
           <span class="flex-1 min-w-0 truncate text-sm font-medium border-b border-transparent"

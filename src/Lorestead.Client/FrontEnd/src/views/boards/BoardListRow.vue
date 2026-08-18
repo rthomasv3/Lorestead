@@ -19,11 +19,21 @@ const contextOpen = ref(false)
 const emit = defineEmits(['select', 'rename', 'rename-done', 'request-delete', 'request-rename', 'drop'])
 
 const row = ref(null)
+const rowButton = ref(null)
 const dropEdge = ref(null)
 const dragging = ref(false)
 let cleanup = null
 
 let renameStartedAt = 0
+
+// The input binds to this draft, not board.name (same fix as the notes tree):
+// a boards:changed load() re-renders mid-edit, and :value bound to the store
+// name would reset the input to it, wiping whatever was typed.
+const renameDraft = ref('')
+
+watch(() => props.renaming, (value) => {
+  if (value) renameDraft.value = props.board.name
+}, { immediate: true })
 
 // The as-child clone hazard (below) bites template refs too: a named ref on the
 // input oscillates on re-render, so a watch awaiting nextTick can find it null
@@ -52,11 +62,19 @@ function commitRename(e) {
       emit('rename', value)
     }
     emit('rename-done')
+    // Same trap as the notes Tree: Enter blurs the input with nowhere for focus
+    // to go, so it lands on body and the panel's F2 handler hears nothing until
+    // a row is clicked. A blur with a relatedTarget is the other kind - the user
+    // clicked something - and taking focus back would fight the click.
+    if (!e.relatedTarget) {
+      rowButton.value?.focus()
+    }
   }
 }
 
 function cancelRename() {
   emit('rename-done')
+  rowButton.value?.focus()
 }
 
 // Same reka as-child hazard as TaskCard: the cloned vnode's ref oscillates on
@@ -136,16 +154,16 @@ onUnmounted(() => {
              on-surface wash on hover. py-1.5 rather than a fixed height, which is what the tree does:
              the two rows then derive the same height from the same text instead of
              agreeing on a number that only holds at today's type scale. -->
-          <button class="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-left transition-colors"
+          <button ref="rowButton" class="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-left transition-colors"
             :class="[
               contextOpen ? 'bg-on-surface/5' : selected ? 'bg-accent-soft' : 'hover:bg-hover-wash',
               dragging ? 'opacity-40' : '',
             ]" @click="emit('select')" @dblclick="emit('request-rename')">
             <!-- <i-lucide-square-kanban class="size-4 shrink-0 text-on-surface-muted" /> -->
-            <input v-if="renaming" :ref="focusEditInput" :value="board.name" placeholder="Untitled board"
+            <input v-if="renaming" :ref="focusEditInput" :value="renameDraft" placeholder="Untitled board"
               class="flex-1 min-w-0 bg-transparent text-sm border-b border-accent outline-none text-on-surface"
-              @blur="commitRename" @keydown.enter="$event.target.blur()" @keydown.esc.stop="cancelRename" @click.stop
-              @dblclick.stop />
+              @input="renameDraft = $event.target.value" @blur="commitRename"
+              @keydown.enter="$event.target.blur()" @keydown.esc.stop="cancelRename" @click.stop @dblclick.stop />
             <span v-else class="truncate border-b border-transparent">{{ board.name || 'Untitled board' }}</span>
           </button>
         </div>
