@@ -7,6 +7,7 @@ import { pointerOutsideOfPreview } from '@atlaskit/pragmatic-drag-and-drop/eleme
 import { attachClosestEdge, extractClosestEdge } from '@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge'
 import { ContextMenuRoot, ContextMenuTrigger, ContextMenuPortal, ContextMenuContent, ContextMenuItem } from 'reka-ui'
 import { MENU_ITEM_CLASS as menuItemClass } from '../../utils/menu.js'
+import TruncatedText from '../../components/TruncatedText.vue'
 
 const props = defineProps({
   board: { type: Object, required: true },
@@ -164,7 +165,7 @@ onUnmounted(() => {
               class="flex-1 min-w-0 bg-transparent text-sm border-b border-accent outline-none text-on-surface"
               @input="renameDraft = $event.target.value" @blur="commitRename"
               @keydown.enter="$event.target.blur()" @keydown.esc.stop="cancelRename" @click.stop @dblclick.stop />
-            <span v-else class="truncate border-b border-transparent">{{ board.name || 'Untitled board' }}</span>
+            <TruncatedText v-else :text="board.name || 'Untitled board'" class="border-b border-transparent" />
           </button>
         </div>
       </div>

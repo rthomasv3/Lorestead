@@ -8,6 +8,7 @@ import { attachClosestEdge, extractClosestEdge } from '@atlaskit/pragmatic-drag-
 import TaskCard from './TaskCard.vue'
 import Button from '../../components/Button.vue'
 import HoverTip from '../../components/HoverTip.vue'
+import TruncatedText from '../../components/TruncatedText.vue'
 
 const props = defineProps({
   column: { type: Object, required: true },
@@ -130,10 +131,9 @@ onUnmounted(() => {
           @keydown.enter="$event.target.blur()" @keydown.esc.stop="emit('rename-done')" @click.stop
           @dblclick.stop />
         <template v-else>
-          <span class="flex-1 min-w-0 truncate text-sm font-medium border-b border-transparent"
-            @dblclick="emit('request-rename')">
-            {{ column.name || 'Untitled list' }}
-          </span>
+          <TruncatedText :text="column.name || 'Untitled list'"
+            class="flex-1 min-w-0 text-sm font-medium border-b border-transparent"
+            @dblclick="emit('request-rename')" />
           <!-- hidden rather than opacity-0, as in the notes tree: a list is 256px
                wide and the title should have all of it until there is a reason not
                to. -->

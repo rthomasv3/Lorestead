@@ -13,6 +13,7 @@ import Button from '../../components/Button.vue'
 import EmptyState from '../../components/EmptyState.vue'
 import TextField from '../../components/TextField.vue'
 import HoverTip from '../../components/HoverTip.vue'
+import TruncatedText from '../../components/TruncatedText.vue'
 import ImportDialog from './ImportDialog.vue'
 import IconSearch from '~icons/lucide/search'
 import { MENU_ITEM_CLASS as menuItemClass } from '../../utils/menu.js'
@@ -392,9 +393,8 @@ defineExpose({ treeRef, addNote, focusTree })
             <template v-else>
               <!-- The transparent border matches the rename input's underline, so
                    entering edit mode doesn't grow the row by a pixel. -->
-              <span class="truncate text-sm border-b border-transparent"
-                :class="item.trashed ? 'text-on-surface-muted' : ''">
-                {{ item.label }}</span>
+              <TruncatedText :text="item.label" class="text-sm border-b border-transparent"
+                :class="item.trashed ? 'text-on-surface-muted' : ''" />
               <span v-if="!item.trashed" class="ml-auto shrink-0 hidden group-hover:flex items-center gap-1" @click.stop
                 @dblclick.stop>
                 <HoverTip text="Add child from template" side="bottom">
@@ -419,7 +419,7 @@ defineExpose({ treeRef, addNote, focusTree })
               class="size-4 shrink-0 text-on-surface-muted" />
             <i-lucide-trash-2 v-else class="size-4 shrink-0 text-on-surface-muted" />
             <!-- Templates/Trash never rename, but they share the row height. -->
-            <span class="truncate text-sm text-on-surface-muted border-b border-transparent">{{ item.label }}</span>
+            <TruncatedText :text="item.label" class="text-sm text-on-surface-muted border-b border-transparent" />
           </template>
         </template>
 
