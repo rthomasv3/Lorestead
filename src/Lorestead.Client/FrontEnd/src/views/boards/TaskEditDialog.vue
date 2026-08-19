@@ -2,7 +2,8 @@
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { dropTargetForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter'
 import { useRouter } from 'vue-router'
-import { DialogRoot, DialogPortal, DialogOverlay, DialogContent, DialogTitle, VisuallyHidden, PopoverRoot, PopoverAnchor, PopoverPortal, PopoverContent } from 'reka-ui'
+import { DialogTitle, VisuallyHidden, PopoverRoot, PopoverAnchor, PopoverPortal, PopoverContent } from 'reka-ui'
+import AppDialog from '../../components/AppDialog.vue'
 import MarkdownEditor from '../../components/MarkdownEditor.vue'
 import MarkdownPreview from '../../components/MarkdownPreview.vue'
 import AttachmentCard from '../../components/AttachmentCard.vue'
@@ -386,152 +387,146 @@ function onDialogKeydown(e) {
 </script>
 
 <template>
-  <DialogRoot :open="open" @update:open="emit('update:open', $event)">
-    <DialogPortal>
-      <DialogOverlay class="fixed inset-0 bg-black/40 z-40 dialog-fade" />
-      <DialogContent
-        class="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-2xl max-h-[85vh] flex flex-col rounded-lg border border-border bg-surface-elevated shadow-xl overflow-hidden dialog-fade"
-        @keydown="onDialogKeydown">
-        <VisuallyHidden>
-          <DialogTitle>Edit task</DialogTitle>
-        </VisuallyHidden>
+  <AppDialog :open="open" class="md:max-w-2xl md:max-h-[85vh]" @update:open="emit('update:open', $event)"
+    @keydown="onDialogKeydown">
+    <VisuallyHidden>
+      <DialogTitle>Edit task</DialogTitle>
+    </VisuallyHidden>
 
-        <div v-if="task" class="flex items-start gap-2 px-5 pt-4 shrink-0">
-          <textarea ref="titleInput" :value="title" rows="1" placeholder="Untitled task"
-            class="flex-1 min-w-0 resize-none overflow-hidden bg-transparent text-lg font-semibold outline-none rounded-md border border-transparent hover:cursor-text focus:border-accent px-2 py-1"
-            @input="onTitleInput" @keydown.enter.prevent="$event.target.blur()" />
-          <!-- Out of the tab order so Tab from the title reaches the description
-               instead of the one control that throws the dialog away. Esc is the
-               keyboard close, same as every other dialog; the toolbar and save
-               buttons below opt out for the same reason. -->
-          <HoverTip text="Close" side="left">
-            <Button variant="ghost" size="icon" class="mt-1" tabindex="-1" @click="emit('update:open', false)">
-              <i-lucide-x class="size-4" />
-            </Button>
+    <div v-if="task" class="flex items-start gap-2 px-5 pt-4 shrink-0">
+      <textarea ref="titleInput" :value="title" rows="1" placeholder="Untitled task"
+        class="flex-1 min-w-0 resize-none overflow-hidden bg-transparent text-lg font-semibold outline-none rounded-md border border-transparent hover:cursor-text focus:border-accent px-2 py-1"
+        @input="onTitleInput" @keydown.enter.prevent="$event.target.blur()" />
+      <!-- Out of the tab order so Tab from the title reaches the description
+           instead of the one control that throws the dialog away. Esc is the
+           keyboard close, same as every other dialog; the toolbar and save
+           buttons below opt out for the same reason. -->
+      <HoverTip text="Close" side="left">
+        <Button variant="ghost" size="icon" class="mt-1" tabindex="-1" @click="emit('update:open', false)">
+          <i-lucide-x class="size-4" />
+        </Button>
+      </HoverTip>
+    </div>
+
+    <div v-if="task" class="flex-1 min-h-0 overflow-y-auto px-5 pb-5 pt-3 flex flex-col gap-4">
+      <div>
+        <div class="text-sm font-medium text-on-surface-muted mb-1.5 ml-1">Description</div>
+        <!-- Both modes render at the same fixed height so switching between
+             reading and editing never resizes the dialog. -->
+        <!-- A tab stop that hands straight over to the editor: Tab from the
+             title puts the caret in the body, which is the whole point of the
+             stop. Reading mode is never what focus rests on. -->
+        <div v-if="!editingBody" ref="readingArea" tabindex="0"
+          class="h-64 overflow-y-auto rounded-md border cursor-text px-2.5 py-2 outline-none"
+          :class="attachDragOver ? 'border-accent bg-drop-target' : 'border-border/60 hover:border-border'"
+          @mousedown="onReadingMousedown" @click="onReadingClick" @focus="onReadingFocus">
+          <MarkdownPreview v-if="body.trim()" :markdown="body" editable @update:markdown="onBodyChange" />
+          <p v-else class="text-sm text-on-surface-muted/60">Click to add a description...</p>
+        </div>
+        <div v-else class="h-64 rounded-md border border-border focus-within:border-accent flex flex-col"
+          @focusout="onEditorFocusOut">
+          <div class="flex items-center gap-0.5 px-1.5 h-9 shrink-0 border-b border-border flex-wrap">
+            <HoverTip v-for="action in TOOLBAR_ACTIONS" :key="action.name" :text="action.title"
+              :hotkey="action.hotkey" side="bottom">
+              <Button variant="ghost" size="icon" tabindex="-1" @click="runToolbar(action.name)">
+                <component :is="action.icon" class="size-4" />
+              </Button>
+            </HoverTip>
+            <div class="flex-1" />
+            <HoverTip text="Save" :hotkey="shortcut('mod', 'S')" side="bottom">
+              <Button variant="ghost" size="icon" tabindex="-1" @click="leaveEdit">
+                <i-lucide-save class="size-4" />
+              </Button>
+            </HoverTip>
+          </div>
+          <div class="flex-1 min-h-0">
+            <!-- document-key without remember-cursor: an agent editing this
+                 task under you shouldn't move the caret, but the position
+                 store is garbage-collected against the note index, so a task
+                 id would be swept on the next load. -->
+            <MarkdownEditor ref="editorRef" :model-value="body" :attachments="attachments"
+              :document-key="taskId ?? ''" @update:model-value="onBodyChange" @save="leaveEdit" />
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="flex items-center justify-between mb-1.5">
+          <span class="text-sm font-medium text-on-surface-muted ml-1">Attachments</span>
+          <HoverTip text="Add attachment" side="left">
+            <button class="text-on-surface-muted hover:text-on-surface" @click="fileInput.click()">
+              <i-lucide-plus class="size-4" />
+            </button>
           </HoverTip>
+          <input ref="fileInput" type="file" multiple class="hidden" @change="onPick" />
         </div>
+        <div class="flex flex-col gap-1.5 rounded-md" :class="dragOver ? 'bg-drop-target' : ''"
+          @dragover.prevent="dragOver = true" @dragleave="dragOver = false" @drop.prevent="onDrop">
+          <AttachmentCard v-for="attachment in attachments" :key="attachment.id" :attachment="attachment"
+            @rename="(filename) => renameAttachment(attachment.id, filename)"
+            @delete="pendingDeleteAttachment = attachment" @preview="previewAttachment = attachment" />
+          <EmptyState v-if="attachments.length === 0" drop-target>
+            Drop files here or use + to attach. Up to 100 MB each.
+          </EmptyState>
+        </div>
+      </div>
 
-        <div v-if="task" class="flex-1 min-h-0 overflow-y-auto px-5 pb-5 pt-3 flex flex-col gap-4">
-          <div>
-            <div class="text-sm font-medium text-on-surface-muted mb-1.5 ml-1">Description</div>
-            <!-- Both modes render at the same fixed height so switching between
-                 reading and editing never resizes the dialog. -->
-            <!-- A tab stop that hands straight over to the editor: Tab from the
-                 title puts the caret in the body, which is the whole point of the
-                 stop. Reading mode is never what focus rests on. -->
-            <div v-if="!editingBody" ref="readingArea" tabindex="0"
-              class="h-64 overflow-y-auto rounded-md border cursor-text px-2.5 py-2 outline-none"
-              :class="attachDragOver ? 'border-accent bg-drop-target' : 'border-border/60 hover:border-border'"
-              @mousedown="onReadingMousedown" @click="onReadingClick" @focus="onReadingFocus">
-              <MarkdownPreview v-if="body.trim()" :markdown="body" editable @update:markdown="onBodyChange" />
-              <p v-else class="text-sm text-on-surface-muted/60">Click to add a description...</p>
-            </div>
-            <div v-else class="h-64 rounded-md border border-border focus-within:border-accent flex flex-col"
-              @focusout="onEditorFocusOut">
-              <div class="flex items-center gap-0.5 px-1.5 h-9 shrink-0 border-b border-border flex-wrap">
-                <HoverTip v-for="action in TOOLBAR_ACTIONS" :key="action.name" :text="action.title"
-                  :hotkey="action.hotkey" side="bottom">
-                  <Button variant="ghost" size="icon" tabindex="-1" @click="runToolbar(action.name)">
-                    <component :is="action.icon" class="size-4" />
-                  </Button>
-                </HoverTip>
-                <div class="flex-1" />
-                <HoverTip text="Save" :hotkey="shortcut('mod', 'S')" side="bottom">
-                  <Button variant="ghost" size="icon" tabindex="-1" @click="leaveEdit">
-                    <i-lucide-save class="size-4" />
-                  </Button>
-                </HoverTip>
-              </div>
-              <div class="flex-1 min-h-0">
-                <!-- document-key without remember-cursor: an agent editing this
-                     task under you shouldn't move the caret, but the position
-                     store is garbage-collected against the note index, so a task
-                     id would be swept on the next load. -->
-                <MarkdownEditor ref="editorRef" :model-value="body" :attachments="attachments"
-                  :document-key="taskId ?? ''" @update:model-value="onBodyChange" @save="leaveEdit" />
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <div class="flex items-center justify-between mb-1.5">
-              <span class="text-sm font-medium text-on-surface-muted ml-1">Attachments</span>
-              <HoverTip text="Add attachment" side="left">
-                <button class="text-on-surface-muted hover:text-on-surface" @click="fileInput.click()">
-                  <i-lucide-plus class="size-4" />
-                </button>
-              </HoverTip>
-              <input ref="fileInput" type="file" multiple class="hidden" @change="onPick" />
-            </div>
-            <div class="flex flex-col gap-1.5 rounded-md" :class="dragOver ? 'bg-drop-target' : ''"
-              @dragover.prevent="dragOver = true" @dragleave="dragOver = false" @drop.prevent="onDrop">
-              <AttachmentCard v-for="attachment in attachments" :key="attachment.id" :attachment="attachment"
-                @rename="(filename) => renameAttachment(attachment.id, filename)"
-                @delete="pendingDeleteAttachment = attachment" @preview="previewAttachment = attachment" />
-              <EmptyState v-if="attachments.length === 0" drop-target>
-                Drop files here or use + to attach. Up to 100 MB each.
-              </EmptyState>
-            </div>
-          </div>
-
-          <div>
-            <div class="text-sm font-medium text-on-surface-muted mb-1.5 ml-1">Linked notes</div>
-            <!-- A popover rather than an absolute dropdown: positioned inside the
-                 dialog's scroll area the list extended the scrollable content, so
-                 opening it scrolled the dialog and cut the list off. The portal
-                 takes it out of that flow entirely; focus stays in the input, so
-                 both auto-focus hops are suppressed. -->
-            <PopoverRoot :open="linkInputFocused && linkSuggestions.length > 0">
-              <PopoverAnchor as-child>
-                <div
-                  class="flex flex-wrap items-center gap-1.5 rounded-md border border-border px-2 py-1.5 min-h-9 focus-within:border-accent">
-                  <span v-for="note in linkedNotes" :key="note.id"
-                    class="flex items-center gap-1 rounded bg-accent-soft text-sm px-1.5 py-0.5">
-                    <button class="hover:text-accent truncate max-w-48" :title="note.title || 'Untitled'"
-                      @click="openLinkedNote(note.id)">{{ note.title || 'Untitled' }}</button>
-                    <HoverTip text="Remove link">
-                      <button class="text-on-surface-muted hover:text-on-surface" @click="removeLink(note.id)">
-                        <i-lucide-x class="size-3" />
-                      </button>
-                    </HoverTip>
-                  </span>
-                  <input v-model="linkQuery" placeholder="Link a note..."
-                    class="flex-1 min-w-24 bg-transparent text-sm outline-none placeholder:text-on-surface-muted/60"
-                    @keydown="onLinkKeydown" @focus="linkInputFocused = true" @blur="linkInputFocused = false" />
-                </div>
-              </PopoverAnchor>
-              <PopoverPortal>
-                <PopoverContent side="bottom" align="start" :side-offset="4"
-                  class="z-[60] w-[var(--reka-popover-trigger-width)] rounded-lg border border-border bg-surface-elevated shadow-lg p-1 max-h-48 overflow-y-auto"
-                  @open-auto-focus.prevent @close-auto-focus.prevent>
-                  <!-- Selection follows the mouse, so hovering a row selects it and
-                       there is no separate hover state to paint. -->
-                  <button v-for="(note, index) in linkSuggestions" :key="note.id"
-                    class="w-full text-left rounded-md px-2.5 py-1.5 text-sm truncate"
-                    :class="index === linkIndex ? 'bg-accent-soft' : ''"
-                    @mouseenter="linkIndex = index" @mousedown.prevent="addLink(note)">
-                    {{ note.title || 'Untitled' }}
+      <div>
+        <div class="text-sm font-medium text-on-surface-muted mb-1.5 ml-1">Linked notes</div>
+        <!-- A popover rather than an absolute dropdown: positioned inside the
+             dialog's scroll area the list extended the scrollable content, so
+             opening it scrolled the dialog and cut the list off. The portal
+             takes it out of that flow entirely; focus stays in the input, so
+             both auto-focus hops are suppressed. -->
+        <PopoverRoot :open="linkInputFocused && linkSuggestions.length > 0">
+          <PopoverAnchor as-child>
+            <div
+              class="flex flex-wrap items-center gap-1.5 rounded-md border border-border px-2 py-1.5 min-h-9 focus-within:border-accent">
+              <span v-for="note in linkedNotes" :key="note.id"
+                class="flex items-center gap-1 rounded bg-accent-soft text-sm px-1.5 py-0.5">
+                <button class="hover:text-accent truncate max-w-48" :title="note.title || 'Untitled'"
+                  @click="openLinkedNote(note.id)">{{ note.title || 'Untitled' }}</button>
+                <HoverTip text="Remove link">
+                  <button class="text-on-surface-muted hover:text-on-surface" @click="removeLink(note.id)">
+                    <i-lucide-x class="size-3" />
                   </button>
-                </PopoverContent>
-              </PopoverPortal>
-            </PopoverRoot>
-          </div>
-        </div>
+                </HoverTip>
+              </span>
+              <input v-model="linkQuery" placeholder="Link a note..."
+                class="flex-1 min-w-24 bg-transparent text-sm outline-none placeholder:text-on-surface-muted/60"
+                @keydown="onLinkKeydown" @focus="linkInputFocused = true" @blur="linkInputFocused = false" />
+            </div>
+          </PopoverAnchor>
+          <PopoverPortal>
+            <PopoverContent side="bottom" align="start" :side-offset="4"
+              class="z-[60] w-[var(--reka-popover-trigger-width)] rounded-lg border border-border bg-surface-elevated shadow-lg p-1 max-h-48 overflow-y-auto"
+              @open-auto-focus.prevent @close-auto-focus.prevent>
+              <!-- Selection follows the mouse, so hovering a row selects it and
+                   there is no separate hover state to paint. -->
+              <button v-for="(note, index) in linkSuggestions" :key="note.id"
+                class="w-full text-left rounded-md px-2.5 py-1.5 text-sm truncate"
+                :class="index === linkIndex ? 'bg-accent-soft' : ''"
+                @mouseenter="linkIndex = index" @mousedown.prevent="addLink(note)">
+                {{ note.title || 'Untitled' }}
+              </button>
+            </PopoverContent>
+          </PopoverPortal>
+        </PopoverRoot>
+      </div>
+    </div>
 
-        <div v-if="task"
-          class="flex items-center justify-between px-6 h-8 shrink-0 border-t border-border text-xs text-on-surface-muted">
-          <span class="truncate">{{ updatedLabel }}</span>
-          <span class="shrink-0">{{ dirty ? 'Unsaved' : 'Saved' }}</span>
-        </div>
+    <div v-if="task"
+      class="flex items-center justify-between px-6 h-8 shrink-0 border-t border-border text-xs text-on-surface-muted">
+      <span class="truncate">{{ updatedLabel }}</span>
+      <span class="shrink-0">{{ dirty ? 'Unsaved' : 'Saved' }}</span>
+    </div>
 
-        <AttachmentPreviewDialog :open="previewAttachment !== null" :attachment="previewAttachment"
-          @update:open="(v) => { if (!v) previewAttachment = null }" />
+    <AttachmentPreviewDialog :open="previewAttachment !== null" :attachment="previewAttachment"
+      @update:open="(v) => { if (!v) previewAttachment = null }" />
 
-        <ConfirmDialog :open="pendingDeleteAttachment !== null" title="Delete attachment?"
-          :message="`&quot;${pendingDeleteAttachment?.filename}&quot; will be removed from this task.`"
-          confirm-label="Delete" @update:open="(v) => { if (!v) pendingDeleteAttachment = null }"
-          @confirm="removeAttachment(pendingDeleteAttachment.id); pendingDeleteAttachment = null" />
-      </DialogContent>
-    </DialogPortal>
-  </DialogRoot>
+    <ConfirmDialog :open="pendingDeleteAttachment !== null" title="Delete attachment?"
+      :message="`&quot;${pendingDeleteAttachment?.filename}&quot; will be removed from this task.`"
+      confirm-label="Delete" @update:open="(v) => { if (!v) pendingDeleteAttachment = null }"
+      @confirm="removeAttachment(pendingDeleteAttachment.id); pendingDeleteAttachment = null" />
+  </AppDialog>
 </template>

@@ -10,7 +10,10 @@ export const MD_TOGGLES = [
 ]
 
 function section(name, anchor, labels) {
-  return labels.map((label) => ({ label, section: name, anchor }))
+  return labels.map((entry) => {
+    const item = typeof entry === 'string' ? { label: entry } : entry
+    return { ...item, section: name, anchor }
+  })
 }
 
 // What Ctrl+K finds in Settings (features/search.md): one row per control, in
@@ -25,7 +28,12 @@ export const SETTINGS_INDEX = [
   ...section('Application', 'settings-application', [
     'Application',
     'Theme', 'Accent', 'Date format', 'Time format', 'History retention', 'Trash retention',
-    'New note focus', 'New task focus', 'Check for updates', 'Auto-update',
+    'New note focus', 'New task focus',
+    // desktopOnly mirrors the page: the updates rows are hidden on mobile
+    // platforms (store updates own that lifecycle), and search must not offer
+    // rows the page will not show.
+    { label: 'Check for updates', desktopOnly: true },
+    { label: 'Auto-update', desktopOnly: true },
   ]),
   ...section('Editor', 'settings-editor', [
     'Editor',

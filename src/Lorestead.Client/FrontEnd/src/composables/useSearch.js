@@ -1,6 +1,7 @@
 import { computed, effectScope, ref, watch } from 'vue'
 import router from '../router.js'
 import { SETTINGS_INDEX } from '../utils/settingsIndex.js'
+import { useMobilePlatform } from './usePlatform.js'
 import { useNotesStore } from '../stores/notesStore.js'
 import { useBoardsStore } from '../stores/boardsStore.js'
 
@@ -20,6 +21,7 @@ export function useSearch() {
   return scope.run(() => {
     const notesStore = useNotesStore()
     const boardsStore = useBoardsStore()
+    const mobilePlatform = useMobilePlatform()
 
     const query = ref('')
     const noteResults = ref([])
@@ -31,6 +33,7 @@ export function useSearch() {
       const q = query.value.trim().toLowerCase()
       if (!q) return []
       return SETTINGS_INDEX
+        .filter((entry) => !(entry.desktopOnly && mobilePlatform.value))
         .filter((entry) => entry.label.toLowerCase().includes(q))
         .map((entry) => ({
           kind: 'settings',

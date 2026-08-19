@@ -5,7 +5,8 @@ import { useSyncStore } from '../stores/syncStore'
 import { useUpdatesStore } from '../stores/updatesStore'
 import { formatTimestamp } from '../utils/dateFormat.js'
 import { getAbout, getLog, getThirdPartyNotices } from '../services/systemService'
-import { DialogRoot, DialogPortal, DialogOverlay, DialogContent, DialogTitle } from 'reka-ui'
+import { DialogTitle } from 'reka-ui'
+import AppDialog from '../components/AppDialog.vue'
 import { MD_TOGGLES } from '../utils/settingsIndex.js'
 import { useMobilePlatform } from '../composables/usePlatform.js'
 import SelectMenu from '../components/SelectMenu.vue'
@@ -428,24 +429,18 @@ onMounted(async () => {
           </p>
         </div>
 
-        <DialogRoot :open="noticesOpen" @update:open="noticesOpen = $event">
-          <DialogPortal>
-            <DialogOverlay class="fixed inset-0 bg-black/40 z-40 dialog-fade" />
-            <DialogContent
-              class="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-2xl max-h-[80vh] flex flex-col rounded-lg border border-border bg-surface-elevated p-5 shadow-xl dialog-fade">
-              <div class="flex items-center gap-2 mb-3">
-                <DialogTitle class="flex-1 font-semibold">Third-party notices</DialogTitle>
-                <HoverTip text="Close" side="bottom">
-                  <button type="button" class="p-2 rounded-md hover:bg-surface-alt" @click="noticesOpen = false">
-                    <i-lucide-x class="size-4" />
-                  </button>
-                </HoverTip>
-              </div>
-              <pre
-                class="flex-1 min-h-0 font-mono text-xs bg-surface-alt border border-border rounded-md p-3 overflow-auto whitespace-pre-wrap">{{ noticesText || 'THIRD-PARTY-NOTICES.txt could not be read.' }}</pre>
-            </DialogContent>
-          </DialogPortal>
-        </DialogRoot>
+        <AppDialog :open="noticesOpen" class="md:max-w-2xl md:max-h-[80vh] p-5" @update:open="noticesOpen = $event">
+          <div class="flex items-center gap-2 mb-3">
+            <DialogTitle class="flex-1 font-semibold">Third-party notices</DialogTitle>
+            <HoverTip text="Close" side="bottom">
+              <button type="button" class="p-2 rounded-md hover:bg-surface-alt" @click="noticesOpen = false">
+                <i-lucide-x class="size-4" />
+              </button>
+            </HoverTip>
+          </div>
+          <pre
+            class="flex-1 min-h-0 font-mono text-xs bg-surface-alt border border-border rounded-md p-3 overflow-auto whitespace-pre-wrap">{{ noticesText || 'THIRD-PARTY-NOTICES.txt could not be read.' }}</pre>
+        </AppDialog>
 
         <div class="flex flex-col gap-3">
           <button id="settings-logs" type="button" class="flex items-center gap-2 text-sm font-semibold text-left"
