@@ -5,7 +5,7 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageVersion Include="Devlooped.CredentialManager" Version="2.7.0" />
-    <PackageVersion Include="Galdr.Native" Version="3.0.0-rc1" />
+    <PackageVersion Include="Galdr.Native" Version="3.0.0-rc2" />
     <PackageVersion Include="GaldrJson" Version="1.2.2" />
     <PackageVersion Include="GaldrJson.AspNetCore" Version="1.2.1" />
     <!-- Provider-less core: each host picks its own SQLitePCLRaw bundle so the client

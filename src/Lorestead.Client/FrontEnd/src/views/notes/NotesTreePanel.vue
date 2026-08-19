@@ -22,6 +22,8 @@ import { MENU_ITEM_CLASS as menuItemClass } from '../../utils/menu.js'
 import { exportSubtree, exportAll } from '../../services/exportService.js'
 import { useNotesStore, TEMPLATES_ID, TRASH_ID } from '../../stores/notesStore.js'
 import { useMobilePlatform } from '../../composables/usePlatform.js'
+import { useFinePointer } from '../../composables/useFinePointer.js'
+import { useIsMobile } from '../../composables/useIsMobile.js'
 import { useSettingsStore } from '../../stores/settingsStore.js'
 
 const emit = defineEmits(['request-delete', 'request-purge', 'request-restore', 'request-template'])
@@ -33,6 +35,8 @@ const settingsStore = useSettingsStore()
 // native pickers behind them do not exist. Platform, not viewport: a narrow
 // desktop window keeps them.
 const mobilePlatform = useMobilePlatform()
+const hasFinePointer = useFinePointer()
+const isMobile = useIsMobile()
 const treeRef = ref(null)
 
 // --- Header ---
@@ -159,9 +163,14 @@ async function onSelect(item) {
   if (item.type === 'note') {
     // Selection is the route (unified routing): the view's param watcher does
     // the fetch. Reselecting the open note is a no-op navigation, and the focus
-    // event still fires for it - same refocus behavior as before.
+    // event still fires for it - same refocus behavior as before. Touch skips
+    // the focus: it would pop the on-screen keyboard over a note the user may
+    // only be reading. Fine pointer means a physical keyboard, where focus is
+    // free.
     await router.push(`/notes/${item.noteId}`)
-    window.dispatchEvent(new CustomEvent('editor:focus'))
+    if (hasFinePointer.value) {
+      window.dispatchEvent(new CustomEvent('editor:focus'))
+    }
   }
 }
 
@@ -185,7 +194,12 @@ async function addNote(parentId) {
     notesStore.expandedIds = new Set([...notesStore.expandedIds, parentId])
   }
   await router.push(`/notes/${note.id}`)
-  if (settingsStore.application.newNoteFocus === 'body') {
+  // Below md the push replaces the tree with the editor, so the 'title'
+  // setting's inline rename would run on a screen that just left. Mobile is
+  // Apple Notes instead: land in the editor writing, and the first line
+  // auto-fills the title. A new note is a write by definition, so the
+  // keyboard coming up is the point - unlike opening an existing note.
+  if (isMobile.value || settingsStore.application.newNoteFocus === 'body') {
     window.dispatchEvent(new CustomEvent('editor:focus'))
   } else {
     requestAnimationFrame(() => {

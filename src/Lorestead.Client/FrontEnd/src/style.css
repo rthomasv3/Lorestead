@@ -143,6 +143,28 @@ kbd {
     animation: fade-out 90ms ease-in both;
 }
 
+/* The mobile tools drawer: slides in from the right edge. Same Presence contract
+   as dialog-fade - separately named keyframes per state. */
+.drawer-slide[data-state="open"] {
+    animation: slide-in-right 200ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.drawer-slide[data-state="closed"] {
+    animation: slide-out-right 150ms ease-in both;
+}
+
+@keyframes slide-in-right {
+    from {
+        transform: translateX(100%);
+    }
+}
+
+@keyframes slide-out-right {
+    to {
+        transform: translateX(100%);
+    }
+}
+
 /* Reduced motion, app-wide. A near-zero duration rather than `transition: none`, because
    ToolPanelShell mounts its content on the width `transitionend` and would render blank if
    that event never fired. The sync spinner is exempt: it reports work in progress, and a

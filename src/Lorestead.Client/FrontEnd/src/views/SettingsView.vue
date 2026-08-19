@@ -491,7 +491,8 @@ onMounted(async () => {
             </div>
             <pre
               class="font-mono text-xs bg-surface-alt border border-border rounded-md p-3 max-h-96 overflow-auto whitespace-pre-wrap">
-      {{ logText || 'The log is empty.' }}</pre>
+                {{ logText || 'The log is empty.' }}
+            </pre>
           </div>
         </div>
 

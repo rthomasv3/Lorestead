@@ -308,6 +308,55 @@ function toggleTool(name) {
   else notesStore.clearHistory()
 }
 
+// --- Mobile chrome (below md) ---
+
+// Full-screen editor/preview swap - the desktop split has no room here.
+const mobilePreview = ref(false)
+
+// The three tool panels live in a right-side drawer opened from the top bar; the
+// desktop rail's icons become a row at the top of the drawer, driving the same
+// toolOpen state.
+const drawerOpen = ref(false)
+
+function openDrawer() {
+  if (!notesStore.toolOpen) {
+    notesStore.toolOpen = 'attachments'
+  } else if (notesStore.toolOpen === 'history') {
+    notesStore.loadHistory()
+  }
+  drawerOpen.value = true
+}
+
+function onDrawerOpenChange(open) {
+  drawerOpen.value = open
+  if (!open) {
+    notesStore.toolOpen = null
+    notesStore.clearHistory()
+  }
+}
+
+// Selecting inside the drawer only switches - toggling the active tool off would
+// leave an open drawer with nothing in it.
+function selectDrawerTool(name) {
+  if (notesStore.toolOpen !== name) {
+    notesStore.toolOpen = name
+    if (name === 'history') notesStore.loadHistory()
+    else notesStore.clearHistory()
+  }
+}
+
+// A note opens editor-first (Apple Notes flow), and a drawer left open belongs
+// to the note it was opened on. Desktop is untouched: its tool panel staying
+// open across note switches is existing behavior.
+watch(editingNoteId, () => {
+  if (isMobile.value) {
+    mobilePreview.value = false
+    if (drawerOpen.value) {
+      onDrawerOpenChange(false)
+    }
+  }
+})
+
 // Switching notes must not leave the previous note's versions on screen, and every
 // save appends one - so track the summary's updatedAt, which is what saveBody and
 // an incoming agent edit both touch (currentNote is not re-fetched on save).
@@ -459,10 +508,59 @@ onMounted(() => {
             class="shrink-0 text-xs text-on-surface-muted border border-border rounded px-1.5 py-0.5 mr-1">
             Read-only
           </span>
+          <Button variant="ghost" size="icon" :active="mobilePreview" aria-label="Toggle preview"
+            @click="mobilePreview = !mobilePreview">
+            <i-lucide-eye class="size-5" />
+          </Button>
+          <Button variant="ghost" size="icon" aria-label="Note tools" @click="openDrawer()">
+            <i-lucide-menu class="size-5" />
+          </Button>
         </div>
-        <MarkdownEditor ref="editorRef" :model-value="body" :readonly="readonly"
+
+        <MarkdownEditor v-if="!mobilePreview" ref="editorRef" :model-value="body" :readonly="readonly"
           :attachments="notesStore.currentAttachments" :document-key="editingNoteId ?? ''" remember-cursor
           class="flex-1 min-h-0" @update:model-value="onBodyChange" @save="flush" />
+        <div v-else class="flex-1 min-h-0 overflow-y-auto p-4">
+          <MarkdownPreview :markdown="body" :editable="!readonly" @update:markdown="onBodyChange" />
+        </div>
+
+        <!-- Tools drawer. Portaled to the body, so it consumes the safe-area
+             insets itself - App.vue's pt-safe does not reach it. -->
+        <DialogRoot :open="drawerOpen" @update:open="onDrawerOpenChange">
+          <DialogPortal>
+            <DialogOverlay class="fixed inset-0 bg-black/40 z-40 dialog-fade" />
+            <DialogContent
+              class="fixed right-0 top-0 bottom-0 z-50 w-[85%] max-w-sm bg-surface border-l border-border flex flex-col pt-safe pb-safe outline-none drawer-slide">
+              <DialogTitle class="sr-only">Note tools</DialogTitle>
+              <div class="flex items-center justify-evenly h-page-header shrink-0 border-b border-border">
+                <Button variant="ghost" size="icon" class="relative" :active="notesStore.toolOpen === 'attachments'"
+                  aria-label="Attachments" @click="selectDrawerTool('attachments')">
+                  <i-lucide-paperclip class="size-4" />
+                  <span v-if="notesStore.currentAttachments.length > 0" :class="RAIL_BADGE_CLASS">
+                    {{ notesStore.currentAttachments.length }}
+                  </span>
+                </Button>
+                <Button variant="ghost" size="icon" class="relative" :active="notesStore.toolOpen === 'backlinks'"
+                  aria-label="Backlinks" @click="selectDrawerTool('backlinks')">
+                  <i-lucide-link class="size-4" />
+                  <span v-if="notesStore.currentBacklinks.length > 0" :class="RAIL_BADGE_CLASS">
+                    {{ notesStore.currentBacklinks.length }}
+                  </span>
+                </Button>
+                <Button variant="ghost" size="icon" :active="notesStore.toolOpen === 'history'" aria-label="History"
+                  @click="selectDrawerTool('history')">
+                  <i-lucide-history class="size-4" />
+                </Button>
+              </div>
+              <div class="flex-1 min-h-0">
+                <AttachmentsPanel v-if="notesStore.toolOpen === 'attachments'" />
+                <BacklinksPanel v-else-if="notesStore.toolOpen === 'backlinks'" />
+                <HistoryPanel v-else-if="notesStore.toolOpen === 'history'" :current-body="body" :readonly="readonly"
+                  @restore="onRestoreVersion" />
+              </div>
+            </DialogContent>
+          </DialogPortal>
+        </DialogRoot>
       </template>
     </div>
 

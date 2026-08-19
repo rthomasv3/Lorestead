@@ -3,6 +3,7 @@ import { createPinia } from 'pinia'
 import router from './router.js'
 import App from './App.vue'
 import { initPlatform } from './composables/usePlatform.js'
+import { installAccessoryBarScoping } from './utils/keyboardAccessory.js'
 
 import './style.css'
 
@@ -12,6 +13,7 @@ if (import.meta.env.DEV && typeof window.galdrInvoke === 'undefined') {
 }
 
 await initPlatform()
+installAccessoryBarScoping()
 
 const app = createApp(App)
 app.use(createPinia())
