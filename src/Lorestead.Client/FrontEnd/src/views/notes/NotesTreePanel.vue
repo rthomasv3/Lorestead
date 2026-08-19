@@ -21,7 +21,7 @@ import IconSearch from '~icons/lucide/search'
 import { MENU_ITEM_CLASS as menuItemClass } from '../../utils/menu.js'
 import { exportSubtree, exportAll } from '../../services/exportService.js'
 import { useNotesStore, TEMPLATES_ID, TRASH_ID } from '../../stores/notesStore.js'
-import { useIsMobile } from '../../composables/useIsMobile.js'
+import { useMobilePlatform } from '../../composables/usePlatform.js'
 import { useSettingsStore } from '../../stores/settingsStore.js'
 
 const emit = defineEmits(['request-delete', 'request-purge', 'request-restore', 'request-template'])
@@ -29,9 +29,10 @@ const emit = defineEmits(['request-delete', 'request-purge', 'request-restore', 
 const router = useRouter()
 const notesStore = useNotesStore()
 const settingsStore = useSettingsStore()
-// Import/export are file-system idioms - hidden from menus on mobile (the
-// header buttons already hide via max-md:hidden).
-const isMobile = useIsMobile()
+// Import/export are file-system idioms - hidden on mobile platforms, where the
+// native pickers behind them do not exist. Platform, not viewport: a narrow
+// desktop window keeps them.
+const mobilePlatform = useMobilePlatform()
 const treeRef = ref(null)
 
 // --- Header ---
@@ -338,14 +339,13 @@ defineExpose({ treeRef, addNote, focusTree })
     <div ref="headerRef" class="flex items-center gap-2 md:gap-1 px-2 h-page-header shrink-0 border-b border-border">
       <TextField v-model="query" size="small" :icon="IconSearch" placeholder="Filter notes" class="flex-1" />
       <template v-if="!collapsed">
-        <!-- Import/export are file-system idioms - desktop-only. -->
-        <HoverTip text="Import notes" side="bottom">
-          <Button variant="ghost" size="icon" class="max-md:hidden" @click="openImport()">
+        <HoverTip v-if="!mobilePlatform" text="Import notes" side="bottom">
+          <Button variant="ghost" size="icon" @click="openImport()">
             <i-lucide-import class="size-4" />
           </Button>
         </HoverTip>
-        <HoverTip text="Export all notes" side="bottom">
-          <Button variant="ghost" size="icon" class="max-md:hidden" @click="exportAll()">
+        <HoverTip v-if="!mobilePlatform" text="Export all notes" side="bottom">
+          <Button variant="ghost" size="icon" @click="exportAll()">
             <i-lucide-folder-output class="size-4" />
           </Button>
         </HoverTip>
@@ -377,11 +377,11 @@ defineExpose({ treeRef, addNote, focusTree })
               <i-lucide-layout-template class="size-4 text-on-surface-muted" />
               New note from template
             </DropdownMenuItem>
-            <DropdownMenuItem v-if="!isMobile" :class="menuItemClass" @select="exportAll()">
+            <DropdownMenuItem v-if="!mobilePlatform" :class="menuItemClass" @select="exportAll()">
               <i-lucide-folder-output class="size-4 text-on-surface-muted" />
               Export all notes
             </DropdownMenuItem>
-            <DropdownMenuItem v-if="!isMobile" :class="menuItemClass" @select="openImport()">
+            <DropdownMenuItem v-if="!mobilePlatform" :class="menuItemClass" @select="openImport()">
               <i-lucide-import class="size-4 text-on-surface-muted" />
               Import notes
             </DropdownMenuItem>
@@ -482,13 +482,13 @@ defineExpose({ treeRef, addNote, focusTree })
               <i-lucide-move class="size-4 text-on-surface-muted" />
               Move...
             </ContextMenuItem>
-            <ContextMenuItem v-if="!isMobile" :class="menuItemClass" @select="exportSubtree(item.noteId)">
+            <ContextMenuItem v-if="!mobilePlatform" :class="menuItemClass" @select="exportSubtree(item.noteId)">
               <i-lucide-folder-output class="size-4 text-on-surface-muted" />
               Export as markdown
             </ContextMenuItem>
             <!-- Templates are excluded: the destination picker only offers live
                  normal notes, so a template target has nothing to preselect. -->
-            <ContextMenuItem v-if="!item.template && !isMobile" :class="menuItemClass" @select="openImport(item.noteId)">
+            <ContextMenuItem v-if="!item.template && !mobilePlatform" :class="menuItemClass" @select="openImport(item.noteId)">
               <i-lucide-import class="size-4 text-on-surface-muted" />
               Import notes
             </ContextMenuItem>

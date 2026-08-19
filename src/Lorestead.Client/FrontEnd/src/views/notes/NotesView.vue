@@ -18,6 +18,7 @@ import { useNotesStore } from '../../stores/notesStore.js'
 import { useSettingsStore } from '../../stores/settingsStore.js'
 import { useScrollSync } from '../../composables/useScrollSync.js'
 import { useIsMobile } from '../../composables/useIsMobile.js'
+import { useMobilePlatform } from '../../composables/usePlatform.js'
 import { formatTimestamp } from '../../utils/dateFormat.js'
 import { exportNote } from '../../services/exportService.js'
 import { TOOLBAR_ACTIONS } from '../../utils/editorToolbar.js'
@@ -28,6 +29,9 @@ const router = useRouter()
 const notesStore = useNotesStore()
 const settingsStore = useSettingsStore()
 const isMobile = useIsMobile()
+// Export is a save-to-disk idiom - hidden on mobile platforms (a wide tablet
+// gets this desktop layout, but still has no native save dialog).
+const mobilePlatform = useMobilePlatform()
 
 // The route param IS the selection (decisions.md): every navigation source -
 // tree click, search, wiki-link, backlink - pushes /notes/:id, and this watcher
@@ -208,7 +212,7 @@ function onViewKeydown(e) {
   if (key === 'p') {
     e.preventDefault()
     notesStore.previewOpen = !notesStore.previewOpen
-  } else if (key === 's' && !readonly.value && currentNote.value) {
+  } else if (key === 's' && !readonly.value && currentNote.value && !mobilePlatform.value) {
     e.preventDefault()
     exportNote(currentNote.value.id)
   }
@@ -352,8 +356,8 @@ onMounted(() => {
                   class="text-xs text-on-surface-muted border border-border rounded px-1.5 py-0.5 mr-1">
                   In Trash - read-only
                 </span>
-                <HoverTip :text="readonly ? 'Note is in the Trash' : 'Export note'" :hotkey="EXPORT_KEY"
-                  side="bottom" wrap>
+                <HoverTip v-if="!mobilePlatform" :text="readonly ? 'Note is in the Trash' : 'Export note'"
+                  :hotkey="EXPORT_KEY" side="bottom" wrap>
                   <Button variant="ghost" size="icon" :disabled="readonly" @click="exportNote(currentNote.id)">
                     <i-lucide-folder-output class="size-4" />
                   </Button>

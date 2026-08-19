@@ -86,6 +86,7 @@ export function installMockBackend() {
       return { application, editor }
     },
     getAbout: () => ({ appName: 'Lorestead', version: 'dev (mock)' }),
+    getPlatform: () => ({ mobile: false }),
     getLog: () => ({ text: '[mock] no log - running against the in-browser mock backend' }),
     getThirdPartyNotices: () => ({ text: '[mock] THIRD-PARTY-NOTICES.txt is read from beside the real binary' }),
 

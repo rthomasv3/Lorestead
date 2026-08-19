@@ -35,7 +35,7 @@ internal class Program
         using Galdr.Native.Galdr galdr = new GaldrBuilder()
             .SetTitle("Lorestead")
             .SetSize(1200, 800)
-            .SetMinSize(800, 600)
+            .SetMinSize(400, 600)
             .UseSingleInstance("lorestead")
             .EnableSpellChecking("en_US", "en_GB")
             .AddSettingsCommands()

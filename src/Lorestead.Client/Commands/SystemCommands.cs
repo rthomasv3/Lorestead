@@ -17,6 +17,11 @@ internal static class SystemCommands
             Version = GetVersion(),
         });
 
+        builder.AddFunction("getPlatform", () => new GetPlatformResponse
+        {
+            Mobile = OperatingSystem.IsAndroid() || OperatingSystem.IsIOS(),
+        });
+
         builder.AddFunction("getLog", (ILoggingService logger) => new GetLogResponse
         {
             Text = logger.ReadLog(),

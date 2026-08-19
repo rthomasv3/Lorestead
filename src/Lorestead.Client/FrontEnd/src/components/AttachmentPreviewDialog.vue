@@ -5,6 +5,7 @@ import { DialogRoot, DialogPortal, DialogOverlay, DialogContent, DialogTitle } f
 import Button from './Button.vue'
 import * as attachmentService from '../services/attachmentService.js'
 import { useNotesStore } from '../stores/notesStore.js'
+import { useMobilePlatform } from '../composables/usePlatform.js'
 import { createImageThumbnail, base64ToBlob } from '../utils/thumbnails.js'
 
 const props = defineProps({
@@ -15,6 +16,9 @@ const props = defineProps({
 const emit = defineEmits(['update:open'])
 
 const notesStore = useNotesStore()
+// Download is a save-to-disk idiom - hidden on mobile platforms, where the
+// native save dialog behind it does not exist.
+const mobilePlatform = useMobilePlatform()
 
 // mode: 'loading' | 'image' | 'pdf' | 'text' | 'none'
 const mode = ref('loading')
@@ -133,7 +137,7 @@ const sizeLabel = () => {
           <DialogTitle class="flex-1 min-w-0 truncate text-sm text-white/90">
             {{ shown?.filename }}
           </DialogTitle>
-          <HoverTip text="Download" side="bottom">
+          <HoverTip v-if="!mobilePlatform" text="Download" side="bottom">
             <button class="p-2 rounded-md text-white/80 hover:text-white hover:bg-white/10" @click="download">
               <i-lucide-download class="size-4.5" />
             </button>
@@ -160,7 +164,7 @@ const sizeLabel = () => {
             class="w-full max-w-3xl max-h-full overflow-auto rounded-lg border border-border bg-surface-elevated shadow-2xl p-4">
             <pre class="text-xs font-mono whitespace-pre-wrap break-words">{{ textContent }}</pre>
             <p v-if="textTruncated" class="mt-3 text-xs text-on-surface-muted">
-              Preview truncated - download the file to see the rest.
+              {{ mobilePlatform ? 'Preview truncated.' : 'Preview truncated - download the file to see the rest.' }}
             </p>
           </div>
 
@@ -169,7 +173,7 @@ const sizeLabel = () => {
             <i-lucide-file class="size-10" />
             <div class="text-sm">No preview available for this file type</div>
             <div class="text-xs">{{ shown?.filename }} ({{ sizeLabel() }})</div>
-            <Button variant="outline" @click="download">
+            <Button v-if="!mobilePlatform" variant="outline" @click="download">
               <i-lucide-download class="size-4" />
               Download
             </Button>

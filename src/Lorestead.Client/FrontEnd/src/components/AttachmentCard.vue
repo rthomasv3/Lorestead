@@ -10,6 +10,7 @@ import IconFile from '~icons/lucide/file'
 import Button from './Button.vue'
 import HoverTip from './HoverTip.vue'
 import { useNotesStore } from '../stores/notesStore.js'
+import { useMobilePlatform } from '../composables/usePlatform.js'
 import * as attachmentService from '../services/attachmentService.js'
 
 const props = defineProps({
@@ -20,6 +21,9 @@ const props = defineProps({
 const emit = defineEmits(['rename', 'delete', 'preview'])
 
 const notesStore = useNotesStore()
+// Download is a save-to-disk idiom - hidden on mobile platforms, where the
+// native save dialog behind it does not exist.
+const mobilePlatform = useMobilePlatform()
 const card = ref(null)
 const editing = ref(false)
 const editInput = ref(null)
@@ -124,7 +128,7 @@ onUnmounted(() => {
          tab order whether they are painted or not. -->
     <span
       class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity shrink-0">
-      <HoverTip text="Download" side="bottom">
+      <HoverTip v-if="!mobilePlatform" text="Download" side="bottom">
         <Button variant="ghost" size="icon"
           @click.stop="attachmentService.downloadAttachment({ id: attachment.id })">
           <i-lucide-download class="size-4" />
