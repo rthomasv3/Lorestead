@@ -132,7 +132,11 @@ const sizeLabel = () => {
   <DialogRoot :open="open" @update:open="emit('update:open', $event)">
     <DialogPortal>
       <DialogOverlay class="fixed inset-0 bg-black/80 z-50 dialog-fade" />
-      <DialogContent class="fixed inset-0 z-50 flex flex-col outline-none dialog-fade">
+      <!-- Portaled to the body, so the top inset is consumed here - App.vue's
+           pt-safe does not reach it. The bottom stays edge-to-edge like a
+           native photo viewer: only the backdrop sits under the home
+           indicator. -->
+      <DialogContent class="fixed inset-0 z-50 flex flex-col outline-none dialog-fade pt-safe">
         <div class="flex items-center gap-1 px-4 h-12 shrink-0">
           <DialogTitle class="flex-1 min-w-0 truncate text-sm text-white/90">
             {{ shown?.filename }}

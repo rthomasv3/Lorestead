@@ -20,6 +20,7 @@ import { useSettingsStore } from '../../stores/settingsStore.js'
 import { formatTimestamp } from '../../utils/dateFormat.js'
 import { TOOLBAR_ACTIONS } from '../../utils/editorToolbar.js'
 import { shortcut } from '../../utils/platform.js'
+import { useFinePointer } from '../../composables/useFinePointer.js'
 
 const props = defineProps({
   open: { type: Boolean, default: false },
@@ -32,6 +33,8 @@ const emit = defineEmits(['update:open'])
 
 const router = useRouter()
 const boardsStore = useBoardsStore()
+// Drag-drop needs a pointer that can drag; touch gets tap wording instead.
+const hasFinePointer = useFinePointer()
 const notesStore = useNotesStore()
 const settingsStore = useSettingsStore()
 
@@ -466,7 +469,7 @@ function onDialogKeydown(e) {
             @rename="(filename) => renameAttachment(attachment.id, filename)"
             @delete="pendingDeleteAttachment = attachment" @preview="previewAttachment = attachment" />
           <EmptyState v-if="attachments.length === 0" drop-target>
-            Drop files here or use + to attach. Up to 100 MB each.
+            {{ hasFinePointer ? 'Drop files here or use + to attach. Up to 100 MB each.' : 'Tap + to attach files. Up to 100 MB each.' }}
           </EmptyState>
         </div>
       </div>

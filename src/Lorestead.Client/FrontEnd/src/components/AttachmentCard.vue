@@ -3,6 +3,9 @@ import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { draggable as makeDraggable } from '@atlaskit/pragmatic-drag-and-drop/element/adapter'
 import { setCustomNativeDragPreview } from '@atlaskit/pragmatic-drag-and-drop/element/set-custom-native-drag-preview'
 import { pointerOutsideOfPreview } from '@atlaskit/pragmatic-drag-and-drop/element/pointer-outside-of-preview'
+import { ContextMenuRoot, ContextMenuTrigger, ContextMenuPortal, ContextMenuContent, ContextMenuItem } from 'reka-ui'
+import { MENU_ITEM_CLASS as menuItemClass, MENU_PRESS_DELAY } from '../utils/menu.js'
+import { useFinePointer } from '../composables/useFinePointer.js'
 import IconImage from '~icons/lucide/image'
 import IconFileText from '~icons/lucide/file-text'
 import IconFileArchive from '~icons/lucide/file-archive'
@@ -24,6 +27,7 @@ const notesStore = useNotesStore()
 // Download is a save-to-disk idiom - hidden on mobile platforms, where the
 // native save dialog behind it does not exist.
 const mobilePlatform = useMobilePlatform()
+const hasFinePointer = useFinePointer()
 const card = ref(null)
 const editing = ref(false)
 const editInput = ref(null)
@@ -80,6 +84,10 @@ function cancelRename() {
 }
 
 onMounted(() => {
+  // Fine pointer only, like the tree: drag-to-embed targets the editor, which
+  // touch never sees beside these cards (the drawer covers it) - and iOS
+  // starts native drags from the same long-press the context menu owns.
+  if (!hasFinePointer.value) return
   dragCleanup = makeDraggable({
     element: card.value,
     getInitialData: () => ({ attachmentId: props.attachment.id, filename: props.attachment.filename, mimeType: props.attachment.mimeType }),
@@ -104,46 +112,68 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div ref="card"
-    class="group flex items-center gap-2.5 rounded-md border border-border bg-surface-alt px-2.5 py-2 cursor-pointer"
-    @click="emit('preview')">
-    <div class="flex size-12 shrink-0 items-center justify-center">
-      <img v-if="thumbnailUrl" :src="thumbnailUrl" :alt="attachment.filename" class="size-12 rounded-md object-cover" />
-      <component :is="typeIcon" v-else class="size-7 text-on-surface-muted" />
-    </div>
-    <div class="flex-1 min-w-0">
-      <!-- block: this column is not a flex row, so an inline-block input would sit
-           on the text baseline and add descender space under it. -->
-      <input v-if="editing" ref="editInput" :value="attachment.filename"
-        class="block w-full bg-transparent text-sm border-b border-accent outline-none" @keydown.enter="commitRename"
-        @keydown.esc="cancelRename" @blur="commitRename" @click.stop />
-      <!-- The transparent border matches the rename input's underline, so
-           entering edit mode doesn't grow the card by a pixel. -->
-      <div v-else class="text-sm truncate border-b border-transparent" :title="attachment.filename"
-        @dblclick="startRename">
-        {{ attachment.filename }}</div>
-      <div class="text-xs text-on-surface-muted">{{ sizeLabel }}</div>
-    </div>
-    <!-- focus-within, or these stay invisible while tabbed onto: they are in the
-         tab order whether they are painted or not. -->
-    <span
-      class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity shrink-0">
-      <HoverTip v-if="!mobilePlatform" text="Download" side="bottom">
-        <Button variant="ghost" size="icon"
-          @click.stop="attachmentService.downloadAttachment({ id: attachment.id })">
-          <i-lucide-download class="size-4" />
-        </Button>
-      </HoverTip>
-      <HoverTip v-if="!readonly" text="Rename" side="bottom">
-        <Button variant="ghost" size="icon" @click.stop="startRename">
-          <i-lucide-pencil class="size-4" />
-        </Button>
-      </HoverTip>
-      <HoverTip v-if="!readonly" text="Delete" side="bottom">
-        <Button variant="ghost-danger" size="icon" @click.stop="emit('delete')">
-          <i-lucide-trash-2 class="size-4" />
-        </Button>
-      </HoverTip>
-    </span>
-  </div>
+  <ContextMenuRoot :press-open-delay="MENU_PRESS_DELAY">
+    <ContextMenuTrigger as-child :disabled="readonly">
+      <div ref="card"
+        class="group flex items-center gap-2.5 rounded-md border border-border bg-surface-alt px-2.5 py-2 cursor-pointer select-none-touch"
+        @click="emit('preview')">
+        <div class="flex size-12 shrink-0 items-center justify-center">
+          <img v-if="thumbnailUrl" :src="thumbnailUrl" :alt="attachment.filename" class="size-12 rounded-md object-cover" />
+          <component :is="typeIcon" v-else class="size-7 text-on-surface-muted" />
+        </div>
+        <div class="flex-1 min-w-0">
+          <!-- block: this column is not a flex row, so an inline-block input would sit
+               on the text baseline and add descender space under it. -->
+          <input v-if="editing" ref="editInput" :value="attachment.filename"
+            class="block w-full bg-transparent text-sm border-b border-accent outline-none" @keydown.enter="commitRename"
+            @keydown.esc="cancelRename" @blur="commitRename" @click.stop />
+          <!-- The transparent border matches the rename input's underline, so
+               entering edit mode doesn't grow the card by a pixel. -->
+          <div v-else class="text-sm truncate border-b border-transparent" :title="attachment.filename"
+            @dblclick="startRename">
+            {{ attachment.filename }}</div>
+          <div class="text-xs text-on-surface-muted">{{ sizeLabel }}</div>
+        </div>
+        <!-- focus-within, or these stay invisible while tabbed onto: they are in the
+             tab order whether they are painted or not. -->
+        <span
+          class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity shrink-0">
+          <HoverTip v-if="!mobilePlatform" text="Download" side="bottom">
+            <Button variant="ghost" size="icon"
+              @click.stop="attachmentService.downloadAttachment({ id: attachment.id })">
+              <i-lucide-download class="size-4" />
+            </Button>
+          </HoverTip>
+          <HoverTip v-if="!readonly" text="Rename" side="bottom">
+            <Button variant="ghost" size="icon" @click.stop="startRename">
+              <i-lucide-pencil class="size-4" />
+            </Button>
+          </HoverTip>
+          <HoverTip v-if="!readonly" text="Delete" side="bottom">
+            <Button variant="ghost-danger" size="icon" @click.stop="emit('delete')">
+              <i-lucide-trash-2 class="size-4" />
+            </Button>
+          </HoverTip>
+        </span>
+      </div>
+    </ContextMenuTrigger>
+    <!-- Touch has no hover, so this menu is the phone's only path to rename
+         and delete; on desktop it is the conventional right-click beside the
+         hover buttons. -->
+    <ContextMenuPortal>
+      <!-- Same as TreeNode: without this, reka hands focus back to the trigger
+           after the menu closes, stealing it from the rename input. -->
+      <ContextMenuContent class="bg-surface-elevated border border-border rounded-lg shadow-lg p-1 min-w-40 z-50"
+        @closeAutoFocus.prevent>
+        <ContextMenuItem :class="menuItemClass" @select="startRename">
+          <i-lucide-pencil class="size-4 text-on-surface-muted" />
+          Rename
+        </ContextMenuItem>
+        <ContextMenuItem :class="menuItemClass" @select="emit('delete')">
+          <i-lucide-trash-2 class="size-4 text-red-500" />
+          Delete
+        </ContextMenuItem>
+      </ContextMenuContent>
+    </ContextMenuPortal>
+  </ContextMenuRoot>
 </template>

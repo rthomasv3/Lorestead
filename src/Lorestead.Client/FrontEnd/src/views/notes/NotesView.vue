@@ -345,6 +345,103 @@ function selectDrawerTool(name) {
   }
 }
 
+// Swipe-to-close, on the whole drawer surface: its interiors scroll vertically,
+// so horizontal intent cannot collide with them - whichever axis wins the
+// first 8px owns the gesture (touch-pan-y leaves vertical with the browser).
+// This is why the drawer needs no grab handle while the bottom sheets do:
+// their interiors scroll in the dismiss axis.
+const drawerContent = ref(null)
+
+let drawerPointer = null
+let drawerDragging = false
+let drawerSwallowClick = false
+let drawerStartX = 0
+let drawerStartY = 0
+let drawerLastX = 0
+let drawerLastTime = 0
+let drawerVelocity = 0
+
+function drawerEl() {
+  return drawerContent.value?.$el
+}
+
+function onDrawerPointerDown(e) {
+  drawerPointer = e.pointerId
+  drawerDragging = false
+  drawerSwallowClick = false
+  drawerStartX = e.clientX
+  drawerStartY = e.clientY
+  drawerLastX = e.clientX
+  drawerLastTime = e.timeStamp
+  drawerVelocity = 0
+}
+
+function onDrawerPointerMove(e) {
+  const el = e.pointerId === drawerPointer ? drawerEl() : null
+  if (el) {
+    const dx = e.clientX - drawerStartX
+    const dy = e.clientY - drawerStartY
+    if (!drawerDragging) {
+      if (Math.abs(dx) > 8 && Math.abs(dx) > Math.abs(dy)) {
+        drawerDragging = true
+        // The tap that would land on whatever the finger started on must not
+        // fire after a drag.
+        drawerSwallowClick = true
+        el.setPointerCapture(e.pointerId)
+      } else if (Math.abs(dy) > 8) {
+        drawerPointer = null
+      }
+    }
+    if (drawerDragging) {
+      const dt = e.timeStamp - drawerLastTime
+      if (dt > 0) {
+        drawerVelocity = (e.clientX - drawerLastX) / dt
+      }
+      drawerLastX = e.clientX
+      drawerLastTime = e.timeStamp
+      // Rightward follows the finger; leftward resists - the drawer is already
+      // fully open.
+      el.style.transition = 'none'
+      el.style.transform = `translateX(${dx >= 0 ? dx : dx * 0.15}px)`
+    }
+  }
+}
+
+function onDrawerPointerUp(e) {
+  const el = e.pointerId === drawerPointer ? drawerEl() : null
+  drawerPointer = null
+  if (el && drawerDragging) {
+    drawerDragging = false
+    const dx = e.clientX - drawerStartX
+    // Distance OR a flick; the exit keyframe only declares `to`, so the
+    // slide-out continues from the dragged position.
+    if (dx > el.offsetWidth * 0.28 || (drawerVelocity > 0.5 && dx > 24)) {
+      onDrawerOpenChange(false)
+    } else {
+      el.style.transition = 'transform 200ms cubic-bezier(0.16, 1, 0.3, 1)'
+      el.style.transform = ''
+    }
+  }
+}
+
+function onDrawerPointerCancel(e) {
+  const el = e.pointerId === drawerPointer ? drawerEl() : null
+  drawerPointer = null
+  if (el && drawerDragging) {
+    drawerDragging = false
+    el.style.transition = 'transform 200ms cubic-bezier(0.16, 1, 0.3, 1)'
+    el.style.transform = ''
+  }
+}
+
+function onDrawerClickCapture(e) {
+  if (drawerSwallowClick) {
+    drawerSwallowClick = false
+    e.preventDefault()
+    e.stopPropagation()
+  }
+}
+
 // A note opens editor-first (Apple Notes flow), and a drawer left open belongs
 // to the note it was opened on. Desktop is untouched: its tool panel staying
 // open across note switches is existing behavior.
@@ -525,14 +622,21 @@ onMounted(() => {
         </div>
 
         <!-- Tools drawer. Portaled to the body, so it consumes the safe-area
-             insets itself - App.vue's pt-safe does not reach it. -->
+             insets itself - App.vue's pt-safe does not reach it. The top offset
+             is the raw inset variable: on a phone the drawer starts below the
+             status bar, on desktop the variable is 0 and it runs full height. -->
         <DialogRoot :open="drawerOpen" @update:open="onDrawerOpenChange">
           <DialogPortal>
             <DialogOverlay class="fixed inset-0 bg-black/40 z-40 dialog-fade" />
-            <DialogContent
-              class="fixed right-0 top-0 bottom-0 z-50 w-[85%] max-w-sm bg-surface border-l border-border flex flex-col pt-safe pb-safe outline-none drawer-slide">
+            <DialogContent ref="drawerContent"
+              class="fixed right-0 bottom-0 top-[var(--galdr-inset-top,0px)] z-50 w-[85%] max-w-sm bg-surface border-l border-t border-border flex flex-col pb-safe outline-none drawer-slide touch-pan-y"
+              @pointerdown="onDrawerPointerDown" @pointermove="onDrawerPointerMove" @pointerup="onDrawerPointerUp"
+              @pointercancel="onDrawerPointerCancel" @click.capture="onDrawerClickCapture">
               <DialogTitle class="sr-only">Note tools</DialogTitle>
-              <div class="flex items-center justify-evenly h-page-header shrink-0 border-b border-border">
+              <!-- justify-between with the same px-3 as the tool panels' own
+                   headers: the first icon and the close X line up with the
+                   panel title and its + button on the row below. -->
+              <div class="flex items-center justify-between px-3 h-page-header shrink-0 border-b border-border">
                 <Button variant="ghost" size="icon" class="relative" :active="notesStore.toolOpen === 'attachments'"
                   aria-label="Attachments" @click="selectDrawerTool('attachments')">
                   <i-lucide-paperclip class="size-4" />
@@ -550,6 +654,9 @@ onMounted(() => {
                 <Button variant="ghost" size="icon" :active="notesStore.toolOpen === 'history'" aria-label="History"
                   @click="selectDrawerTool('history')">
                   <i-lucide-history class="size-4" />
+                </Button>
+                <Button variant="ghost" size="icon" aria-label="Close" @click="onDrawerOpenChange(false)">
+                  <i-lucide-x class="size-4" />
                 </Button>
               </div>
               <div class="flex-1 min-h-0">

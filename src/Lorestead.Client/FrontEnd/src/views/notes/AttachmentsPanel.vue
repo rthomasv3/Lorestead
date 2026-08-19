@@ -8,8 +8,11 @@ import AttachmentPreviewDialog from '../../components/AttachmentPreviewDialog.vu
 import ConfirmDialog from '../../components/ConfirmDialog.vue'
 import { useNotesStore } from '../../stores/notesStore.js'
 import { createImageThumbnail } from '../../utils/thumbnails.js'
+import { useFinePointer } from '../../composables/useFinePointer.js'
 
 const notesStore = useNotesStore()
+// Drag-drop needs a pointer that can drag; touch gets tap wording instead.
+const hasFinePointer = useFinePointer()
 const readonly = computed(() => !!notesStore.currentNote?.deleted)
 const dragOver = ref(false)
 const pendingDelete = ref(null)
@@ -77,7 +80,8 @@ function onPick(e) {
 
       <EmptyState v-if="notesStore.currentAttachments.length === 0" class="flex-1" :drop-target="!readonly">
         <template v-if="readonly">This note is in the Trash</template>
-        <template v-else>Drop files here or use + to attach. Up to 100 MB each.</template>
+        <template v-else-if="hasFinePointer">Drop files here or use + to attach. Up to 100 MB each.</template>
+        <template v-else>Tap + to attach files. Up to 100 MB each.</template>
       </EmptyState>
     </div>
 
