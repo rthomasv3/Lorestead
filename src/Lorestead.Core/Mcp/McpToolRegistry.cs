@@ -39,7 +39,11 @@ namespace Lorestead.Core.Mcp
 
                 McpServerTool.Create((string noteId, string title = null, string body = null) =>
                     RunAsync(async () => PayloadJson.Serialize(await tools.UpdateNote(noteId, title, body))),
-                    Options("update_note", "Replace a note's title and/or body. Omitted fields are kept. Prefer append_to_note for additions - a full body replace overwrites concurrent edits.")),
+                    Options("update_note", "Replace a note's title and/or body. Omitted fields are kept. For changes to existing content prefer edit_note, and for additions append_to_note - a full body replace overwrites concurrent edits.")),
+
+                McpServerTool.Create((string noteId, string oldText, string newText, bool replaceAll = false) =>
+                    RunAsync(async () => PayloadJson.Serialize(await tools.EditNote(noteId, oldText, newText, replaceAll))),
+                    Options("edit_note", "Replace one exact occurrence of oldText in a note's body with newText. The preferred way to change existing content: only the edited text is sent, and the rest of the note is untouched. oldText must match the current body exactly, including whitespace; if it matches more than one place the call fails - include more surrounding context, or set replaceAll to replace every occurrence.")),
 
                 McpServerTool.Create((string noteId, string markdown) =>
                     RunAsync(async () => PayloadJson.Serialize(await tools.AppendToNote(noteId, markdown))),

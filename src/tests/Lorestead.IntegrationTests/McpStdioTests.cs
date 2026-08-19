@@ -42,7 +42,7 @@ namespace Lorestead.IntegrationTests
                 await using (McpClient client = await McpClient.CreateAsync(transport, cancellationToken: Token))
                 {
                     IList<McpClientTool> tools = await client.ListToolsAsync(cancellationToken: Token);
-                    Assert.Equal(19, tools.Count);
+                    Assert.Equal(20, tools.Count);
 
                     CallToolResult created = await client.CallToolAsync(
                         "create_note",
