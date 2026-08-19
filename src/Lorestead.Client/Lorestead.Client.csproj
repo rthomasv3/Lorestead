@@ -139,12 +139,17 @@
     <ProjectReference Include="..\Lorestead.Core\Lorestead.Core.csproj" />
   </ItemGroup>
 
-  <!-- Ship beside the binaries on desktop (distribution.md); About reads the notices.
-       Mobile bundles have no file-beside-the-exe concept — About's notices are a known
-       gap there. -->
+  <!-- Ship beside the binaries on desktop (distribution.md) for anyone browsing the
+       install folder; About reads the embedded copy below instead, because mobile
+       bundles have no file-beside-the-exe concept. Same repo file, so the two copies
+       cannot disagree. -->
   <ItemGroup Condition="'$(_LoresteadPlatform)' == ''">
     <Content Include="..\..\LICENSE.txt" Link="LICENSE.txt" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="..\..\THIRD-PARTY-NOTICES.txt" Link="THIRD-PARTY-NOTICES.txt" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="..\..\THIRD-PARTY-NOTICES.txt" LogicalName="THIRD-PARTY-NOTICES.txt" />
   </ItemGroup>
 
   <PropertyGroup>

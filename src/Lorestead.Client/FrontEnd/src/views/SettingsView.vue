@@ -7,7 +7,9 @@ import { formatTimestamp } from '../utils/dateFormat.js'
 import { getAbout, getLog, getThirdPartyNotices } from '../services/systemService'
 import { DialogRoot, DialogPortal, DialogOverlay, DialogContent, DialogTitle } from 'reka-ui'
 import { MD_TOGGLES } from '../utils/settingsIndex.js'
+import { useMobilePlatform } from '../composables/usePlatform.js'
 import SelectMenu from '../components/SelectMenu.vue'
+import SettingRow from '../components/SettingRow.vue'
 import Toggle from '../components/Toggle.vue'
 import Button from '../components/Button.vue'
 import TextField from '../components/TextField.vue'
@@ -17,6 +19,10 @@ import HoverTip from '../components/HoverTip.vue'
 const store = useSettingsStore()
 const sync = useSyncStore()
 const updates = useUpdatesStore()
+// Mobile updates ship through the app stores, so the whole updates group -
+// toggles included, which would write settings nothing reads there - is hidden.
+// Desktop keeps the disabled-with-tooltip button on unpackaged builds.
+const mobilePlatform = useMobilePlatform()
 
 const THEME_OPTIONS = [
   { value: 'system', label: 'System' },
@@ -218,16 +224,14 @@ onMounted(async () => {
         <div class="flex flex-col gap-3">
           <h2 id="settings-application" class="text-sm font-semibold">Application</h2>
 
-          <div class="flex items-center gap-3">
-            <span class="text-sm text-on-surface-muted w-44 shrink-0">Theme</span>
+          <SettingRow label="Theme">
             <div class="w-44">
               <SelectMenu :model-value="store.application.theme" :options="THEME_OPTIONS"
                 @update:model-value="store.saveApplication({ theme: $event })" />
             </div>
-          </div>
+          </SettingRow>
 
-          <div class="flex items-center gap-3">
-            <span class="text-sm text-on-surface-muted w-44 shrink-0">Accent</span>
+          <SettingRow label="Accent">
             <div class="flex items-center gap-2">
               <HoverTip v-for="a in ACCENT_SWATCHES" :key="a.value" :text="a.label" side="bottom">
                 <button type="button" :aria-label="a.label" :aria-pressed="activeAccent === a.value"
@@ -238,161 +242,134 @@ onMounted(async () => {
                 </button>
               </HoverTip>
             </div>
-          </div>
+          </SettingRow>
 
-          <div class="flex items-center gap-3">
-            <span class="text-sm text-on-surface-muted w-44 shrink-0">Date format</span>
+          <SettingRow label="Date format">
             <div class="w-44">
               <SelectMenu :model-value="store.application.dateFormat" :options="DATE_FORMAT_OPTIONS"
                 @update:model-value="store.saveApplication({ dateFormat: $event })" />
             </div>
-          </div>
+          </SettingRow>
 
-          <div class="flex items-center gap-3">
-            <span class="text-sm text-on-surface-muted w-44 shrink-0">Time format</span>
+          <SettingRow label="Time format">
             <div class="w-44">
               <SelectMenu :model-value="store.application.timeFormat" :options="TIME_FORMAT_OPTIONS"
                 @update:model-value="store.saveApplication({ timeFormat: $event })" />
             </div>
-          </div>
+          </SettingRow>
 
-          <div class="flex items-center gap-3">
-            <span class="text-sm text-on-surface-muted w-44 shrink-0">History retention</span>
+          <SettingRow label="History retention" hint="Versions kept per item (10-100)">
             <TextField v-model="historyRetention" type="number" min="10" max="100" class="w-24"
               @input="debounced('history', saveHistoryRetention)" />
-            <span class="text-xs text-on-surface-muted">Versions kept per item (10-100)</span>
-          </div>
+          </SettingRow>
 
-          <div class="flex items-center gap-3">
-            <span class="text-sm text-on-surface-muted w-44 shrink-0">Trash retention</span>
+          <SettingRow label="Trash retention" hint="Days before deleted items purge">
             <TextField v-model="trashRetentionDays" type="number" min="1" max="365" class="w-24"
               @input="debounced('trash', saveTrashRetention)" />
-            <span class="text-xs text-on-surface-muted">Days before deleted items purge</span>
-          </div>
+          </SettingRow>
 
-          <div class="flex items-center gap-3">
-            <span class="text-sm text-on-surface-muted w-44 shrink-0">New note focus</span>
+          <SettingRow label="New note focus">
             <div class="w-44">
               <SelectMenu :model-value="store.application.newNoteFocus" :options="FOCUS_OPTIONS"
                 @update:model-value="store.saveApplication({ newNoteFocus: $event })" />
             </div>
-          </div>
+          </SettingRow>
 
-          <div class="flex items-center gap-3">
-            <span class="text-sm text-on-surface-muted w-44 shrink-0">New task focus</span>
+          <SettingRow label="New task focus">
             <div class="w-44">
               <SelectMenu :model-value="store.application.newTaskFocus" :options="FOCUS_OPTIONS"
                 @update:model-value="store.saveApplication({ newTaskFocus: $event })" />
             </div>
-          </div>
+          </SettingRow>
 
-          <div class="flex items-center gap-3">
-            <span class="text-sm text-on-surface-muted w-44 shrink-0">Check for updates</span>
-            <Toggle :model-value="store.application.autoCheckUpdates"
-              @update:model-value="store.saveApplication({ autoCheckUpdates: $event })" />
-            <span class="text-xs text-on-surface-muted">Check automatically at startup</span>
-          </div>
+          <template v-if="!mobilePlatform">
+            <SettingRow label="Check for updates" hint="Check automatically at startup">
+              <Toggle :model-value="store.application.autoCheckUpdates"
+                @update:model-value="store.saveApplication({ autoCheckUpdates: $event })" />
+            </SettingRow>
 
-          <div class="flex items-center gap-3">
-            <span class="text-sm text-on-surface-muted w-44 shrink-0">Auto-update</span>
-            <Toggle :model-value="store.application.autoUpdate"
-              @update:model-value="store.saveApplication({ autoUpdate: $event })" />
-            <span class="text-xs text-on-surface-muted">Pre-download and apply on restart</span>
-          </div>
+            <SettingRow label="Auto-update" hint="Pre-download and apply on restart">
+              <Toggle :model-value="store.application.autoUpdate"
+                @update:model-value="store.saveApplication({ autoUpdate: $event })" />
+            </SettingRow>
 
-          <div class="flex items-center gap-3">
-            <span class="text-sm text-on-surface-muted w-44 shrink-0"></span>
-            <Button v-if="updates.status?.supported" :disabled="updatesBusy" @click="updates.check()">
-              <i-lucide-refresh-cw class="size-4" :class="updates.checking ? 'animate-spin' : ''" />
-              Check for updates
-            </Button>
-            <HoverTip v-else text="Available in packaged builds" side="bottom" wrap>
-              <Button disabled>
-                <i-lucide-refresh-cw class="size-4" />
+            <SettingRow>
+              <Button v-if="updates.status?.supported" :disabled="updatesBusy" @click="updates.check()">
+                <i-lucide-refresh-cw class="size-4" :class="updates.checking ? 'animate-spin' : ''" />
                 Check for updates
               </Button>
-            </HoverTip>
-            <span class="text-xs text-on-surface-muted">Last checked: {{ lastChecked }}<template v-if="upToDate"> - You're on the latest version</template></span>
-          </div>
+              <HoverTip v-else text="Available in packaged builds" side="bottom" wrap>
+                <Button disabled>
+                  <i-lucide-refresh-cw class="size-4" />
+                  Check for updates
+                </Button>
+              </HoverTip>
+              <template #hint>Last checked: {{ lastChecked }}<template v-if="upToDate"> - You're on the latest version</template></template>
+            </SettingRow>
 
-          <div v-if="updates.status?.updateAvailable" class="flex items-center gap-3">
-            <span class="text-sm text-on-surface-muted w-44 shrink-0"></span>
-            <Button :disabled="updatesBusy" @click="updates.relaunch()">
-              <i-lucide-rotate-ccw class="size-4" />
-              Relaunch to Update
-            </Button>
-            <span class="text-xs text-on-surface-muted">Version {{ updates.status.version }} available</span>
-          </div>
+            <SettingRow v-if="updates.status?.updateAvailable" :hint="`Version ${updates.status.version} available`">
+              <Button :disabled="updatesBusy" @click="updates.relaunch()">
+                <i-lucide-rotate-ccw class="size-4" />
+                Relaunch to Update
+              </Button>
+            </SettingRow>
 
-          <div v-if="updates.downloading" class="flex items-center gap-3">
-            <span class="text-sm text-on-surface-muted w-44 shrink-0"></span>
-            <div class="w-64 h-1.5 rounded-full bg-surface-alt border border-border overflow-hidden">
-              <div class="h-full bg-accent-strong transition-[width] duration-200" :style="{ width: `${updates.progress}%` }" />
-            </div>
-            <span class="text-xs text-on-surface-muted tabular-nums">{{ updates.progress }}%</span>
-          </div>
+            <SettingRow v-if="updates.downloading">
+              <div class="w-64 h-1.5 rounded-full bg-surface-alt border border-border overflow-hidden">
+                <div class="h-full bg-accent-strong transition-[width] duration-200" :style="{ width: `${updates.progress}%` }" />
+              </div>
+              <span class="text-xs text-on-surface-muted tabular-nums">{{ updates.progress }}%</span>
+            </SettingRow>
 
-          <div v-if="autoApplyPending" class="flex items-center gap-3">
-            <span class="text-sm text-on-surface-muted w-44 shrink-0"></span>
-            <span class="text-xs text-on-surface-muted">The update will apply automatically on the next restart</span>
-          </div>
+            <SettingRow v-if="autoApplyPending">
+              <span class="text-xs text-on-surface-muted">The update will apply automatically on the next restart</span>
+            </SettingRow>
 
-          <div v-if="updates.status?.error" class="flex items-center gap-3">
-            <span class="text-sm text-on-surface-muted w-44 shrink-0"></span>
-            <span class="text-xs text-rose-500">{{ updates.status.error }}</span>
-          </div>
+            <SettingRow v-if="updates.status?.error">
+              <span class="text-xs text-rose-500">{{ updates.status.error }}</span>
+            </SettingRow>
+          </template>
         </div>
 
         <div class="flex flex-col gap-3">
           <h2 id="settings-editor" class="text-sm font-semibold">Editor</h2>
 
-          <div class="flex items-center gap-3">
-            <span class="text-sm text-on-surface-muted w-44 shrink-0">Font size</span>
+          <SettingRow label="Font size">
             <TextField v-model="fontSize" type="number" min="8" max="32" class="w-24"
               @input="debounced('fontSize', saveFontSize)" />
-          </div>
+          </SettingRow>
 
-          <div class="flex items-center gap-3">
-            <span class="text-sm text-on-surface-muted w-44 shrink-0">Font family</span>
+          <SettingRow label="Font family">
             <TextField v-model="fontFamily" type="text" spellcheck="false" placeholder="System monospace" class="w-64"
               @input="debounced('fontFamily', saveFontFamily)" />
-          </div>
+          </SettingRow>
 
-          <div class="flex items-center gap-3">
-            <span class="text-sm text-on-surface-muted w-44 shrink-0">Spellcheck</span>
+          <SettingRow label="Spellcheck">
             <Toggle :model-value="store.editor.spellcheckEnabled"
               @update:model-value="store.saveEditor({ spellcheckEnabled: $event })" />
-          </div>
+          </SettingRow>
 
-          <div class="flex items-center gap-3">
-            <span class="text-sm text-on-surface-muted w-44 shrink-0">Show line count</span>
+          <SettingRow label="Show line count">
             <Toggle :model-value="store.editor.showLineCount"
               @update:model-value="store.saveEditor({ showLineCount: $event })" />
-          </div>
+          </SettingRow>
 
-          <div class="flex items-center gap-3">
-            <span class="text-sm text-on-surface-muted w-44 shrink-0">Highlight active line</span>
+          <SettingRow label="Highlight active line">
             <Toggle :model-value="store.editor.highlightActiveLine"
               @update:model-value="store.saveEditor({ highlightActiveLine: $event })" />
-          </div>
+          </SettingRow>
 
-          <div class="flex items-center gap-3">
-            <span class="text-sm text-on-surface-muted w-44 shrink-0">Remember cursor position</span>
+          <SettingRow label="Remember cursor position" hint="Reopen a note where you left off">
             <Toggle :model-value="store.editor.rememberCursorPosition"
               @update:model-value="store.saveEditor({ rememberCursorPosition: $event })" />
-            <span class="text-xs text-on-surface-muted">Reopen a note where you left off</span>
-          </div>
+          </SettingRow>
 
-          <div class="flex items-center gap-3">
-            <span class="text-sm text-on-surface-muted w-44 shrink-0">Autosave debounce</span>
+          <SettingRow label="Autosave debounce" hint="Milliseconds after typing stops (Ctrl+S saves immediately)">
             <TextField v-model="autosaveDebounceMs" type="number" min="100" max="10000" step="100" class="w-24"
               @input="debounced('autosave', saveAutosaveDebounce)" />
-            <span class="text-xs text-on-surface-muted">Milliseconds after typing stops (Ctrl+S saves
-              immediately)</span>
-          </div>
+          </SettingRow>
 
-          <div class="flex items-start gap-3">
-            <span class="text-sm text-on-surface-muted w-44 shrink-0 pt-0.5">Markdown extensions</span>
+          <SettingRow label="Markdown extensions" align="start">
             <div class="flex flex-col gap-2">
               <label v-for="t in MD_TOGGLES" :key="t.key" class="flex items-center gap-2.5">
                 <Toggle :model-value="store.editor[t.key]"
@@ -400,43 +377,39 @@ onMounted(async () => {
                 <span class="text-sm">{{ t.label }}</span>
               </label>
             </div>
-          </div>
+          </SettingRow>
         </div>
 
         <div class="flex flex-col gap-3">
           <h2 id="settings-sync" class="text-sm font-semibold">Sync server</h2>
 
-          <div class="flex items-center gap-3">
-            <span class="text-sm text-on-surface-muted w-44 shrink-0">Status</span>
+          <SettingRow label="Status">
             <span class="size-2.5 rounded-full shrink-0" :class="sync.connected ? 'bg-emerald-500' : 'bg-rose-500'" />
             <span class="text-sm text-on-surface-muted min-w-0 break-words">{{ sync.label }}</span>
-          </div>
+          </SettingRow>
 
-          <div class="flex items-center gap-3">
-            <span class="text-sm text-on-surface-muted w-44 shrink-0">Server URL</span>
+          <SettingRow label="Server URL">
             <TextField v-model="syncServerUrl" type="text" spellcheck="false" placeholder="https://sync.example.com"
-              class="w-80" @blur="commitSyncServerUrl" @keydown.enter.prevent="$event.target.blur()" />
-          </div>
+              class="w-80 max-w-full" @blur="commitSyncServerUrl" @keydown.enter.prevent="$event.target.blur()" />
+          </SettingRow>
 
-          <div class="flex items-center gap-3">
-            <span class="text-sm text-on-surface-muted w-44 shrink-0">Token</span>
+          <SettingRow label="Token">
             <template v-if="sync.status?.tokenSet && !tokenEditing">
-              <span class="text-sm text-on-surface-muted w-44">••••••••</span>
+              <span class="text-sm text-on-surface-muted w-39">••••••••</span>
               <Button @click="startTokenReplace">Replace</Button>
               <Button @click="sync.removeToken()">Remove</Button>
             </template>
             <TextField v-else ref="tokenInputEl" v-model="syncToken" type="password" spellcheck="false"
-              placeholder="Paste the server token" class="w-80" @blur="commitSyncToken"
+              placeholder="Paste the server token" class="w-80 max-w-full" @blur="commitSyncToken"
               @keydown.enter.prevent="$event.target.blur()" @keydown.esc="cancelTokenEdit" />
-          </div>
+          </SettingRow>
 
-          <div class="flex items-center gap-3">
-            <span class="text-sm text-on-surface-muted w-44 shrink-0"></span>
+          <SettingRow>
             <Button :disabled="!sync.status?.configured || !sync.status?.tokenSet || sync.syncing" @click="sync.sync()">
               <i-lucide-refresh-cw class="size-4" :class="sync.syncing ? 'animate-spin' : ''" />
               Sync now
             </Button>
-          </div>
+          </SettingRow>
         </div>
 
         <div class="flex flex-col gap-3">

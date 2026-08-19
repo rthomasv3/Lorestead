@@ -37,8 +37,17 @@ internal static class SystemCommands
 
     private static string GetThirdPartyNotices()
     {
-        string path = Path.Combine(AppContext.BaseDirectory, "THIRD-PARTY-NOTICES.txt");
-        return File.Exists(path) ? File.ReadAllText(path) : "THIRD-PARTY-NOTICES.txt was not found beside the application.";
+        // The embedded copy, not the file beside the binary: Android apps have no
+        // loose files, and one read then serves every platform. The Content copy
+        // still ships beside desktop builds for anyone browsing the install folder.
+        string text = "THIRD-PARTY-NOTICES.txt is missing from this build.";
+        using Stream stream = typeof(SystemCommands).Assembly.GetManifestResourceStream("THIRD-PARTY-NOTICES.txt");
+        if (stream != null)
+        {
+            using StreamReader reader = new StreamReader(stream);
+            text = reader.ReadToEnd();
+        }
+        return text;
     }
 
     private static string GetVersion()
