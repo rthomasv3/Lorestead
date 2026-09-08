@@ -9,10 +9,10 @@ using Lorestead.Core.Search;
 
 namespace Lorestead.Core.Mcp
 {
-    // The MCP tool operations (features/mcp.md), shared verbatim by the server's
-    // HTTP endpoint and the stdio binary. Writes ride the normal repository save path
-    // (outbox append); afterWrite is the host seam - the server stamps seqs and
-    // broadcasts the sync hint there, the stdio host passes null.
+    // The MCP tool operations, shared verbatim by the server's HTTP endpoint
+    // and the stdio binary. Writes ride the normal repository save path
+    // (outbox append); afterWrite is the host seam - the server stamps seqs
+    // and broadcasts the sync hint there, the stdio host passes null.
     public sealed class McpToolService
     {
         private const long MaxAttachmentBytes = 100L * 1024 * 1024;
@@ -346,44 +346,11 @@ namespace Lorestead.Core.Mcp
 
         // Exact-match replacement so an agent changes a region without resending the
         // whole body. Applied to the freshly read row, so content elsewhere in the
-        // note survives - update_note's full replace is the clobber path. Ambiguity
-        // is an error, never a guess: the agent retries with more context.
+        // note survives - update_note's full replace is the clobber path.
         public async Task<McpSaveResponse> EditNote(string noteId, string oldText, string newText, bool replaceAll)
         {
             Note note = RequireActiveNote(noteId);
-            if (string.IsNullOrEmpty(oldText))
-            {
-                throw new InvalidOperationException("oldText is required.");
-            }
-
-            int count = 0;
-            int index = note.Body.IndexOf(oldText, StringComparison.Ordinal);
-            while (index >= 0)
-            {
-                count += 1;
-                index = note.Body.IndexOf(oldText, index + oldText.Length, StringComparison.Ordinal);
-            }
-
-            if (count == 0)
-            {
-                throw new InvalidOperationException("oldText was not found in the note body. It must match the current text exactly, including whitespace.");
-            }
-            if (count > 1 && !replaceAll)
-            {
-                throw new InvalidOperationException($"oldText matches {count} places in the note body. Include more surrounding context to make it unique, or set replaceAll to true.");
-            }
-
-            string replacement = newText ?? string.Empty;
-            if (replaceAll)
-            {
-                note.Body = note.Body.Replace(oldText, replacement);
-            }
-            else
-            {
-                int start = note.Body.IndexOf(oldText, StringComparison.Ordinal);
-                note.Body = note.Body.Substring(0, start) + replacement + note.Body.Substring(start + oldText.Length);
-            }
-
+            note.Body = ReplaceExact(note.Body, oldText, newText, replaceAll, "note body");
             _notes.Save(note);
             await NotifyWrite();
             return new McpSaveResponse { UpdatedAt = note.UpdatedAt };
@@ -506,6 +473,16 @@ namespace Lorestead.Core.Mcp
             {
                 task.Body = body;
             }
+            _tasks.Save(task);
+            await NotifyWrite();
+            return new McpSaveResponse { UpdatedAt = task.UpdatedAt };
+        }
+
+        // The task twin of EditNote: same contract, same errors, against the task body.
+        public async Task<McpSaveResponse> EditTask(string taskId, string oldText, string newText, bool replaceAll)
+        {
+            TaskItem task = RequireTask(taskId);
+            task.Body = ReplaceExact(task.Body, oldText, newText, replaceAll, "task body");
             _tasks.Save(task);
             await NotifyWrite();
             return new McpSaveResponse { UpdatedAt = task.UpdatedAt };
@@ -805,6 +782,46 @@ namespace Lorestead.Core.Mcp
         private static string NullIfEmpty(string value)
         {
             return string.IsNullOrEmpty(value) ? null : value;
+        }
+
+        // Replaces oldText in body with newText and returns the result. One
+        // occurrence unless replaceAll; ambiguity is an error, never a guess, so the
+        // agent retries with more context. `what` names the body in the messages
+        // ("note body", "task body") - the agent needs to know which it was told to
+        // re-read.
+        private static string ReplaceExact(string body, string oldText, string newText, bool replaceAll, string what)
+        {
+            if (string.IsNullOrEmpty(oldText))
+            {
+                throw new InvalidOperationException("oldText is required.");
+            }
+
+            string current = body ?? string.Empty;
+            int count = 0;
+            int index = current.IndexOf(oldText, StringComparison.Ordinal);
+            while (index >= 0)
+            {
+                count += 1;
+                index = current.IndexOf(oldText, index + oldText.Length, StringComparison.Ordinal);
+            }
+
+            if (count == 0)
+            {
+                throw new InvalidOperationException($"oldText was not found in the {what}. It must match the current text exactly, including whitespace.");
+            }
+            if (count > 1 && !replaceAll)
+            {
+                throw new InvalidOperationException($"oldText matches {count} places in the {what}. Include more surrounding context to make it unique, or set replaceAll to true.");
+            }
+
+            string replacement = newText ?? string.Empty;
+            if (replaceAll)
+            {
+                return current.Replace(oldText, replacement);
+            }
+
+            int start = current.IndexOf(oldText, StringComparison.Ordinal);
+            return current.Substring(0, start) + replacement + current.Substring(start + oldText.Length);
         }
     }
 }

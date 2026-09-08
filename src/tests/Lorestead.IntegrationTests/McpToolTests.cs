@@ -351,6 +351,58 @@ namespace Lorestead.IntegrationTests
         }
 
         [Fact]
+        public async Task EditTaskReplacesUniqueTextOnly()
+        {
+            Board board = Items.Board();
+            _db.Boards.Save(board);
+            BoardColumn column = Items.Column(board.Id, "Todo");
+            _db.Columns.Save(column);
+            McpCreateResponse created = await _tools.CreateTask(column.Id, "Task", "alpha beta gamma", null);
+
+            await _tools.EditTask(created.Id, "beta", "BETA", false);
+            McpTaskResponse task = _tools.GetTask(created.Id);
+            Assert.Equal("alpha BETA gamma", task.Body);
+            // The title is not part of the edit surface and must survive untouched.
+            Assert.Equal("Task", task.Title);
+        }
+
+        [Fact]
+        public async Task EditTaskRejectsMissingAndAmbiguousText()
+        {
+            Board board = Items.Board();
+            _db.Boards.Save(board);
+            BoardColumn column = Items.Column(board.Id, "Todo");
+            _db.Columns.Save(column);
+            McpCreateResponse created = await _tools.CreateTask(column.Id, "Task", "one two one", null);
+
+            InvalidOperationException missing = await Assert.ThrowsAsync<InvalidOperationException>(
+                () => _tools.EditTask(created.Id, "three", "x", false));
+            Assert.Contains("not found in the task body", missing.Message);
+
+            InvalidOperationException ambiguous = await Assert.ThrowsAsync<InvalidOperationException>(
+                () => _tools.EditTask(created.Id, "one", "x", false));
+            Assert.Contains("2 places in the task body", ambiguous.Message);
+
+            // Neither failure may write: the body is untouched and no notification
+            // fired beyond the create's own.
+            Assert.Equal("one two one", _tools.GetTask(created.Id).Body);
+            Assert.Equal(1, _writeNotifications);
+        }
+
+        [Fact]
+        public async Task EditTaskReplaceAllReplacesEveryOccurrence()
+        {
+            Board board = Items.Board();
+            _db.Boards.Save(board);
+            BoardColumn column = Items.Column(board.Id, "Todo");
+            _db.Columns.Save(column);
+            McpCreateResponse created = await _tools.CreateTask(column.Id, "Task", "one two one", null);
+
+            await _tools.EditTask(created.Id, "one", "1", true);
+            Assert.Equal("1 two 1", _tools.GetTask(created.Id).Body);
+        }
+
+        [Fact]
         public async Task MoveTaskReportsTheClampedIndex()
         {
             Board board = Items.Board();

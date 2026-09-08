@@ -63,7 +63,7 @@ You set both up on the server - [Sync Setup](note://019b76da-a800-7000-8000-0000
 
 ## What an agent can do
 
-Search, walk the note tree, list what changed recently, read a note or task in full, create and update notes, append to a note, make templates and new notes from them, work with boards and tasks, link a note to a task, and read or add attachments.
+Search, walk the note tree, list what changed recently, read a note or task in full, create and update notes, edit a note or task in place, append to a note, make templates and new notes from them, work with boards and tasks, link a note to a task, and read or add attachments.
 
 Search and listings return ids, titles, and snippets rather than whole bodies, so an agent finds the right note before spending its context on it.
 

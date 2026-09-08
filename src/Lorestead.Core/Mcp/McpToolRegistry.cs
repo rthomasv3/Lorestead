@@ -67,7 +67,11 @@ namespace Lorestead.Core.Mcp
 
                 McpServerTool.Create((string taskId, string title = null, string body = null) =>
                     RunAsync(async () => PayloadJson.Serialize(await tools.UpdateTask(taskId, title, body))),
-                    Options("update_task", "Replace a task's title and/or body. Omitted fields are kept.")),
+                    Options("update_task", "Replace a task's title and/or body. Omitted fields are kept. For changes to existing content prefer edit_task - a full body replace overwrites concurrent edits.")),
+
+                McpServerTool.Create((string taskId, string oldText, string newText, bool replaceAll = false) =>
+                    RunAsync(async () => PayloadJson.Serialize(await tools.EditTask(taskId, oldText, newText, replaceAll))),
+                    Options("edit_task", "Replace one exact occurrence of oldText in a task's body with newText. The preferred way to change existing content: only the edited text is sent, and the rest of the task is untouched. oldText must match the current body exactly, including whitespace; if it matches more than one place the call fails - include more surrounding context, or set replaceAll to replace every occurrence.")),
 
                 McpServerTool.Create((string taskId, string columnId, int index = -1) =>
                     RunAsync(async () => PayloadJson.Serialize(await tools.MoveTask(taskId, columnId, index))),

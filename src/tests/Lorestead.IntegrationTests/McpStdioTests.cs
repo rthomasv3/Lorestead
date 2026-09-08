@@ -27,7 +27,7 @@ namespace Lorestead.IntegrationTests
             // Lorestead.Mcp, so a missing binary means that broke, not that the
             // developer forgot to build it.
             string exe = FindBinary();
-            Assert.True(exe != null, "Lorestead.Mcp.exe was not built - check the build-ordering ProjectReference in the test csproj.");
+            Assert.True(exe != null, "The Lorestead.Mcp binary was not found - check the build-ordering ProjectReference in the test csproj.");
 
             string dataDir = Path.Combine(Path.GetTempPath(), $"lorestead-mcp-stdio-{Guid.NewGuid():N}");
             try
@@ -42,7 +42,7 @@ namespace Lorestead.IntegrationTests
                 await using (McpClient client = await McpClient.CreateAsync(transport, cancellationToken: Token))
                 {
                     IList<McpClientTool> tools = await client.ListToolsAsync(cancellationToken: Token);
-                    Assert.Equal(20, tools.Count);
+                    Assert.Equal(21, tools.Count);
 
                     CallToolResult created = await client.CallToolAsync(
                         "create_note",
@@ -73,11 +73,14 @@ namespace Lorestead.IntegrationTests
 
         private static string FindBinary()
         {
-            string root = AppContext.BaseDirectory;
+            // Segments rather than one backslash string, and the .exe suffix only on
+            // Windows - on Linux and macOS the apphost has no extension.
+            string name = OperatingSystem.IsWindows() ? "Lorestead.Mcp.exe" : "Lorestead.Mcp";
+            string bin = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "Lorestead.Mcp", "bin"));
             string[] candidates =
             {
-                Path.GetFullPath(Path.Combine(root, @"..\..\..\..\..\Lorestead.Mcp\bin\Debug\net10.0\Lorestead.Mcp.exe")),
-                Path.GetFullPath(Path.Combine(root, @"..\..\..\..\..\Lorestead.Mcp\bin\Release\net10.0\Lorestead.Mcp.exe")),
+                Path.Combine(bin, "Debug", "net10.0", name),
+                Path.Combine(bin, "Release", "net10.0", name),
             };
             return candidates.FirstOrDefault(File.Exists);
         }
