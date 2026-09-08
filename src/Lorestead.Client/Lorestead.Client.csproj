@@ -3,6 +3,21 @@
   <PropertyGroup>
     <TargetFrameworks>net10.0;net10.0-android</TargetFrameworks>
     <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('OSX'))">$(TargetFrameworks);net10.0-ios</TargetFrameworks>
+  </PropertyGroup>
+
+  <!-- A desktop RID publish (the release scripts) only needs the desktop framework.
+       Leaving the mobile ones in the list makes restore evaluate them too, which
+       demands the android/ios workloads - installed here, absent on the release
+       runners. The singular property rather than a one-entry list: any
+       TargetFrameworks value makes this a cross-targeting outer build, and Publish
+       refuses to run on those (NETSDK1129). Keyed off the RID the scripts already
+       pass, so plain builds and VS's device picker still see every framework. -->
+  <PropertyGroup Condition="$(RuntimeIdentifier.StartsWith('win-')) Or $(RuntimeIdentifier.StartsWith('linux-')) Or $(RuntimeIdentifier.StartsWith('osx-'))">
+    <TargetFrameworks></TargetFrameworks>
+    <TargetFramework>net10.0</TargetFramework>
+  </PropertyGroup>
+
+  <PropertyGroup>
     <RootNamespace>Lorestead.Client</RootNamespace>
     <!-- The shipped exe is Lorestead, not Lorestead.Client; set here rather than on the
          publish command line because CLI properties are global and would rename Core too. -->
