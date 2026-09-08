@@ -1,7 +1,7 @@
 <script setup>
 import { ref, watch, onMounted, onUnmounted, computed, nextTick } from 'vue'
 import { EditorView, keymap, lineNumbers, highlightActiveLine, placeholder, Decoration, ViewPlugin, tooltips } from '@codemirror/view'
-import { EditorState, EditorSelection, Compartment, RangeSetBuilder } from '@codemirror/state'
+import { EditorState, EditorSelection, Compartment, Prec, RangeSetBuilder } from '@codemirror/state'
 import { defaultKeymap, history, historyKeymap } from '@codemirror/commands'
 import { markdown } from '@codemirror/lang-markdown'
 import { syntaxHighlighting, defaultHighlightStyle, syntaxTree } from '@codemirror/language'
@@ -12,6 +12,8 @@ import { useSettingsStore } from '../stores/settingsStore.js'
 import { useNotesStore } from '../stores/notesStore.js'
 import { getCursor, setCursor, flushCursors } from '../utils/cursorPositions.js'
 import { toolbarKeymap } from '../utils/editorToolbar.js'
+import { editorIndentUnit, indentKeymap, dedentKeymap } from '../utils/editorIndent.js'
+import { listKeymap } from '../utils/editorLists.js'
 import { minimalChange } from '../utils/diff.js'
 import { shortcut } from '../utils/platform.js'
 import TextField from './TextField.vue'
@@ -421,10 +423,11 @@ function createView() {
               return true
             },
           },
-          // Tab accepts the `[[` completion. acceptCompletion returns false when
-          // no popup is open, so Tab keeps its normal behaviour the rest of the
-          // time (Enter is bound by the autocomplete keymap already).
+          // Tab accepts the `[[` completion. acceptCompletion returns false
+          // when no popup is open, so the indent below gets the key the rest of
+          // the time (Enter is bound by the autocomplete keymap already).
           { key: 'Tab', run: acceptCompletion },
+          ...indentKeymap,
           // Ahead of defaultKeymap so Mod-e beats the emacs-style cursorLineEnd
           // it binds on macOS. Bound here rather than by the hosts, so the task
           // dialog's editor gets the shortcuts without asking for them.
@@ -441,6 +444,11 @@ function createView() {
         searchTheme,
         matchHighlighter,
         markdown(),
+        editorIndentUnit,
+        // Prec.highest: markdown() registers its own Backspace and Enter at
+        // Prec.high, and these have to be asked first (see editorIndent.js and
+        // editorLists.js).
+        Prec.highest(keymap.of([...dedentKeymap, ...listKeymap])),
         autocompletion({ override: [linkCompletions], icons: false }),
         // Parented to the body: the task dialog's centering transform makes the
         // popup's default fixed positioning resolve against the dialog, so
