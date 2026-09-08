@@ -12,6 +12,7 @@ import { useSettingsStore } from '../stores/settingsStore.js'
 import { useNotesStore } from '../stores/notesStore.js'
 import { getCursor, setCursor, flushCursors } from '../utils/cursorPositions.js'
 import { toolbarKeymap } from '../utils/editorToolbar.js'
+import { minimalChange } from '../utils/diff.js'
 import { shortcut } from '../utils/platform.js'
 import TextField from './TextField.vue'
 import Button from './Button.vue'
@@ -593,21 +594,32 @@ watch(() => [props.documentKey, props.modelValue], ([key, value]) => {
   // update, and stealing focus would fight it.
   if (openedAnother && findOpen.value) closeFind(false)
 
-  // Holding the caret when the open document is rewritten under you - an agent
-  // edit landing on it, a version restored from history - is unconditional. The
-  // setting governs reopening, not being edited around: turning it off means
-  // "don't put me back where I was", never "throw me to the top mid-sentence".
-  // Clamped, because the incoming text can be shorter than the old offset.
-  const anchor = openedAnother
-    ? openingAnchor(key, value.length)
-    : Math.min(view.state.selection.main.head, value.length)
-
   syncingFromProp = true
-  view.dispatch({
-    changes: textChanged ? { from: 0, to: view.state.doc.length, insert: value } : undefined,
-    selection: { anchor },
-    scrollIntoView: true,
-  })
+  if (openedAnother) {
+    view.dispatch({
+      changes: textChanged ? { from: 0, to: view.state.doc.length, insert: value } : undefined,
+      selection: { anchor: openingAnchor(key, value.length) },
+      scrollIntoView: true,
+    })
+  } else {
+    // The open document rewritten under you - a checkbox flipped in the preview,
+    // an agent edit landing on it, a version restored from history. Holding the
+    // caret here is unconditional: the setting governs reopening, not being
+    // edited around, so turning it off means "don't put me back where I was",
+    // never "throw me to the top mid-sentence". Only the span that differs is
+    // replaced, and no selection is given, so the caret is mapped through the
+    // change and stays on the text it was on rather than at a clamped offset.
+    //
+    // No scrollIntoView either. Scrolling to the caret was right for opening,
+    // but for a rewrite it hauled the editor to wherever the caret had been left
+    // - the top, for someone who had only been reading the preview - and the
+    // scroll sync then dragged the preview up after it. The scroll position is
+    // put back explicitly in case the edit shifts CodeMirror's layout anyway.
+    const scroller = view.scrollDOM
+    const top = scroller.scrollTop
+    view.dispatch({ changes: minimalChange(view.state.doc.toString(), value) })
+    scroller.scrollTop = top
+  }
   syncingFromProp = false
   appliedKey = key
 })

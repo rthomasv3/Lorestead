@@ -25,6 +25,26 @@ export function changeCounts(oldText, newText) {
   return { added, removed }
 }
 
+// The one span that differs between two texts, as a CodeMirror change spec, or
+// null when they are the same. Common prefix and suffix are trimmed and what is
+// left is the edit. Meant for a document rewritten under an open editor - a
+// checkbox flipped in the preview, an agent edit landing - where replacing the
+// whole buffer would throw away the height cache, the undo history, and the
+// layout the reader is looking at, all for a change of one character.
+export function minimalChange(oldText, newText) {
+  if (oldText === newText) return null
+  const shortest = Math.min(oldText.length, newText.length)
+  let from = 0
+  while (from < shortest && oldText.charCodeAt(from) === newText.charCodeAt(from)) from++
+  let oldEnd = oldText.length
+  let newEnd = newText.length
+  while (oldEnd > from && newEnd > from && oldText.charCodeAt(oldEnd - 1) === newText.charCodeAt(newEnd - 1)) {
+    oldEnd--
+    newEnd--
+  }
+  return { from, to: oldEnd, insert: newText.slice(from, newEnd) }
+}
+
 function wordSegments(oldLine, newLine, want) {
   const segments = []
   for (const part of diffWordsWithSpace(oldLine, newLine)) {
