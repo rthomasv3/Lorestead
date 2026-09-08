@@ -10,6 +10,7 @@ import AttachmentPreviewDialog from './AttachmentPreviewDialog.vue'
 import { useSettingsStore } from '../stores/settingsStore.js'
 import { useNotesStore } from '../stores/notesStore.js'
 import { sourceLines, toggleTaskLine } from '../utils/markdownSource.js'
+import { copyButtons, codeTextOf, copyText } from '../utils/copyCode.js'
 
 const props = defineProps({
   markdown: { type: String, default: '' },
@@ -17,6 +18,9 @@ const props = defineProps({
   // (task cards, trashed notes), and a live checkbox in one of those would
   // offer an edit the host has no way to save.
   editable: { type: Boolean, default: false },
+  // Off for the kanban card snippets: a hover control on a card that is itself
+  // draggable and clickable is noise, and the snippet is a teaser, not the text.
+  copyCode: { type: Boolean, default: true },
 })
 
 const emit = defineEmits(['update:markdown'])
@@ -58,6 +62,7 @@ const md = computed(() => {
   if (editor.mdHighlight) instance.use(mark)
   instance.use(underline)
   instance.use(sourceLines)
+  if (props.copyCode) instance.use(copyButtons)
   return instance
 })
 
@@ -105,6 +110,12 @@ watch([html, container, () => props.editable, () => notesStore.summaries], async
 
 // Delegated: survives every re-render without stacking listeners on the same node.
 function onPreviewClick(event) {
+  const copyButton = event.target.closest?.('button.copy-code')
+  if (copyButton) {
+    onCopyClick(event, copyButton)
+    return
+  }
+
   const checkbox = event.target.closest?.('input.task-list-item-checkbox')
   if (checkbox) {
     toggleTask(event, checkbox)
@@ -145,6 +156,26 @@ function toggleTask(event, checkbox) {
   const line = Number(checkbox.closest('[data-line]')?.dataset.line)
   const next = toggleTaskLine(props.markdown, line)
   if (next !== null) emit('update:markdown', next)
+}
+
+// Keyed by button so a re-render can drop both the node and its pending reset;
+// a timer left over from a replaced node only ever touches a detached element.
+const copiedTimers = new WeakMap()
+
+// stopPropagation for the same reason link and checkbox clicks do - in the task
+// dialog's reading mode a container click enters edit mode.
+async function onCopyClick(event, button) {
+  event.preventDefault()
+  event.stopPropagation()
+
+  if (!(await copyText(codeTextOf(button)))) return
+
+  button.classList.add('copied')
+  clearTimeout(copiedTimers.get(button))
+  copiedTimers.set(button, setTimeout(() => {
+    button.classList.remove('copied')
+    copiedTimers.delete(button)
+  }, 1500))
 }
 </script>
 

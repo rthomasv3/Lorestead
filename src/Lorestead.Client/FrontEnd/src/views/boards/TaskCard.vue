@@ -133,7 +133,7 @@ onUnmounted(() => {
             </div>
             <div v-if="snippet"
               class="max-h-16 overflow-hidden text-xs text-on-surface-muted pointer-events-none [&_.markdown-preview]:text-xs">
-              <MarkdownPreview :markdown="snippet" />
+              <MarkdownPreview :markdown="snippet" :copy-code="false" />
             </div>
             <div class="flex items-center gap-2 text-xs text-on-surface-muted/80">
               <span v-if="task.attachmentCount > 0" class="flex items-center gap-0.5">

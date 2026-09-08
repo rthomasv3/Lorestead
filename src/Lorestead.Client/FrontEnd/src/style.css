@@ -565,6 +565,80 @@ kbd {
     font-size: 0.85em;
 }
 
+/* Copy button. The wrapper exists only to position it; the padding keeps a long
+   line from running under the button before the pre starts scrolling. */
+.markdown-preview .code-block {
+    position: relative;
+}
+
+.markdown-preview .code-block pre {
+    padding-right: 2.6em;
+}
+
+.markdown-preview .copy-code {
+    position: absolute;
+    top: 0.45em;
+    right: 0.45em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.9em;
+    height: 1.9em;
+    font-size: 0.85em;
+    border: 1px solid var(--color-border);
+    border-radius: 5px;
+    /* Opaque: code scrolled horizontally passes underneath it. */
+    background: var(--color-surface-alt);
+    color: var(--color-on-surface-muted);
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 120ms ease, color 120ms ease;
+}
+
+/* One line has no top corner worth aiming at - centre on the right edge instead. */
+.markdown-preview .code-block-single .copy-code {
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.markdown-preview .code-block:hover .copy-code,
+.markdown-preview .copy-code:focus-visible {
+    opacity: 1;
+}
+
+/* Hover reveals nothing on a touch screen, so there it simply stays put. */
+@media (hover: none) {
+    .markdown-preview .copy-code {
+        opacity: 1;
+    }
+}
+
+.markdown-preview .copy-code:hover {
+    /* The wash token is an alpha, and this button has to stay opaque - mix it
+       into the surface instead of layering it over. */
+    background: color-mix(in srgb, var(--color-on-surface) 8%, var(--color-surface-alt));
+    color: var(--color-on-surface);
+}
+
+.markdown-preview .copy-code.copied {
+    opacity: 1;
+    color: var(--color-accent);
+}
+
+.markdown-preview .copy-code svg {
+    width: 1.05em;
+    height: 1.05em;
+}
+
+.markdown-preview .copy-code .copy-code-done,
+.markdown-preview .copy-code.copied .copy-code-idle {
+    display: none;
+}
+
+.markdown-preview .copy-code.copied .copy-code-done {
+    display: block;
+}
+
 .markdown-preview table {
     border-collapse: collapse;
     margin: 0.6em 0;
