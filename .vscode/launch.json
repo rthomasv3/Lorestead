@@ -6,7 +6,7 @@
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "dev: frontend + build",
-            "program": "${workspaceFolder}/src/Lorestead.Client/bin/Debug/net10.0/Lorestead.Client.dll",
+            "program": "${workspaceFolder}/src/Lorestead.Client/bin/Debug/net10.0/Lorestead.dll",
             "args": [],
             "cwd": "${workspaceFolder}/src/Lorestead.Client",
             "stopAtEntry": false,
