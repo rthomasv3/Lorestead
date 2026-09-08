@@ -7,6 +7,7 @@ import { useSyncStore } from './stores/syncStore'
 import { useUpdatesStore } from './stores/updatesStore'
 import { useNotesStore } from './stores/notesStore'
 import { useBoardsStore } from './stores/boardsStore'
+import { watchNativeDrops } from './utils/nativeFileDrop.js'
 import Sidebar from './components/Sidebar.vue'
 import BottomNav from './components/BottomNav.vue'
 import SearchDialog from './components/SearchDialog.vue'
@@ -43,6 +44,10 @@ window.addEventListener('note:navigate', async (event) => {
 // refreshing it from here would just repopulate state nobody is showing. The
 // summary lists (load) stay ungated - they are navigation data, kept warm so the
 // tree and board list render instantly on return.
+// Drops from outside the app: the page default that would navigate to the file,
+// and the pairing that gets a host-taken drop to the zone it landed on.
+watchNativeDrops()
+
 window.addEventListener('notes:changed', () => {
   if (notes.loaded) notes.load()
   if (router.currentRoute.value.name === 'notes') {

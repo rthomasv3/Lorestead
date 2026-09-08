@@ -13,7 +13,10 @@ import ConfirmDialog from '../../components/ConfirmDialog.vue'
 import HoverTip from '../../components/HoverTip.vue'
 import EmptyState from '../../components/EmptyState.vue'
 import * as attachmentService from '../../services/attachmentService.js'
-import { createImageThumbnail } from '../../utils/thumbnails.js'
+import {
+  MAX_ATTACHMENT_SIZE, filePathsFrom, filesFromPaths, toAttachmentPayload,
+} from '../../utils/attachmentFiles.js'
+import { claimDrop } from '../../utils/nativeFileDrop.js'
 import { useBoardsStore } from '../../stores/boardsStore.js'
 import { useNotesStore } from '../../stores/notesStore.js'
 import { useSettingsStore } from '../../stores/settingsStore.js'
@@ -55,8 +58,6 @@ const pendingDeleteAttachment = ref(null)
 const previewAttachment = ref(null)
 
 let saveTimer = null
-
-const MAX_SIZE = 100 * 1024 * 1024
 
 // immediate matters: a jump from another route (search result, backlink card)
 // mounts BoardsView with the request already pending, so this dialog's first
@@ -268,38 +269,41 @@ async function refreshAttachments() {
   boardsStore.refreshTaskAttachmentCount(task.value.id, attachments.value.length)
 }
 
-function readFile(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => resolve(reader.result.split(',')[1])
-    reader.onerror = reject
-    reader.readAsDataURL(file)
-  })
-}
-
+// Returns what it stored so a paste into the description can link it.
 async function addFiles(files) {
+  const added = []
   for (const file of files) {
-    if (file.size > MAX_SIZE) {
-      // Errors never toast (conventions) - oversized files are silently skipped;
-      // the limit is stated in the drop zone hint.
-      continue
-    }
-    const dataBase64 = await readFile(file)
-    const thumbnailBase64 = await createImageThumbnail(file, file.type)
-    await attachmentService.addAttachment({
+    // Errors never toast (conventions) - oversized files are silently skipped;
+    // the limit is stated in the drop zone hint.
+    if (file.size > MAX_ATTACHMENT_SIZE) continue
+    const response = await attachmentService.addAttachment({
       taskId: task.value.id,
-      filename: file.name,
-      mimeType: file.type || 'application/octet-stream',
-      dataBase64,
-      thumbnailBase64,
+      ...(await toAttachmentPayload(file)),
     })
+    added.push(response.attachment)
   }
   await refreshAttachments()
+  return added
 }
 
-function onDrop(e) {
+async function onDrop(e) {
   dragOver.value = false
-  addFiles([...(e.dataTransfer?.files ?? [])])
+  const files = [...(e.dataTransfer?.files ?? [])]
+  if (files.length > 0) {
+    await addFiles(files)
+  } else {
+    // A file manager drag carries paths and no bytes, so `files` is empty for it.
+    // Read them before the handler returns and dataTransfer is emptied.
+    const paths = filePathsFrom(e.dataTransfer)
+    if (paths.length > 0) await addFiles(await filesFromPaths(paths))
+  }
+}
+
+// On WebKit this drop never reaches the page at all - the host takes it and says
+// so afterwards, so the zone has to be claimed while the drag is still overhead.
+function onDragOver() {
+  dragOver.value = true
+  claimDrop(async (paths) => addFiles(await filesFromPaths(paths)))
 }
 
 function onPick(e) {
@@ -448,7 +452,8 @@ function onDialogKeydown(e) {
                  store is garbage-collected against the note index, so a task
                  id would be swept on the next load. -->
             <MarkdownEditor ref="editorRef" :model-value="body" :attachments="attachments"
-              :document-key="taskId ?? ''" @update:model-value="onBodyChange" @save="leaveEdit" />
+              :attach-files="addFiles" :document-key="taskId ?? ''" @update:model-value="onBodyChange"
+              @save="leaveEdit" />
           </div>
         </div>
       </div>
@@ -464,7 +469,7 @@ function onDialogKeydown(e) {
           <input ref="fileInput" type="file" multiple class="hidden" @change="onPick" />
         </div>
         <div class="flex flex-col gap-1.5 rounded-md" :class="dragOver ? 'bg-drop-target' : ''"
-          @dragover.prevent="dragOver = true" @dragleave="dragOver = false" @drop.prevent="onDrop">
+          @dragover.prevent="onDragOver" @dragleave="dragOver = false" @drop.prevent="onDrop">
           <AttachmentCard v-for="attachment in attachments" :key="attachment.id" :attachment="attachment"
             @rename="(filename) => renameAttachment(attachment.id, filename)"
             @delete="pendingDeleteAttachment = attachment" @preview="previewAttachment = attachment" />

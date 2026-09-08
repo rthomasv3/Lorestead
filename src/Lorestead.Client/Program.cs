@@ -62,6 +62,7 @@ internal class Program
             .AddSingleton<IBoardService, BoardService>()
             .AddSingleton<ISyncService, SyncEngine>()
             .AddSingleton<IChangeWatcher, DataVersionWatcher>()
+            .AddSingleton<IFileDropWatcher, FileDropWatcher>()
             .AddSingleton<IUpdateService, UpdateService>()
             .SetContentProvider(new MultiplatformContent(devServerPort: 5174, hostname: "lorestead.localhost"))
             .OnBeforeStartup(() =>
@@ -88,6 +89,7 @@ internal class Program
                 RestoreWindow(serviceProvider, logger);
                 serviceProvider.GetRequiredService<ISyncService>().Start();
                 serviceProvider.GetRequiredService<IChangeWatcher>().Start();
+                serviceProvider.GetRequiredService<IFileDropWatcher>().Start();
                 serviceProvider.GetRequiredService<IUpdateService>().Start();
             })
             .OnBackground(serviceProvider =>

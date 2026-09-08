@@ -27,6 +27,14 @@ internal static class SystemCommands
             Text = logger.ReadLog(),
         });
 
+        // The webview has a console nobody can open on the desktop, so anything the
+        // frontend needs to say about a session goes to the same log as the rest.
+        builder.AddFunction("logMessage", (LogMessageRequest request, ILoggingService logger) =>
+        {
+            logger.Debug(string.IsNullOrEmpty(request.Source) ? "Frontend" : request.Source, request.Message ?? string.Empty);
+            return new LogMessageResponse { Logged = true };
+        });
+
         builder.AddFunction("getThirdPartyNotices", () => new GetThirdPartyNoticesResponse
         {
             Text = GetThirdPartyNotices(),

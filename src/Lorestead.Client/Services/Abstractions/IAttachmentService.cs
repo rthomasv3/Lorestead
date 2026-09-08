@@ -6,6 +6,7 @@ public interface IAttachmentService
 {
     GetAttachmentsResponse GetForNote(GetAttachmentsRequest request);
     AddAttachmentResponse Add(AddAttachmentRequest request);
+    ReadAttachmentFileResponse ReadFile(ReadAttachmentFileRequest request);
     RenameAttachmentResponse Rename(RenameAttachmentRequest request);
     DeleteAttachmentResponse Delete(DeleteAttachmentRequest request);
     GetAttachmentDataResponse GetData(GetAttachmentDataRequest request);

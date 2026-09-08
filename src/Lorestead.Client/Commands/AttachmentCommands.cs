@@ -10,6 +10,7 @@ internal static class AttachmentCommands
     {
         builder.AddFunction("getAttachments", (GetAttachmentsRequest request, IAttachmentService attachments) => attachments.GetForNote(request));
         builder.AddFunction("addAttachment", (AddAttachmentRequest request, IAttachmentService attachments) => attachments.Add(request));
+        builder.AddFunction("readAttachmentFile", (ReadAttachmentFileRequest request, IAttachmentService attachments) => attachments.ReadFile(request));
         builder.AddFunction("renameAttachment", (RenameAttachmentRequest request, IAttachmentService attachments) => attachments.Rename(request));
         builder.AddFunction("deleteAttachment", (DeleteAttachmentRequest request, IAttachmentService attachments) => attachments.Delete(request));
         builder.AddFunction("getAttachmentData", (GetAttachmentDataRequest request, IAttachmentService attachments) => attachments.GetData(request));

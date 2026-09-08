@@ -7,8 +7,9 @@ import EmptyState from '../../components/EmptyState.vue'
 import AttachmentPreviewDialog from '../../components/AttachmentPreviewDialog.vue'
 import ConfirmDialog from '../../components/ConfirmDialog.vue'
 import { useNotesStore } from '../../stores/notesStore.js'
-import { createImageThumbnail } from '../../utils/thumbnails.js'
 import { useFinePointer } from '../../composables/useFinePointer.js'
+import { filePathsFrom, filesFromPaths } from '../../utils/attachmentFiles.js'
+import { claimDrop } from '../../utils/nativeFileDrop.js'
 
 const notesStore = useNotesStore()
 // Drag-drop needs a pointer that can drag; touch gets tap wording instead.
@@ -19,39 +20,31 @@ const pendingDelete = ref(null)
 const previewAttachment = ref(null)
 const fileInput = ref(null)
 
-const MAX_SIZE = 100 * 1024 * 1024
-
-function readFile(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => resolve(reader.result.split(',')[1])
-    reader.onerror = reject
-    reader.readAsDataURL(file)
-  })
-}
-
 async function addFiles(files) {
   if (readonly.value) return
-  for (const file of files) {
-    if (file.size > MAX_SIZE) {
-      // Errors never toast (conventions) - an oversized file is silently skipped;
-      // the limit is stated in the drop zone hint.
-      continue
-    }
-    const dataBase64 = await readFile(file)
-    const thumbnailBase64 = await createImageThumbnail(file, file.type)
-    await notesStore.addAttachment({
-      filename: file.name,
-      mimeType: file.type || 'application/octet-stream',
-      dataBase64,
-      thumbnailBase64,
-    })
+  await notesStore.addAttachmentFiles(files)
+}
+
+async function onDrop(e) {
+  dragOver.value = false
+  const files = [...(e.dataTransfer?.files ?? [])]
+  if (files.length > 0) {
+    await addFiles(files)
+  } else {
+    // A file manager drag carries paths and no bytes, so `files` is empty for it.
+    // Read them before the handler returns and dataTransfer is emptied.
+    const paths = filePathsFrom(e.dataTransfer)
+    if (paths.length > 0) await addFiles(await filesFromPaths(paths))
   }
 }
 
-function onDrop(e) {
-  dragOver.value = false
-  addFiles([...(e.dataTransfer?.files ?? [])])
+// On WebKit this drop never reaches the page at all - the host takes it and says
+// so afterwards, so the zone has to be claimed while the drag is still overhead.
+function onDragOver() {
+  dragOver.value = !readonly.value
+  if (!readonly.value) {
+    claimDrop(async (paths) => addFiles(await filesFromPaths(paths)))
+  }
 }
 
 function onPick(e) {
@@ -73,7 +66,7 @@ function onPick(e) {
     </div>
 
     <div class="flex-1 min-h-0 overflow-y-auto p-2 flex flex-col gap-1.5" :class="dragOver ? 'bg-drop-target' : ''"
-      @dragover.prevent="dragOver = !readonly" @dragleave="dragOver = false" @drop.prevent="onDrop">
+      @dragover.prevent="onDragOver" @dragleave="dragOver = false" @drop.prevent="onDrop">
       <AttachmentCard v-for="attachment in notesStore.currentAttachments" :key="attachment.id" :attachment="attachment"
         :readonly="readonly" @rename="(filename) => notesStore.renameAttachment(attachment.id, filename)"
         @delete="pendingDelete = attachment" @preview="previewAttachment = attachment" />

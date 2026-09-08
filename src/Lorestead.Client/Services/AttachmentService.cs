@@ -1,7 +1,9 @@
 using System;
+using System.IO;
 using Galdr.Native;
 using Lorestead.Client.Commands.Contracts;
 using Lorestead.Client.Services.Abstractions;
+using Lorestead.Core;
 using Lorestead.Core.DataAccess;
 using Lorestead.Core.Entities;
 
@@ -88,6 +90,44 @@ public sealed class AttachmentService : IAttachmentService
             saved = true;
         }
         return new DownloadAttachmentResponse { Saved = saved };
+    }
+
+    // A file the webview knows only as a path: pasted or dropped from a file
+    // manager, which hands over a file:// URI and never the bytes. Reading them
+    // here and letting the frontend attach keeps one attach path - it is the
+    // only place that can decode an image for a thumbnail.
+    public ReadAttachmentFileResponse ReadFile(ReadAttachmentFileRequest request)
+    {
+        ReadAttachmentFileResponse response = new ReadAttachmentFileResponse();
+        string path = request.Path;
+
+        if (!string.IsNullOrWhiteSpace(path) && File.Exists(path))
+        {
+            FileInfo info = new FileInfo(path);
+            // Checked before the read so an enormous file is never loaded, let
+            // alone base64'd across the bridge.
+            if (info.Length <= MaxSizeBytes)
+            {
+                try
+                {
+                    response.Filename = info.Name;
+                    response.MimeType = MimeTypes.FromExtension(info.Name);
+                    response.DataBase64 = Convert.ToBase64String(File.ReadAllBytes(path));
+                }
+                catch (IOException)
+                {
+                    // Unreadable (permissions, a device that went away) - an empty
+                    // response, and the caller skips it.
+                    response.DataBase64 = null;
+                }
+                catch (UnauthorizedAccessException)
+                {
+                    response.DataBase64 = null;
+                }
+            }
+        }
+
+        return response;
     }
 
     public RenameAttachmentResponse Rename(RenameAttachmentRequest request)

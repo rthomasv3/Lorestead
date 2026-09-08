@@ -8,6 +8,10 @@ export async function addAttachment(request) {
   return invoke('addAttachment', { request })
 }
 
+export async function readAttachmentFile(request) {
+  return invoke('readAttachmentFile', { request })
+}
+
 export async function renameAttachment(request) {
   return invoke('renameAttachment', { request })
 }

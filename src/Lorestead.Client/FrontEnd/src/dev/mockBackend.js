@@ -88,6 +88,10 @@ export function installMockBackend() {
     getAbout: () => ({ appName: 'Lorestead', version: 'dev (mock)' }),
     getPlatform: () => ({ mobile: false }),
     getLog: () => ({ text: '[mock] no log - running against the in-browser mock backend' }),
+    logMessage: ({ request }) => {
+      console.log(`[${request.source ?? 'Frontend'}] ${request.message ?? ''}`)
+      return { logged: true }
+    },
     getThirdPartyNotices: () => ({ text: '[mock] THIRD-PARTY-NOTICES.txt is embedded in the real binary' }),
 
     getNotes: () => ({ notes: sorted().map(summary) }),
@@ -242,6 +246,9 @@ export function installMockBackend() {
       if (request.thumbnailBase64) thumbnails.set(attachment.id, request.thumbnailBase64)
       return { attachment }
     },
+    // The browser has no file system to read from - the dev mock answers the way
+    // the real command answers an unreadable path, and the caller skips it.
+    readAttachmentFile: () => ({ filename: null, mimeType: null, dataBase64: null }),
     getAttachmentThumbnail: ({ request }) => ({ dataBase64: thumbnails.get(request.id) ?? '' }),
     saveAttachmentThumbnail: ({ request }) => {
       thumbnails.set(request.id, request.dataBase64 ?? '')

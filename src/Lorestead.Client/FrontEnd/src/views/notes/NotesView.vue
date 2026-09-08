@@ -524,7 +524,8 @@ onMounted(() => {
               <SplitterGroup direction="horizontal" class="flex-1 min-h-0" auto-save-id="lorestead-notes-preview">
                 <SplitterPanel :min-size="25">
                   <MarkdownEditor ref="editorRef" :model-value="body" :readonly="readonly"
-                    :attachments="notesStore.currentAttachments" :document-key="editingNoteId ?? ''" remember-cursor
+                    :attachments="notesStore.currentAttachments" :attach-files="notesStore.addAttachmentFiles"
+                    :document-key="editingNoteId ?? ''" remember-cursor
                     @update:model-value="onBodyChange" @save="flush" @scroll="onEditorScroll"
                     @keydown.esc="onEditorEscape" />
                 </SplitterPanel>
@@ -615,7 +616,8 @@ onMounted(() => {
         </div>
 
         <MarkdownEditor v-if="!mobilePreview" ref="editorRef" :model-value="body" :readonly="readonly"
-          :attachments="notesStore.currentAttachments" :document-key="editingNoteId ?? ''" remember-cursor
+          :attachments="notesStore.currentAttachments" :attach-files="notesStore.addAttachmentFiles"
+          :document-key="editingNoteId ?? ''" remember-cursor
           class="flex-1 min-h-0" @update:model-value="onBodyChange" @save="flush" />
         <div v-else class="flex-1 min-h-0 overflow-y-auto p-4">
           <MarkdownPreview :markdown="body" :editable="!readonly" @update:markdown="onBodyChange" />

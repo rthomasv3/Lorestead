@@ -14,6 +14,10 @@ import { getCursor, setCursor, flushCursors } from '../utils/cursorPositions.js'
 import { toolbarKeymap } from '../utils/editorToolbar.js'
 import { editorIndentUnit, indentKeymap, dedentKeymap } from '../utils/editorIndent.js'
 import { listKeymap } from '../utils/editorLists.js'
+import {
+  attachmentLink, clipboardPayload, filePathsFrom, filesFromPaths, pastedFiles,
+} from '../utils/attachmentFiles.js'
+import { claimDrop } from '../utils/nativeFileDrop.js'
 import { minimalChange } from '../utils/diff.js'
 import { shortcut } from '../utils/platform.js'
 import TextField from './TextField.vue'
@@ -26,6 +30,11 @@ const props = defineProps({
   // The editing item's own attachments, for the `[[` autocomplete. Per-item
   // ownership keeps this list short, which is why it can be offered in full.
   attachments: { type: Array, default: () => [] },
+  // Given the files off a paste, stores them against whatever this editor is
+  // editing and hands back the attachments it created. The host owns it because
+  // only the host knows whether it is holding a note or a task. Without it a
+  // paste is left to the browser, as it was.
+  attachFiles: { type: Function, default: null },
   // Which document the buffer currently holds. Without it the editor cannot tell
   // "you opened something else" from "what you have open was rewritten under
   // you", and those two want opposite things from the caret.
@@ -162,14 +171,11 @@ function linkCompletions(context) {
   for (const attachment of props.attachments) {
     const filename = attachment.filename || 'Attachment'
     if (query && !filename.toLowerCase().includes(query)) continue
-    // Images embed so they render inline in the preview - same rule as a dragged
-    // attachment card.
-    const embed = (attachment.mimeType || '').startsWith('image/') ? '!' : ''
     options.push({
       label: filename,
       detail: 'attachment',
       section: 'Attachments',
-      apply: `${embed}[${filename}](attachment://${attachment.id})`,
+      apply: attachmentLink(attachment),
     })
   }
 
@@ -406,6 +412,112 @@ function findKeymap() {
   ]
 }
 
+// A pasted image never had a name of its own until now, so the attachment it
+// becomes is only useful if the body links it - that link is the whole point of
+// pasting rather than attaching from the panel.
+function onPaste(event, view) {
+  if (props.readonly || !props.attachFiles) return false
+
+  const files = pastedFiles(event)
+  if (files.length > 0) {
+    event.preventDefault()
+    attachPasted(files, view)
+    return true
+  }
+
+  // A file copied in a file manager: paths, no bytes. Checked before the text
+  // below because that copy puts the path on the clipboard as text too, and the
+  // file is what was meant. Empty on WebKit, which sanitizes the paste event's
+  // DataTransfer down to a couple of types and lists uri-list without serving
+  // it - there the async clipboard below is what finds these.
+  const paths = filePathsFrom(event.clipboardData)
+  if (paths.length > 0) {
+    event.preventDefault()
+    attachPaths(paths, view)
+    return true
+  }
+
+  // Text on the clipboard means an ordinary paste - leave it to the editor.
+  if (event.clipboardData?.getData('text/plain')) return false
+
+  // Nothing textual and no file: on this webview a bitmap may still be there,
+  // just not on the event (see clipboardImageFiles). The default paste would
+  // insert nothing anyway, so taking the key costs the user nothing.
+  event.preventDefault()
+  attachFromClipboard(view)
+  return true
+}
+
+async function attachFromClipboard(view) {
+  let payload = { files: [], paths: [] }
+  try {
+    payload = await clipboardPayload()
+  } catch {
+    // Denied, or a clipboard this webview will not hand over. Nothing to paste.
+    return
+  }
+
+  if (payload.files.length > 0) attachPasted(payload.files, view)
+  else if (payload.paths.length > 0) attachPaths(payload.paths, view)
+}
+
+// A file dragged in from outside the app. CodeMirror's own drop would insert the
+// path as text, which is what this replaces.
+function onDrop(event, view) {
+  if (props.readonly || !props.attachFiles) return false
+
+  const files = [...(event.dataTransfer?.files ?? [])]
+  const paths = files.length === 0 ? filePathsFrom(event.dataTransfer) : []
+  if (files.length === 0 && paths.length === 0) return false
+
+  event.preventDefault()
+  // Read now: the caret has to be resolved from the event, and dataTransfer is
+  // emptied once the handler returns.
+  const at = view.posAtCoords({ x: event.clientX, y: event.clientY }, false)
+  if (files.length > 0) attachPasted(files, view, at)
+  else attachPaths(paths, view, at)
+  return true
+}
+
+// Where a file drop this webview keeps to itself would land, remembered while the
+// drag is still over the editor - by the time the host says what was dropped, the
+// drag is over and the pointer is the only thing that knew (see nativeFileDrop.js).
+function onDragOver(event, view) {
+  if (!props.readonly && props.attachFiles) {
+    const at = view.posAtCoords({ x: event.clientX, y: event.clientY }, false)
+    claimDrop((paths) => attachPaths(paths, view, at))
+  }
+  return false
+}
+
+async function attachPaths(paths, view, at) {
+  attachPasted(await filesFromPaths(paths), view, at)
+}
+
+async function attachPasted(files, view, at) {
+  if (files.length === 0) return
+
+  let added = []
+  try {
+    added = (await props.attachFiles(files)) ?? []
+  } catch {
+    // Errors never toast (conventions). Nothing was inserted, and the paste is
+    // still on the clipboard to try again.
+    return
+  }
+  if (added.length === 0) return
+
+  const text = added.map(attachmentLink).join('\n')
+  // A drop lands where it was aimed; a paste goes to the caret as it stands now
+  // rather than where the paste started - the store call is a local write, and
+  // holding a stale position would be the riskier half of that trade.
+  const spec = at === undefined || at === null
+    ? view.state.replaceSelection(text)
+    : { changes: { from: at, insert: text }, selection: { anchor: at + text.length } }
+  view.dispatch({ ...spec, scrollIntoView: true, userEvent: 'input.paste' })
+  view.focus()
+}
+
 function createView() {
   const anchor = openingAnchor(props.documentKey, props.modelValue.length)
   view = new EditorView({
@@ -459,6 +571,7 @@ function createView() {
         tooltips({ parent: document.body }),
         syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
         underscoreEmphasis,
+        EditorView.domEventHandlers({ paste: onPaste, drop: onDrop, dragover: onDragOver }),
         EditorView.lineWrapping,
         // placeholder('Start writing...'),
         configurable.of(settingsExtensions()),
@@ -568,9 +681,8 @@ onMounted(() => {
     onDrop: ({ source, location }) => {
       hideDropCaret()
       const { attachmentId, filename, mimeType, noteId, label } = source.data
-      const embed = (mimeType || '').startsWith('image/') ? '!' : ''
       const text = attachmentId
-        ? `${embed}[${filename}](attachment://${attachmentId})`
+        ? attachmentLink({ id: attachmentId, filename, mimeType })
         : `[${label || 'Untitled'}](note://${noteId})`
       insertAtPoint(text, location.current.input)
     },

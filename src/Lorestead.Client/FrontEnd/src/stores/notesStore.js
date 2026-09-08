@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import * as noteService from '../services/noteService.js'
 import * as attachmentService from '../services/attachmentService.js'
 import { pruneCursors } from '../utils/cursorPositions.js'
+import { MAX_ATTACHMENT_SIZE, toAttachmentPayload } from '../utils/attachmentFiles.js'
 
 export const TEMPLATES_ID = '__templates'
 export const TRASH_ID = '__trash'
@@ -299,6 +300,19 @@ export const useNotesStore = defineStore('notes', () => {
     return response.attachment
   }
 
+  // Files from a drop, the picker or a paste - stored against the open note and
+  // handed back so a caller that needs to link them can.
+  async function addAttachmentFiles(files) {
+    const added = []
+    for (const file of files) {
+      // Errors never toast (conventions) - an oversized file is silently
+      // skipped; the limit is stated in the drop zone hint.
+      if (file.size > MAX_ATTACHMENT_SIZE) continue
+      added.push(await addAttachment(await toAttachmentPayload(file)))
+    }
+    return added
+  }
+
   async function renameAttachment(id, filename) {
     await attachmentService.renameAttachment({ id, filename })
     await refreshAttachments()
@@ -449,6 +463,7 @@ export const useNotesStore = defineStore('notes', () => {
     clearHistory,
     restoreVersion,
     addAttachment,
+    addAttachmentFiles,
     renameAttachment,
     removeAttachment,
     getAttachmentUrl,
