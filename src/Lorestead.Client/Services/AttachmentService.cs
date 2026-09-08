@@ -158,7 +158,11 @@ public sealed class AttachmentService : IAttachmentService
     {
         AttachmentRepository attachments = _repositories.Attachments;
         Attachment attachment = GetRequired(attachments, request.Id);
-        byte[] data = attachments.GetBlob(request.Id);
+        // A tombstoned attachment reads as having no content. Its blob is only
+        // kept for the owner's purge, and a body still linking it should show it
+        // missing rather than keep rendering a file the user removed. Not thrown:
+        // a stale link in a note is ordinary, not a command error for the log.
+        byte[] data = attachment.Deleted ? null : attachments.GetBlob(request.Id);
         return new GetAttachmentDataResponse
         {
             Filename = attachment.Filename,

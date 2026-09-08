@@ -318,6 +318,9 @@ async function renameAttachment(id, filename) {
 
 async function removeAttachment(id) {
   await attachmentService.deleteAttachment({ id })
+  // The body preview embeds through the notes store's url cache, whichever
+  // owner the attachment has.
+  notesStore.releaseBlobUrl(id)
   await refreshAttachments()
 }
 

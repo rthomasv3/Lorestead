@@ -72,11 +72,31 @@ function noteIdOf(href) {
   return href.slice('note://'.length).toLowerCase()
 }
 
+// No url means nothing to show - deleted, or not synced here yet. The image is
+// left without a source so the alt text (the filename, as inserted) stands in
+// for it, styled like a broken note link rather than the webview's missing-image
+// glyph. Deleted and never-existed look the same, the same as note links.
+function showEmbed(img, url) {
+  if (url) {
+    img.src = url
+    img.classList.remove('broken-attachment')
+    img.removeAttribute('title')
+  } else {
+    img.removeAttribute('src')
+    img.classList.add('broken-attachment')
+    img.title = 'Attachment not available'
+    if (!img.alt) img.alt = 'Attachment'
+  }
+}
+
 // attachment:// sources resolve to cached object URLs; note:// links are classified
 // against the loaded note index (decisions.md) - no lookup call, so no unresolved
 // frame. Re-runs when summaries arrive, which is why it only sets attributes:
 // clicks are delegated below and cannot double-bind.
-watch([html, container, () => props.editable, () => notesStore.summaries], async () => {
+//
+// blobVersion is in the source so a deleted attachment stops showing: its embed
+// already holds a url, and only the store knows that url was dropped.
+watch([html, container, () => props.editable, () => notesStore.summaries, () => notesStore.blobVersion], async () => {
   await nextTick()
   const root = container.value
   if (!root) return
@@ -85,9 +105,16 @@ watch([html, container, () => props.editable, () => notesStore.summaries], async
     box.disabled = !props.editable
   }
 
+  // The id outlives the src: once resolved the src is an object url, and a
+  // re-run still has to know which attachment the embed is.
   for (const img of root.querySelectorAll('img[src^="attachment://"]')) {
-    const id = img.getAttribute('src').slice('attachment://'.length)
-    notesStore.getAttachmentUrl(id).then((url) => { img.src = url }).catch(() => { })
+    img.dataset.attachmentId = img.getAttribute('src').slice('attachment://'.length)
+  }
+
+  for (const img of root.querySelectorAll('img[data-attachment-id]')) {
+    notesStore.getAttachmentUrl(img.dataset.attachmentId)
+      .then((url) => showEmbed(img, url))
+      .catch(() => showEmbed(img, null))
   }
 
   const noteLinks = root.querySelectorAll('a[href^="note://"]')

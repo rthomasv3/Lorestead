@@ -420,9 +420,10 @@ export function installMockBackend() {
 
     getAttachmentData: ({ request }) => {
       const attachment = attachments.find((a) => a.id === request.id)
+      // Mirrors the backend: a tombstoned attachment has no content to give.
       return {
         filename: attachment?.filename ?? '', mimeType: attachment?.mimeType ?? '',
-        dataBase64: blobs.get(request.id) ?? '',
+        dataBase64: attachment && !attachment.deleted ? blobs.get(request.id) ?? '' : '',
       }
     },
   }

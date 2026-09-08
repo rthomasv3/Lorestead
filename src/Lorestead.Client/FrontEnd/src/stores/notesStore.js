@@ -325,12 +325,20 @@ export const useNotesStore = defineStore('notes', () => {
     await refreshAttachments()
   }
 
+  // Bumped whenever a cached blob url is dropped. Embeds in a rendered body hold
+  // the old url and have nothing else to watch - without this a deleted attachment
+  // keeps showing in the preview until the body itself changes.
+  const blobVersion = ref(0)
+
   // Object URLs are cached per attachment id - blobs are immutable, so a URL stays
   // valid for the app's lifetime and both the preview and the cards reuse it.
+  // Resolves null when there is nothing to show: the attachment is deleted, or its
+  // blob has not synced here yet.
   async function getAttachmentUrl(id) {
     if (!blobUrls.has(id)) {
       const promise = attachmentService.getAttachmentData({ id }).then((data) => {
-        const bytes = Uint8Array.from(atob(data.dataBase64 || ''), (c) => c.charCodeAt(0))
+        if (!data.dataBase64) return null
+        const bytes = Uint8Array.from(atob(data.dataBase64), (c) => c.charCodeAt(0))
         return URL.createObjectURL(new Blob([bytes], { type: data.mimeType || 'application/octet-stream' }))
       })
       blobUrls.set(id, promise)
@@ -342,8 +350,9 @@ export const useNotesStore = defineStore('notes', () => {
     const cached = blobUrls.get(id)
     if (cached) {
       blobUrls.delete(id)
-      cached.then((url) => URL.revokeObjectURL(url)).catch(() => {})
+      cached.then((url) => url && URL.revokeObjectURL(url)).catch(() => {})
     }
+    blobVersion.value++
   }
 
   // Cards only ever pull the small thumbnail across the bridge - the full blob
@@ -467,6 +476,8 @@ export const useNotesStore = defineStore('notes', () => {
     renameAttachment,
     removeAttachment,
     getAttachmentUrl,
+    releaseBlobUrl,
+    blobVersion,
     getAttachmentThumbnailUrl,
     storeAttachmentThumbnail,
     thumbnailVersion,

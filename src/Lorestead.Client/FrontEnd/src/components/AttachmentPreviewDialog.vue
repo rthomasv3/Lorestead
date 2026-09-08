@@ -79,17 +79,23 @@ watch(() => props.open, async (value) => {
     meta.value = attachment
     const mime = attachment.mimeType || ''
 
+    // A null url or empty data is an attachment with nothing to show here -
+    // deleted, or its blob not yet synced - and lands on the no-preview card.
     if (mime.startsWith('image/')) {
       contentUrl.value = await notesStore.getAttachmentUrl(attachment.id)
-      mode.value = 'image'
-      maybeBackfillThumbnail(attachment)
+      if (contentUrl.value) {
+        mode.value = 'image'
+        maybeBackfillThumbnail(attachment)
+      } else {
+        mode.value = 'none'
+      }
     } else if (mime.includes('pdf')) {
       contentUrl.value = await notesStore.getAttachmentUrl(attachment.id)
-      mode.value = 'pdf'
+      mode.value = contentUrl.value ? 'pdf' : 'none'
     } else {
       const data = fetched ?? await attachmentService.getAttachmentData({ id: attachment.id })
       const bytes = Uint8Array.from(atob(data.dataBase64 || ''), (c) => c.charCodeAt(0))
-      const text = sniffText(bytes)
+      const text = bytes.length > 0 ? sniffText(bytes) : null
       if (text !== null) {
         textContent.value = text
         textTruncated.value = bytes.length > TEXT_CAP

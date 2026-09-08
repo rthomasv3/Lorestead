@@ -451,6 +451,19 @@ kbd {
     text-decoration: line-through;
 }
 
+/* An attachment:// embed with nothing behind it - deleted, or not synced here
+   yet. No src, so the alt text (the filename) is what renders. */
+.markdown-preview img.broken-attachment {
+    display: inline-block;
+    padding: 0.1em 0.4em;
+    border: 1px dashed var(--color-border);
+    border-radius: 0.25rem;
+    color: var(--color-on-surface-muted);
+    font-size: 0.875em;
+    text-decoration: line-through;
+    text-decoration-color: var(--color-red-500);
+}
+
 .markdown-preview ul,
 .markdown-preview ol {
     padding-left: 1.6em;
