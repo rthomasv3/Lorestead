@@ -122,7 +122,11 @@ namespace Lorestead.Core.Sync
 
             foreach (string attachmentId in attachmentIds)
             {
-                byte[] blob = _attachments.GetBlob(attachmentId);
+                // A tombstone is an upsert too. Its blob stays only for the owner's
+                // purge and no device ever asks for it - backfill fetches for live
+                // attachments alone - so nothing is shipped for it.
+                Attachment attachment = _attachments.Get(attachmentId);
+                byte[] blob = attachment == null || attachment.Deleted ? null : _attachments.GetBlob(attachmentId);
 
                 if (blob != null && await _server.PutBlob(attachmentId, blob))
                 {

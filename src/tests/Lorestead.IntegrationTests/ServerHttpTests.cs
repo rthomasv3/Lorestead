@@ -78,6 +78,28 @@ namespace Lorestead.IntegrationTests
             Assert.Equal(blob, await got.Content.ReadAsByteArrayAsync(Token));
         }
 
+        // Every metadata upsert of an attachment re-sends its blob, so the second
+        // put of an id must be a no-op and not a primary-key conflict.
+        [Fact]
+        public async Task BlobPutIsIdempotent()
+        {
+            using ServerFixture server = new ServerFixture();
+            Note owner = Items.Note("Owner");
+            Attachment attachment = Items.Attachment(noteId: owner.Id);
+            byte[] blob = Encoding.UTF8.GetBytes("the bytes");
+
+            await PostChanges(server, Upsert(owner, "2026-07-23T10:00:00.0000001Z"));
+            await PostChanges(server, AttachmentUpsert(attachment, "2026-07-23T10:00:00.0000002Z"));
+
+            HttpResponseMessage first = await server.Client.PutAsync($"/attachments/{attachment.Id}/blob", new ByteArrayContent(blob), Token);
+            HttpResponseMessage second = await server.Client.PutAsync($"/attachments/{attachment.Id}/blob", new ByteArrayContent(blob), Token);
+            Assert.Equal(HttpStatusCode.NoContent, first.StatusCode);
+            Assert.Equal(HttpStatusCode.NoContent, second.StatusCode);
+
+            HttpResponseMessage got = await server.Client.GetAsync($"/attachments/{attachment.Id}/blob", Token);
+            Assert.Equal(blob, await got.Content.ReadAsByteArrayAsync(Token));
+        }
+
         [Fact]
         public async Task CursorBelowTheWatermarkGets410ButFullPullsNever()
         {

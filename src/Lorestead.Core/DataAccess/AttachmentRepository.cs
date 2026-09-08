@@ -157,11 +157,15 @@ namespace Lorestead.Core.DataAccess
         }
 
         // Blobs never touch the change log (data.md) - they move over dedicated endpoints.
+        // A blob is immutable, so a second save of the same id is the same bytes
+        // again and is ignored: the server sees one with every metadata upsert of an
+        // attachment that already uploaded (a rename), and a conflict there was a 500
+        // that ended the whole sync cycle.
         public void SaveBlob(string attachmentId, byte[] data)
         {
             using SqliteConnection connection = _connectionManager.CreateConnection();
             using SqliteCommand insert = connection.CreateCommand();
-            insert.CommandText = "INSERT INTO attachment_blob (attachment_id, data) VALUES (@id, @data)";
+            insert.CommandText = "INSERT OR IGNORE INTO attachment_blob (attachment_id, data) VALUES (@id, @data)";
             insert.Parameters.AddWithValue("@id", attachmentId);
             insert.Parameters.AddWithValue("@data", data);
             insert.ExecuteNonQuery();

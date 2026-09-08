@@ -143,6 +143,69 @@ namespace Lorestead.IntegrationTests
             Assert.Equal(blob, deviceB.Attachments.GetBlob(attachment.Id));
         }
 
+        // A rename is a metadata upsert, so the cycle sends the blob again; the
+        // server already has it and that used to be a 500 that killed the cycle.
+        [Fact]
+        public async Task RenamingAnUploadedAttachmentSyncsAgain()
+        {
+            using ServerFixture server = new ServerFixture();
+            using TestDb deviceA = new TestDb();
+            using TestDb deviceB = new TestDb();
+            using HttpClient httpA = new HttpClient();
+            using HttpClient httpB = new HttpClient();
+            SyncCycle cycleA = CycleFor(deviceA, server, httpA);
+            SyncCycle cycleB = CycleFor(deviceB, server, httpB);
+
+            Note owner = Items.Note("Has attachment");
+            deviceA.Notes.Save(owner);
+            Attachment attachment = Items.Attachment(noteId: owner.Id);
+            deviceA.Attachments.Save(attachment);
+            byte[] blob = Encoding.UTF8.GetBytes("attachment bytes");
+            deviceA.Attachments.SaveBlob(attachment.Id, blob);
+            await cycleA.Run();
+
+            attachment.Filename = "renamed.png";
+            deviceA.Attachments.Save(attachment);
+            SyncCycleResult renameResult = await cycleA.Run();
+            SyncCycleResult downloadResult = await cycleB.Run();
+
+            Assert.Equal(1, renameResult.Uploaded);
+            Assert.Equal("renamed.png", deviceB.Attachments.Get(attachment.Id).Filename);
+            Assert.Equal(blob, deviceB.Attachments.GetBlob(attachment.Id));
+            Assert.Equal(1, downloadResult.BlobsDownloaded);
+        }
+
+        // Deleting is an upsert of the tombstone. The blob is not sent with it -
+        // nothing will ever fetch it - and the tombstone still lands on the other device.
+        [Fact]
+        public async Task DeletingAnAttachmentSyncsWithoutItsBlob()
+        {
+            using ServerFixture server = new ServerFixture();
+            using TestDb deviceA = new TestDb();
+            using TestDb deviceB = new TestDb();
+            using HttpClient httpA = new HttpClient();
+            using HttpClient httpB = new HttpClient();
+            SyncCycle cycleA = CycleFor(deviceA, server, httpA);
+            SyncCycle cycleB = CycleFor(deviceB, server, httpB);
+
+            Note owner = Items.Note("Has attachment");
+            deviceA.Notes.Save(owner);
+            Attachment attachment = Items.Attachment(noteId: owner.Id);
+            deviceA.Attachments.Save(attachment);
+            deviceA.Attachments.SaveBlob(attachment.Id, Encoding.UTF8.GetBytes("attachment bytes"));
+            await cycleA.Run();
+            await cycleB.Run();
+
+            attachment.Deleted = true;
+            deviceA.Attachments.Save(attachment);
+            SyncCycleResult deleteResult = await cycleA.Run();
+            SyncCycleResult downloadResult = await cycleB.Run();
+
+            Assert.Equal(0, deleteResult.BlobsUploaded);
+            Assert.True(deviceB.Attachments.Get(attachment.Id).Deleted);
+            Assert.Equal(0, downloadResult.BlobsDownloaded);
+        }
+
         // Regression probe for real-world uploads: a batch big enough to span many
         // network/JSON buffers, with multi-byte and escaped characters in every
         // payload - small ASCII fixtures never exercised those paths.
