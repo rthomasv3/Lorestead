@@ -17,6 +17,7 @@ public interface IBoardService
     CreateTaskResponse CreateTask(CreateTaskRequest request);
     GetTaskResponse GetTask(GetTaskRequest request);
     SaveTaskResponse SaveTask(SaveTaskRequest request);
+    GetLabelsResponse GetLabels();
     MoveTaskResponse MoveTask(MoveTaskRequest request);
     DeleteTaskResponse DeleteTask(DeleteTaskRequest request);
     SearchTasksResponse SearchTasks(SearchTasksRequest request);

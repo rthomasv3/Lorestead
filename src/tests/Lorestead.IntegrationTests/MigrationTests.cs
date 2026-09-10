@@ -17,6 +17,7 @@ namespace Lorestead.IntegrationTests
             Assert.Contains("board_column", names);
             Assert.Contains("task", names);
             Assert.Contains("task_note", names);
+            Assert.Contains("task_label", names);
             Assert.Contains("attachment", names);
             Assert.Contains("attachment_blob", names);
             Assert.Contains("attachment_thumbnail", names);
@@ -39,7 +40,7 @@ namespace Lorestead.IntegrationTests
             Assert.Contains("remember_cursor_position", GetColumnNames(db, "editor_settings"));
             Assert.Contains("server_id", GetColumnNames(db, "sync_state"));
 
-            Assert.Equal(8, GetSchemaVersion(db));
+            Assert.Equal(9, GetSchemaVersion(db));
         }
 
         [Fact]
@@ -52,7 +53,8 @@ namespace Lorestead.IntegrationTests
             Assert.DoesNotContain("sync_state", names);
             Assert.DoesNotContain("application_settings", names);
             Assert.DoesNotContain("editor_settings", names);
-            Assert.Equal(1, GetSchemaVersion(db));
+            Assert.Contains("task_label", names);
+            Assert.Equal(9, GetSchemaVersion(db));
         }
 
         [Fact]
@@ -69,7 +71,8 @@ namespace Lorestead.IntegrationTests
             // The instance id is born with the schema, never empty afterwards.
             Assert.Contains("server_id", GetColumnNames(db, "server_state"));
             Assert.NotEqual("", ScalarString(db, "SELECT server_id FROM server_state WHERE id = 1"));
-            Assert.Equal(7, GetSchemaVersion(db));
+            Assert.Contains("task_label", names);
+            Assert.Equal(9, GetSchemaVersion(db));
         }
 
         [Fact]
@@ -83,7 +86,7 @@ namespace Lorestead.IntegrationTests
                 migrator.Add(migration);
             }
             migrator.Run(connection);
-            Assert.Equal(8, GetSchemaVersion(db));
+            Assert.Equal(9, GetSchemaVersion(db));
         }
 
         private static List<string> GetSchemaNames(TestDb db, string type)

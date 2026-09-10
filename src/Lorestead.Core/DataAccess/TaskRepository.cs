@@ -29,9 +29,13 @@ namespace Lorestead.Core.DataAccess
                 task.CreatedAt = now;
             }
             task.UpdatedAt = now;
+            // Normalized here, not per caller, so the payload every writer (dialog,
+            // MCP) ships is already clean and peers apply it verbatim.
+            task.Labels = TaskLabels.Normalize(task.Labels);
 
             UpsertWithin(connection, transaction, task);
             ReplaceNoteLinksWithin(connection, transaction, task.Id, task.NoteIds);
+            ReplaceLabelsWithin(connection, transaction, task.Id, task.Labels);
             NoteLinkRebuilder.RebuildForTaskWithin(connection, transaction, task.Id, task.Body);
 
             ChangeLogRepository.AppendAndPruneWithin(connection, transaction, new ChangeLogEntry
@@ -65,6 +69,7 @@ namespace Lorestead.Core.DataAccess
             if (task != null)
             {
                 task.NoteIds = GetNoteIds(connection, task.Id);
+                task.Labels = GetLabels(connection, task.Id);
             }
             return task;
         }
@@ -81,8 +86,10 @@ namespace Lorestead.Core.DataAccess
             transaction.Commit();
         }
 
-        // One query for the whole kanban view; NoteIds are left null - cards don't
-        // show links, the edit dialog loads the full task.
+        // One query for the whole kanban view; NoteIds and Labels are left empty -
+        // cards don't show links, and labels come from GetLabelsForBoard in one
+        // grouped query rather than a read per task. The edit dialog loads the
+        // full task.
         public List<TaskItem> GetActiveForBoard(string boardId)
         {
             List<TaskItem> tasks = new List<TaskItem>();
@@ -131,6 +138,58 @@ namespace Lorestead.Core.DataAccess
             return counts;
         }
 
+        // Labels per active task on a board, in the order they were given. Same
+        // one-query shape as the counts above; the board load stitches them onto
+        // the summaries.
+        public Dictionary<string, List<string>> GetLabelsForBoard(string boardId)
+        {
+            Dictionary<string, List<string>> labels = new Dictionary<string, List<string>>();
+            using SqliteConnection connection = _connectionManager.CreateConnection();
+            using SqliteCommand select = connection.CreateCommand();
+            select.CommandText = @"
+                SELECT tl.task_id, tl.label
+                FROM task_label tl
+                JOIN task t ON t.id = tl.task_id
+                JOIN board_column bc ON bc.id = t.column_id
+                WHERE bc.board_id = @board_id AND t.deleted = 0
+                ORDER BY tl.task_id, tl.ord";
+            select.Parameters.AddWithValue("@board_id", boardId);
+            using SqliteDataReader reader = select.ExecuteReader();
+            while (reader.Read())
+            {
+                string taskId = reader.GetString(0);
+                if (!labels.TryGetValue(taskId, out List<string> list))
+                {
+                    list = new List<string>();
+                    labels[taskId] = list;
+                }
+                list.Add(reader.GetString(1));
+            }
+            return labels;
+        }
+
+        // Every label in use on any live task, most used first, for the dialog's
+        // suggestions. Spellings that differ only by case fold together.
+        public List<string> GetAllLabels()
+        {
+            List<string> labels = new List<string>();
+            using SqliteConnection connection = _connectionManager.CreateConnection();
+            using SqliteCommand select = connection.CreateCommand();
+            select.CommandText = @"
+                SELECT tl.label, COUNT(*) AS uses
+                FROM task_label tl
+                JOIN task t ON t.id = tl.task_id
+                WHERE t.deleted = 0
+                GROUP BY tl.label COLLATE NOCASE
+                ORDER BY uses DESC, tl.label COLLATE NOCASE";
+            using SqliteDataReader reader = select.ExecuteReader();
+            while (reader.Read())
+            {
+                labels.Add(reader.GetString(0));
+            }
+            return labels;
+        }
+
         public string GetMaxPosition(string columnId)
         {
             using SqliteConnection connection = _connectionManager.CreateConnection();
@@ -168,6 +227,7 @@ namespace Lorestead.Core.DataAccess
             foreach (TaskItem task in tasks)
             {
                 task.NoteIds = GetNoteIds(connection, task.Id);
+                task.Labels = GetLabels(connection, task.Id);
             }
             return tasks;
         }
@@ -216,8 +276,32 @@ namespace Lorestead.Core.DataAccess
             }
         }
 
+        // task_label rows are rewritten from the payload's full label list, same as
+        // the note links; ord records list order so reads come back as given.
+        public static void ReplaceLabelsWithin(SqliteConnection connection, SqliteTransaction transaction, string taskId, List<string> labels)
+        {
+            using (SqliteCommand delete = connection.CreateCommand())
+            {
+                delete.CommandText = "DELETE FROM task_label WHERE task_id = @task_id";
+                delete.Parameters.AddWithValue("@task_id", taskId);
+                delete.ExecuteNonQuery();
+            }
+
+            int ord = 0;
+            foreach (string label in labels ?? new List<string>())
+            {
+                using SqliteCommand insert = connection.CreateCommand();
+                insert.CommandText = "INSERT OR IGNORE INTO task_label (task_id, label, ord) VALUES (@task_id, @label, @ord)";
+                insert.Parameters.AddWithValue("@task_id", taskId);
+                insert.Parameters.AddWithValue("@label", label);
+                insert.Parameters.AddWithValue("@ord", ord++);
+                insert.ExecuteNonQuery();
+            }
+        }
+
         // Shared by the column/board delete cascades so every tombstone gets its own
-        // outbox entry with the task's full state (including its note links).
+        // outbox entry with the task's full state (including its note links and
+        // labels).
         public static void TombstoneWithin(SqliteConnection connection, SqliteTransaction transaction, string id, string deviceId, string now, int historyRetention)
         {
             TaskItem task = GetWithin(connection, transaction, id);
@@ -226,6 +310,7 @@ namespace Lorestead.Core.DataAccess
                 task.Deleted = true;
                 task.UpdatedAt = now;
                 task.NoteIds = GetNoteIds(connection, id);
+                task.Labels = GetLabels(connection, id);
                 UpsertWithin(connection, transaction, task);
                 ChangeLogRepository.AppendAndPruneWithin(connection, transaction, new ChangeLogEntry
                 {
@@ -288,6 +373,20 @@ namespace Lorestead.Core.DataAccess
                 noteIds.Add(reader.GetString(0));
             }
             return noteIds;
+        }
+
+        private static List<string> GetLabels(SqliteConnection connection, string taskId)
+        {
+            List<string> labels = new List<string>();
+            using SqliteCommand select = connection.CreateCommand();
+            select.CommandText = "SELECT label FROM task_label WHERE task_id = @task_id ORDER BY ord";
+            select.Parameters.AddWithValue("@task_id", taskId);
+            using SqliteDataReader reader = select.ExecuteReader();
+            while (reader.Read())
+            {
+                labels.Add(reader.GetString(0));
+            }
+            return labels;
         }
 
         private const string SelectSql =

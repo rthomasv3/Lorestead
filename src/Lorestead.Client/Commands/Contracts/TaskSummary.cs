@@ -1,7 +1,10 @@
+using System.Collections.Generic;
+
 namespace Lorestead.Client.Commands.Contracts;
 
-// Card-level view of a task: body rides along for the snippet render, note links
-// don't (the edit dialog loads the full task).
+// Card-level view of a task: body rides along for the snippet render and labels
+// for the chips and the board filter; note links don't (the edit dialog loads
+// the full task).
 public sealed class TaskSummary
 {
     public string Id { get; set; }
@@ -11,6 +14,7 @@ public sealed class TaskSummary
     public string Position { get; set; }
     public int AttachmentCount { get; set; }
     public int LinkedNoteCount { get; set; }
+    public List<string> Labels { get; set; }
     public string CreatedAt { get; set; }
     public string UpdatedAt { get; set; }
 }

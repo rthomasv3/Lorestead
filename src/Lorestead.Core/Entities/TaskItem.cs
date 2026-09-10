@@ -18,5 +18,9 @@ namespace Lorestead.Core.Entities
         // Linked notes (task_note rows) ride the task payload so links sync; additive
         // link semantics live at the MCP/service layer, this is full item state.
         public List<string> NoteIds { get; set; } = new List<string>();
+
+        // Labels (task_label rows) ride the payload the same way: plain strings in
+        // the order the user gave them, normalized by TaskLabels on save.
+        public List<string> Labels { get; set; } = new List<string>();
     }
 }

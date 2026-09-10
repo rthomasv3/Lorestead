@@ -29,6 +29,7 @@ namespace Lorestead.Core.Sync
                     TaskItem task = PayloadJson.Deserialize<TaskItem>(entry.Payload);
                     TaskRepository.UpsertWithin(connection, transaction, task);
                     TaskRepository.ReplaceNoteLinksWithin(connection, transaction, task.Id, task.NoteIds);
+                    TaskRepository.ReplaceLabelsWithin(connection, transaction, task.Id, task.Labels);
                     NoteLinkRebuilder.RebuildForTaskWithin(connection, transaction, task.Id, task.Body);
                     break;
                 case ItemTypes.Attachment:

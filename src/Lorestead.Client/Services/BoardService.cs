@@ -72,6 +72,7 @@ public sealed class BoardService : IBoardService
         List<BoardColumn> columns = _repositories.Columns.GetActiveForBoard(request.Id);
         Dictionary<string, int> counts = _repositories.Attachments.CountByTaskForBoard(request.Id);
         Dictionary<string, int> linkCounts = _repositories.Tasks.CountNoteLinksForBoard(request.Id);
+        Dictionary<string, List<string>> labels = _repositories.Tasks.GetLabelsForBoard(request.Id);
         List<TaskSummary> tasks = new List<TaskSummary>();
         foreach (TaskItem task in _repositories.Tasks.GetActiveForBoard(request.Id))
         {
@@ -84,6 +85,7 @@ public sealed class BoardService : IBoardService
                 Position = task.Position,
                 AttachmentCount = counts.TryGetValue(task.Id, out int count) ? count : 0,
                 LinkedNoteCount = linkCounts.TryGetValue(task.Id, out int linkCount) ? linkCount : 0,
+                Labels = labels.TryGetValue(task.Id, out List<string> taskLabels) ? taskLabels : new List<string>(),
                 CreatedAt = task.CreatedAt,
                 UpdatedAt = task.UpdatedAt,
             });
@@ -168,9 +170,18 @@ public sealed class BoardService : IBoardService
         task.Title = request.Title ?? string.Empty;
         task.Body = request.Body ?? string.Empty;
         task.NoteIds = request.NoteIds ?? new List<string>();
+        if (request.Labels != null)
+        {
+            task.Labels = request.Labels;
+        }
         tasks.Save(task);
         _sync.NotifyLocalChange();
         return new SaveTaskResponse { UpdatedAt = task.UpdatedAt };
+    }
+
+    public GetLabelsResponse GetLabels()
+    {
+        return new GetLabelsResponse { Labels = _repositories.Tasks.GetAllLabels() };
     }
 
     public MoveTaskResponse MoveTask(MoveTaskRequest request)

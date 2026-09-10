@@ -75,6 +75,116 @@ namespace Lorestead.IntegrationTests
         }
 
         [Fact]
+        public void DeleteCascade_Task_TombstonePayloadKeepsLabels()
+        {
+            using TestDb db = new TestDb();
+            Board board = Items.Board();
+            BoardColumn column = Items.Column(board.Id);
+            TaskItem task = Items.Task(column.Id, labels: new List<string> { "keepme" });
+            db.Boards.Save(board);
+            db.Columns.Save(column);
+            db.Tasks.Save(task);
+
+            db.Tasks.Delete(task.Id);
+
+            PendingChange tombstone = db.ChangeLog.GetPending()
+                .Last(p => p.Entry.ItemType == ItemTypes.Task && p.Entry.ItemId == task.Id);
+            Assert.Contains("keepme", tombstone.Entry.Payload);
+        }
+
+        [Fact]
+        public void Save_NormalizesLabels_AndReadsThemBackInOrder()
+        {
+            using TestDb db = new TestDb();
+            Board board = Items.Board();
+            BoardColumn column = Items.Column(board.Id);
+            TaskItem task = Items.Task(column.Id, labels: new List<string> { " Agent ", "bug", "agent", "", null, "Bug" });
+            db.Boards.Save(board);
+            db.Columns.Save(column);
+
+            db.Tasks.Save(task);
+
+            // Trimmed, blanks dropped, case-insensitive dedupe keeping the first
+            // spelling, original order kept.
+            Assert.Equal(new List<string> { "Agent", "bug" }, task.Labels);
+            Assert.Equal(new List<string> { "Agent", "bug" }, db.Tasks.Get(task.Id).Labels);
+            Assert.Equal(new List<string> { "Agent", "bug" }, db.Tasks.GetForColumn(column.Id).Single().Labels);
+
+            PendingChange change = db.ChangeLog.GetPending().Last(p => p.Entry.ItemId == task.Id);
+            Assert.Contains("\"labels\":[\"Agent\",\"bug\"]", change.Entry.Payload);
+        }
+
+        [Fact]
+        public void Save_ReplacesLabels_WithFullList()
+        {
+            using TestDb db = new TestDb();
+            Board board = Items.Board();
+            BoardColumn column = Items.Column(board.Id);
+            TaskItem task = Items.Task(column.Id, labels: new List<string> { "one", "two" });
+            db.Boards.Save(board);
+            db.Columns.Save(column);
+            db.Tasks.Save(task);
+
+            task.Labels = new List<string> { "two", "three" };
+            db.Tasks.Save(task);
+
+            Assert.Equal(new List<string> { "two", "three" }, db.Tasks.Get(task.Id).Labels);
+        }
+
+        [Fact]
+        public void GetLabelsForBoard_GroupsActiveTasksOnly()
+        {
+            using TestDb db = new TestDb();
+            Board board = Items.Board();
+            Board other = Items.Board("Other");
+            BoardColumn column = Items.Column(board.Id);
+            BoardColumn otherColumn = Items.Column(other.Id);
+            TaskItem tagged = Items.Task(column.Id, labels: new List<string> { "b", "a" });
+            TaskItem plain = Items.Task(column.Id);
+            TaskItem gone = Items.Task(column.Id, labels: new List<string> { "deleted" });
+            TaskItem elsewhere = Items.Task(otherColumn.Id, labels: new List<string> { "elsewhere" });
+            db.Boards.Save(board);
+            db.Boards.Save(other);
+            db.Columns.Save(column);
+            db.Columns.Save(otherColumn);
+            db.Tasks.Save(tagged);
+            db.Tasks.Save(plain);
+            db.Tasks.Save(gone);
+            db.Tasks.Save(elsewhere);
+            db.Tasks.Delete(gone.Id);
+
+            Dictionary<string, List<string>> labels = db.Tasks.GetLabelsForBoard(board.Id);
+
+            Assert.Equal(new List<string> { "b", "a" }, labels[tagged.Id]);
+            Assert.False(labels.ContainsKey(plain.Id));
+            Assert.False(labels.ContainsKey(gone.Id));
+            Assert.False(labels.ContainsKey(elsewhere.Id));
+        }
+
+        [Fact]
+        public void GetAllLabels_MostUsedFirst_FoldsCase_SkipsDeleted()
+        {
+            using TestDb db = new TestDb();
+            Board board = Items.Board();
+            BoardColumn column = Items.Column(board.Id);
+            TaskItem first = Items.Task(column.Id, labels: new List<string> { "agent", "zeta" });
+            TaskItem second = Items.Task(column.Id, labels: new List<string> { "Agent", "alpha" });
+            TaskItem gone = Items.Task(column.Id, labels: new List<string> { "ghost" });
+            db.Boards.Save(board);
+            db.Columns.Save(column);
+            db.Tasks.Save(first);
+            db.Tasks.Save(second);
+            db.Tasks.Save(gone);
+            db.Tasks.Delete(gone.Id);
+
+            List<string> labels = db.Tasks.GetAllLabels();
+
+            Assert.Equal(3, labels.Count);
+            Assert.Equal("agent", labels[0], ignoreCase: true);
+            Assert.Equal(new List<string> { "alpha", "zeta" }, labels.Skip(1).ToList());
+        }
+
+        [Fact]
         public void GetActiveForBoard_ExcludesTombstonedRows()
         {
             using TestDb db = new TestDb();

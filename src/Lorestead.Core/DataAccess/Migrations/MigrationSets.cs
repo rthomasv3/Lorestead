@@ -11,6 +11,7 @@ namespace Lorestead.Core.DataAccess.Migrations
             return new IMigration[]
             {
                 new Db001_CoreSchema(),
+                new Db009_TaskLabels(),
             };
         }
 
@@ -22,6 +23,7 @@ namespace Lorestead.Core.DataAccess.Migrations
                 new Db004_ServerState(),
                 new Db006_OAuthGrants(),
                 new Db007_ServerIdentity(),
+                new Db009_TaskLabels(),
             };
         }
 
@@ -34,6 +36,7 @@ namespace Lorestead.Core.DataAccess.Migrations
                 new Db003_AttachmentThumbnail(),
                 new Db005_RememberCursorPosition(),
                 new Db008_SyncServerId(),
+                new Db009_TaskLabels(),
             };
         }
     }

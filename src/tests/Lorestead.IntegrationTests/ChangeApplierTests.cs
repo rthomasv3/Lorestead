@@ -307,7 +307,7 @@ namespace Lorestead.IntegrationTests
             db.Columns.Save(column);
 
             TaskItem task = Items.Task(column.Id, "remote task", $"body note://{linked.Id}",
-                new List<string> { linked.Id });
+                new List<string> { linked.Id }, new List<string> { "remote", "label" });
             Stamp(task);
             applier.Apply(new List<ChangeLogEntry>
             {
@@ -325,10 +325,58 @@ namespace Lorestead.IntegrationTests
 
             TaskItem applied = db.Tasks.Get(task.Id);
             Assert.Equal(linked.Id, Assert.Single(applied.NoteIds));
+            Assert.Equal(new List<string> { "remote", "label" }, applied.Labels);
 
             List<NoteLink> backlinks = db.Notes.GetBacklinks(linked.Id);
             Assert.Single(backlinks);
             Assert.Single(db.Search.SearchTasks("remote"));
+        }
+
+        // A peer on a build without labels sends payloads with no `labels` key.
+        // Under LWW full item state that is "no labels": the row's labels clear
+        // and nothing throws on the null the deserializer hands back.
+        [Fact]
+        public void TaskUpsertWithoutLabelsKeyClearsLabels()
+        {
+            using TestDb db = new TestDb();
+            db.SyncState.EnsureInitializedWithDevice(db.DeviceId);
+            ChangeApplier applier = new ChangeApplier(db.ConnectionManager, db.DeviceId);
+
+            Board board = Items.Board();
+            db.Boards.Save(board);
+            BoardColumn column = Items.Column(board.Id);
+            db.Columns.Save(column);
+            TaskItem task = Items.Task(column.Id, "tagged", labels: new List<string> { "old" });
+            Stamp(task);
+
+            string taggedPayload = PayloadJson.Serialize(task);
+            string legacyPayload = taggedPayload.Replace(",\"labels\":[\"old\"]", "");
+            Assert.Contains("labels", taggedPayload);
+            Assert.DoesNotContain("labels", legacyPayload);
+
+            applier.Apply(new List<ChangeLogEntry>
+            {
+                ForeignTaskUpsert(task.Id, taggedPayload, 1),
+                ForeignTaskUpsert(task.Id, legacyPayload, 2),
+            });
+
+            TaskItem applied = db.Tasks.Get(task.Id);
+            Assert.Equal("tagged", applied.Title);
+            Assert.Empty(applied.Labels);
+        }
+
+        private static ChangeLogEntry ForeignTaskUpsert(string taskId, string payload, long seq)
+        {
+            return new ChangeLogEntry
+            {
+                Seq = seq,
+                ItemType = ItemTypes.Task,
+                ItemId = taskId,
+                Op = ChangeOps.Upsert,
+                Payload = payload,
+                DeviceId = OtherDevice,
+                ChangedAt = Timestamps.UtcNowIso(),
+            };
         }
 
         [Fact]

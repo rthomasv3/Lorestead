@@ -60,6 +60,10 @@ export async function deleteTask(request) {
   return invoke('deleteTask', { request })
 }
 
+export async function getLabels() {
+  return invoke('getLabels')
+}
+
 export async function searchTasks(request) {
   return invoke('searchTasks', { request })
 }

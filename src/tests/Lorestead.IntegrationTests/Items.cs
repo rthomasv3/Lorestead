@@ -44,7 +44,7 @@ namespace Lorestead.IntegrationTests
             };
         }
 
-        public static TaskItem Task(string columnId, string title = "Task", string body = "", List<string> noteIds = null)
+        public static TaskItem Task(string columnId, string title = "Task", string body = "", List<string> noteIds = null, List<string> labels = null)
         {
             return new TaskItem
             {
@@ -54,6 +54,7 @@ namespace Lorestead.IntegrationTests
                 Body = body,
                 Position = "V",
                 NoteIds = noteIds ?? new List<string>(),
+                Labels = labels ?? new List<string>(),
             };
         }
 

@@ -21,6 +21,7 @@ internal static class BoardCommands
         builder.AddFunction("createTask", (CreateTaskRequest request, IBoardService boards) => boards.CreateTask(request));
         builder.AddFunction("getTask", (GetTaskRequest request, IBoardService boards) => boards.GetTask(request));
         builder.AddFunction("saveTask", (SaveTaskRequest request, IBoardService boards) => boards.SaveTask(request));
+        builder.AddFunction("getLabels", (IBoardService boards) => boards.GetLabels());
         builder.AddFunction("moveTask", (MoveTaskRequest request, IBoardService boards) => boards.MoveTask(request));
         builder.AddFunction("deleteTask", (DeleteTaskRequest request, IBoardService boards) => boards.DeleteTask(request));
         builder.AddFunction("searchTasks", (SearchTasksRequest request, IBoardService boards) => boards.SearchTasks(request));

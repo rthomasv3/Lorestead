@@ -79,6 +79,43 @@ namespace Lorestead.UnitTests
         }
 
         [Fact]
+        public void TaskRoundTripsLabelsInOrder()
+        {
+            TaskItem task = new TaskItem
+            {
+                Id = "0198c0de-0000-7000-8000-000000000012",
+                ColumnId = "0198c0de-0000-7000-8000-000000000011",
+                Title = "Tagged",
+                Body = "",
+                Position = "V",
+                CreatedAt = "2026-07-23T09:00:00.0000000Z",
+                UpdatedAt = "2026-07-23T09:00:00.0000000Z",
+                Labels = new List<string> { "agent", "Needs Review" },
+            };
+
+            string json = PayloadJson.Serialize(task);
+            Assert.Contains("\"labels\"", json);
+
+            TaskItem back = PayloadJson.Deserialize<TaskItem>(json);
+            Assert.Equal(task.Labels, back.Labels);
+        }
+
+        // A payload from a build that predates labels carries no `labels` key -
+        // every change_log row written before Db009 is one. GaldrJson leaves an
+        // absent list null rather than running the property initializer, so the
+        // apply and save paths null-guard; this pins "deserializes, no labels".
+        [Fact]
+        public void TaskWithoutLabelsKeyDeserializesWithNoLabels()
+        {
+            const string json = "{\"id\":\"0198c0de-0000-7000-8000-000000000013\",\"columnId\":\"c\",\"title\":\"t\",\"body\":\"\",\"position\":\"V\",\"deleted\":false,\"createdAt\":\"2026-07-23T09:00:00.0000000Z\",\"updatedAt\":\"2026-07-23T09:00:00.0000000Z\",\"noteIds\":[]}";
+
+            TaskItem back = PayloadJson.Deserialize<TaskItem>(json);
+            Assert.Equal("t", back.Title);
+            Assert.True(back.Labels == null || back.Labels.Count == 0);
+            Assert.Empty(TaskLabels.Normalize(back.Labels));
+        }
+
+        [Fact]
         public void BoardAndColumnRoundTrip()
         {
             Board board = new Board
