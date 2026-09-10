@@ -5,6 +5,7 @@ import { useRouter } from 'vue-router'
 import { DialogTitle, VisuallyHidden } from 'reka-ui'
 import AppDialog from '../../components/AppDialog.vue'
 import ChipInput from '../../components/ChipInput.vue'
+import LabelChip from '../../components/LabelChip.vue'
 import MarkdownEditor from '../../components/MarkdownEditor.vue'
 import MarkdownPreview from '../../components/MarkdownPreview.vue'
 import AttachmentCard from '../../components/AttachmentCard.vue'
@@ -46,6 +47,7 @@ const task = ref(null)
 const title = ref('')
 const body = ref('')
 const noteIds = ref([])
+const labels = ref([])
 const attachments = ref([])
 const editingBody = ref(false)
 const dirty = ref(false)
@@ -74,9 +76,11 @@ watch(() => props.open, async (value, previous) => {
     title.value = response.task?.title ?? ''
     body.value = response.task?.body ?? ''
     noteIds.value = [...(response.task?.noteIds ?? [])]
+    labels.value = [...(response.task?.labels ?? [])]
     attachments.value = response.attachments ?? []
     updatedAt.value = response.task?.updatedAt ?? ''
     if (!notesStore.loaded) notesStore.load()
+    loadLabelSuggestions()
     await nextTick()
     resizeTitle()
     if (props.isNew) {
@@ -104,6 +108,7 @@ async function onBoardsChanged() {
       title.value = response.task?.title ?? ''
       body.value = response.task?.body ?? ''
       noteIds.value = [...(response.task?.noteIds ?? [])]
+      labels.value = [...(response.task?.labels ?? [])]
       updatedAt.value = response.task?.updatedAt ?? ''
       await nextTick()
       resizeTitle()
@@ -145,6 +150,7 @@ async function flush() {
       title: title.value,
       body: body.value,
       noteIds: noteIds.value,
+      labels: labels.value,
     })
     updatedAt.value = response.updatedAt
   }
@@ -338,6 +344,23 @@ function onNoteIdsChange(ids) {
   markDirty()
 }
 
+// --- Labels ---
+
+// Suggestions span every board (a label is a plain string, "agent" is the same
+// label everywhere) and refresh per open so a label typed on one task offers
+// itself on the next. Typing anything new is allowed; the backend normalizes.
+const labelSuggestions = ref([])
+
+async function loadLabelSuggestions() {
+  const list = await boardsStore.getLabels()
+  labelSuggestions.value = list.map((label) => ({ value: label, label }))
+}
+
+function onLabelsChange(list) {
+  labels.value = list
+  markDirty()
+}
+
 async function openLinkedNote(id) {
   await flush()
   emit('update:open', false)
@@ -362,7 +385,7 @@ function onDialogKeydown(e) {
 </script>
 
 <template>
-  <AppDialog :open="open" class="md:max-w-2xl md:max-h-[85vh]" @update:open="emit('update:open', $event)"
+  <AppDialog :open="open" class="md:max-w-3xl md:max-h-[85vh]" @update:open="emit('update:open', $event)"
     @keydown="onDialogKeydown">
     <VisuallyHidden>
       <DialogTitle>Edit task</DialogTitle>
@@ -427,6 +450,16 @@ function onDialogKeydown(e) {
       </div>
 
       <div>
+        <div class="text-sm font-medium text-on-surface-muted mb-1.5 ml-1">Labels</div>
+        <ChipInput :model-value="labels" :suggestions="labelSuggestions" allow-new :min-query="0"
+          placeholder="Add a label..." @update:model-value="onLabelsChange">
+          <template #chip="{ value, remove, chipClass }">
+            <LabelChip :label="value" removable :class="chipClass" @remove="remove()" />
+          </template>
+        </ChipInput>
+      </div>
+
+      <div>
         <div class="flex items-center justify-between mb-1.5">
           <span class="text-sm font-medium text-on-surface-muted ml-1">Attachments</span>
           <HoverTip text="Add attachment" side="left">
@@ -454,7 +487,7 @@ function onDialogKeydown(e) {
           <!-- A chip is the note's title as a jump link; an id the notes store
                has not loaded renders nothing, as before. -->
           <template #chip="{ value, remove, chipClass }">
-            <span v-if="notesStore.byId.get(value)" :class="chipClass">
+            <span v-if="notesStore.byId.get(value)" class="bg-accent-soft" :class="chipClass">
               <button class="hover:text-accent truncate max-w-48" :title="notesStore.byId.get(value).title || 'Untitled'"
                 @click.stop="openLinkedNote(value)">{{ notesStore.byId.get(value).title || 'Untitled' }}</button>
               <HoverTip text="Remove link">

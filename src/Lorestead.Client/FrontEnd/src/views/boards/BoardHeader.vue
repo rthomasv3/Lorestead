@@ -1,11 +1,13 @@
 <script setup>
-import { ref, watch, onUnmounted } from 'vue'
+import { ref, computed, watch, onUnmounted } from 'vue'
 import IconSearch from '~icons/lucide/search'
 import TextField from '../../components/TextField.vue'
+import ChipInput from '../../components/ChipInput.vue'
+import LabelChip from '../../components/LabelChip.vue'
 import { useBoardsStore } from '../../stores/boardsStore.js'
 
 // Desktop header above the selected board, the same height as the board list
-// header beside it. Holds the search field now; the label filter joins it later.
+// header beside it: the search field and the label filter, nothing else.
 const boardsStore = useBoardsStore()
 
 // The field owns a draft and writes it to the store on a short debounce - the
@@ -34,13 +36,25 @@ function onKeydown(e) {
     query.value = ''
   }
 }
+
+// Only labels on this board are offered - the filter can't ask for what isn't
+// there. No creating from the filter, and the list is short enough to show whole.
+const labelSuggestions = computed(() =>
+  boardsStore.boardLabels.map((label) => ({ value: label, label })))
 </script>
 
 <template>
-  <!-- Controls only: the board list beside this header already shows which
-       board is selected. Search sits at the left, the label filter joins it. -->
   <div class="flex items-center gap-2 px-2 h-page-header shrink-0 border-b border-border">
     <TextField v-model="query" size="small" :icon="IconSearch" placeholder="Filter tasks" class="w-56"
       @keydown="onKeydown" />
+    <!-- Single line: chips scroll inside the field rather than stacking, so the
+         header keeps its height however many labels are picked. -->
+    <ChipInput :model-value="boardsStore.filterLabels" :suggestions="labelSuggestions" :min-query="0"
+      :max-suggestions="50" :wrap="false" size="small" placeholder="Labels" class="w-64 bg-surface-alt"
+      @update:model-value="(list) => (boardsStore.filterLabels = list)">
+      <template #chip="{ value, remove, chipClass }">
+        <LabelChip :label="value" removable :class="chipClass" @remove="remove()" />
+      </template>
+    </ChipInput>
   </div>
 </template>

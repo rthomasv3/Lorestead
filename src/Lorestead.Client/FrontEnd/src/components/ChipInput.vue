@@ -1,10 +1,15 @@
 <script setup>
-import { ref, computed, nextTick } from 'vue'
+import { ref, computed, nextTick, useAttrs } from 'vue'
 import { PopoverRoot, PopoverAnchor, PopoverPortal, PopoverContent } from 'reka-ui'
 
 // Chips plus a typing input with a suggestion list: linked notes on a task,
 // labels on a task, the label filter in the board header. The control owns
 // the query, the highlight and the popover; the caller owns the values.
+//
+// The root is a renderless PopoverRoot, so a caller's class lands on the field
+// box by hand (widths in the board header) instead of falling through.
+defineOptions({ inheritAttrs: false })
+
 const props = defineProps({
   // Selected values, in order. Strings or ids - whatever `suggestions` carries.
   modelValue: { type: Array, default: () => [] },
@@ -24,6 +29,7 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['update:modelValue'])
+const attrs = useAttrs()
 
 const input = ref(null)
 const field = ref(null)
@@ -34,21 +40,26 @@ const focused = ref(false)
 const dismissed = ref(false)
 
 // Mirrors fieldSize so this lines up beside a TextField of the same size; the
-// wrapping variant needs a minimum rather than a fixed height. Chips and the
-// input share one fixed row height, so the field is exactly its minimum
-// whether empty or holding chips - left to line boxes, a chip's glyphs and
-// icon rounded it up a pixel and the field grew on the first chip.
+// wrapping variant needs a minimum rather than a fixed height. The input is
+// given a fixed row height chosen so row + padding + 1px borders is exactly
+// the minimum (36 = 26 + 8 + 2, 28 = 22 + 4 + 2): the field is the same
+// height empty or holding chips, and the same height as the TextField beside
+// it. Chips are a step shorter than the row and centre in it, so they read
+// as pills inside the field rather than filling it. Left to line boxes, a
+// chip's glyphs and icon rounded it up a pixel and the field grew on the
+// first chip. The chip class is layout only - the default chip adds the
+// accent fill, a LabelChip brings its own colour.
 const SIZES = {
   normal: {
-    field: 'min-h-9 px-2 py-1.5 gap-1.5 text-sm',
-    chip: 'flex items-center gap-1 h-6 px-1.5 rounded bg-accent-soft text-sm shrink-0',
-    input: 'h-6',
+    field: 'min-h-9 px-2 py-1 gap-1.5 text-sm',
+    chip: 'flex items-center gap-1 h-6 px-1.5 rounded text-sm shrink-0',
+    input: 'h-6.5',
     row: 'text-sm',
   },
   small: {
-    field: 'min-h-7 px-2 py-1 gap-1 text-xs',
-    chip: 'flex items-center gap-1 h-5 px-1.5 rounded bg-accent-soft text-xs shrink-0',
-    input: 'h-5',
+    field: 'min-h-7 px-2 py-0.5 gap-1 text-xs',
+    chip: 'flex items-center gap-1 h-5 px-1.5 rounded text-xs shrink-0',
+    input: 'h-5.5',
     row: 'text-xs',
   },
 }
@@ -167,7 +178,7 @@ defineExpose({ focus: () => input.value?.focus() })
     <PopoverAnchor as-child>
       <div ref="field"
         class="flex items-center rounded-md border border-border focus-within:border-accent cursor-text"
-        :class="[sizing.field, wrap ? 'flex-wrap' : 'flex-nowrap overflow-x-auto [scrollbar-width:none]']"
+        :class="[sizing.field, wrap ? 'flex-wrap' : 'flex-nowrap overflow-x-auto [scrollbar-width:none]', attrs.class]"
         @click="input?.focus()">
         <!-- The slot replaces the whole chip, so a caller can render nothing
              for a value it cannot resolve (a linked note that is not loaded)
@@ -175,7 +186,7 @@ defineExpose({ focus: () => input.value?.focus() })
         <template v-for="value in modelValue" :key="value">
           <slot name="chip" :value="value" :label="labelFor(value)" :remove="() => remove(value)"
             :chip-class="sizing.chip">
-            <span :class="sizing.chip">
+            <span class="bg-accent-soft" :class="sizing.chip">
               <span class="truncate max-w-48">{{ labelFor(value) }}</span>
               <button class="text-on-surface-muted hover:text-on-surface" aria-label="Remove" @click.stop="remove(value)">
                 <i-lucide-x class="size-3" />

@@ -43,6 +43,17 @@ export const useBoardsStore = defineStore('boards', () => {
 
   const filterActive = computed(() => filterCount.value > 0)
 
+  // Labels present on the loaded board, for the header's filter picker - a
+  // filter can only ask for what is there. Sorted for scanning; the dialog's
+  // cross-board suggestions come from getLabels instead.
+  const boardLabels = computed(() => {
+    const seen = new Set()
+    for (const task of tasks.value) {
+      for (const label of task.labels ?? []) seen.add(label)
+    }
+    return [...seen].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }))
+  })
+
   // Every term must appear somewhere in the title or the raw body; every
   // selected label must be on the task (AND across labels).
   function matchesFilter(task) {
@@ -189,16 +200,22 @@ export const useBoardsStore = defineStore('boards', () => {
     return boardService.getTask({ id })
   }
 
-  async function saveTask({ id, title, body, noteIds }) {
-    const response = await boardService.saveTask({ id, title, body, noteIds })
+  async function saveTask({ id, title, body, noteIds, labels }) {
+    const response = await boardService.saveTask({ id, title, body, noteIds, labels })
     const summary = tasks.value.find((t) => t.id === id)
     if (summary) {
       summary.title = title
       summary.body = body
       summary.updatedAt = response.updatedAt
       summary.linkedNoteCount = (noteIds ?? []).length
+      if (labels) summary.labels = [...labels]
     }
     return response
+  }
+
+  async function getLabels() {
+    const response = await boardService.getLabels()
+    return response.labels ?? []
   }
 
   async function moveTask({ id, columnId, previousId, nextId }) {
@@ -239,6 +256,7 @@ export const useBoardsStore = defineStore('boards', () => {
     filterLabels,
     filterCount,
     filterActive,
+    boardLabels,
     visibleTasksByColumn,
     clearFilter,
     openTaskRequest,
@@ -257,6 +275,7 @@ export const useBoardsStore = defineStore('boards', () => {
     createTask,
     getTask,
     saveTask,
+    getLabels,
     moveTask,
     deleteTask,
     refreshTaskAttachmentCount,

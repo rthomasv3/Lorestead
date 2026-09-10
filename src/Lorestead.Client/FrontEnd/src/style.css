@@ -392,6 +392,49 @@ kbd {
     --accent-soft-base-dark: #a8b878;
 }
 
+/* Label palette. A task label's colour is a hash of its name (utils/labelColors.js),
+   so unlike the accent all twelve are live at once and each theme maps the whole
+   set rather than switching one per attribute. Same tones as the accents: 600 on
+   light and parchment, 400 on dark; rust and olive reuse their accent ramps. A
+   chip sets `--label` inline to one of these and .label-chip paints from it. */
+.light,
+.parchment {
+    --label-mix: 15%;
+    --label-indigo: var(--color-indigo-600);
+    --label-violet: var(--color-violet-600);
+    --label-blue: var(--color-blue-600);
+    --label-cyan: var(--color-cyan-600);
+    --label-emerald: var(--color-emerald-600);
+    --label-rose: var(--color-rose-600);
+    --label-rust: #9b4a2c;
+    --label-olive: #5a693c;
+    --label-amber: var(--color-amber-600);
+    --label-orange: var(--color-orange-600);
+    --label-pink: var(--color-pink-600);
+    --label-teal: var(--color-teal-600);
+}
+
+.dark {
+    --label-mix: 22%;
+    --label-indigo: var(--color-indigo-400);
+    --label-violet: var(--color-violet-400);
+    --label-blue: var(--color-blue-400);
+    --label-cyan: var(--color-cyan-400);
+    --label-emerald: var(--color-emerald-400);
+    --label-rose: var(--color-rose-400);
+    --label-rust: #cd7f5c;
+    --label-olive: #a8b878;
+    --label-amber: var(--color-amber-400);
+    --label-orange: var(--color-orange-400);
+    --label-pink: var(--color-pink-400);
+    --label-teal: var(--color-teal-400);
+}
+
+.label-chip {
+    color: var(--label);
+    background: color-mix(in oklab, var(--label) var(--label-mix), transparent);
+}
+
 /* Markdown preview — GitHub-readme style over theme tokens. Rendered via v-html,
    so utilities can't reach it; this is the one sanctioned CSS block for it. */
 .markdown-preview> :first-child {

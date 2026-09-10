@@ -8,6 +8,7 @@ import { attachClosestEdge, extractClosestEdge } from '@atlaskit/pragmatic-drag-
 import { ContextMenuRoot, ContextMenuTrigger, ContextMenuPortal, ContextMenuContent, ContextMenuItem } from 'reka-ui'
 import MarkdownPreview from '../../components/MarkdownPreview.vue'
 import HoverTip from '../../components/HoverTip.vue'
+import LabelChip from '../../components/LabelChip.vue'
 import { useSettingsStore } from '../../stores/settingsStore.js'
 import { formatTimestamp } from '../../utils/dateFormat.js'
 import { MENU_ITEM_CLASS as menuItemClass } from '../../utils/menu.js'
@@ -130,6 +131,10 @@ onUnmounted(() => {
                   <i-lucide-trash-2 class="size-3.5" />
                 </button>
               </HoverTip>
+            </div>
+            <div v-if="task.labels?.length" class="flex flex-wrap gap-1">
+              <LabelChip v-for="label in task.labels" :key="label" :label="label"
+                class="h-4 px-1.5 text-[10px] leading-4" />
             </div>
             <div v-if="snippet"
               class="max-h-16 overflow-hidden text-xs text-on-surface-muted pointer-events-none [&_.markdown-preview]:text-xs">
