@@ -69,7 +69,14 @@ namespace Lorestead.Core.Mcp
 
             if (scope == "all" || scope == "tasks")
             {
-                foreach (TaskSearchResult hit in _search.SearchTasksWithContext(query, cap))
+                List<TaskSearchResult> hits = _search.SearchTasksWithContext(query, cap);
+                List<string> hitIds = new List<string>();
+                foreach (TaskSearchResult hit in hits)
+                {
+                    hitIds.Add(hit.Id);
+                }
+                Dictionary<string, List<string>> labels = _tasks.GetLabelsForTasks(hitIds);
+                foreach (TaskSearchResult hit in hits)
                 {
                     response.Tasks.Add(new McpTaskHit
                     {
@@ -77,6 +84,7 @@ namespace Lorestead.Core.Mcp
                         Title = hit.Title,
                         Breadcrumb = $"{hit.BoardName} › {hit.ColumnName}",
                         Snippet = hit.Snippet,
+                        Labels = labels.TryGetValue(hit.Id, out List<string> hitLabels) ? hitLabels : new List<string>(),
                         UpdatedAt = hit.UpdatedAt,
                     });
                 }
@@ -396,15 +404,107 @@ namespace Lorestead.Core.Mcp
                 response.Columns.Add(columnTasks);
             }
 
+            Dictionary<string, List<string>> labels = _tasks.GetLabelsForBoard(boardId);
             foreach (TaskItem task in _tasks.GetActiveForBoard(boardId))
             {
                 if (columnsById.TryGetValue(task.ColumnId, out McpColumnTasks columnTasks))
                 {
-                    columnTasks.Tasks.Add(new McpTaskSummary { Id = task.Id, Title = task.Title, UpdatedAt = task.UpdatedAt });
+                    columnTasks.Tasks.Add(new McpTaskSummary
+                    {
+                        Id = task.Id,
+                        Title = task.Title,
+                        Labels = labels.TryGetValue(task.Id, out List<string> taskLabels) ? taskLabels : new List<string>(),
+                        UpdatedAt = task.UpdatedAt,
+                    });
                 }
             }
 
             return response;
+        }
+
+        // The board-scoped filter an agent reaches for instead of get_board plus
+        // its own scan: query narrows by full text (same FTS as search), labels
+        // by every label given (AND, case-insensitive). Both optional; neither
+        // returns the whole board in board order.
+        public McpTaskListResponse ListTasks(string boardId, string query, string[] labels)
+        {
+            Board board = RequireBoard(boardId);
+            McpTaskListResponse response = new McpTaskListResponse { BoardId = board.Id, BoardName = board.Name };
+
+            Dictionary<string, string> snippets = null;
+            if (!string.IsNullOrWhiteSpace(query))
+            {
+                snippets = new Dictionary<string, string>();
+                foreach (SearchResult hit in _search.SearchTasks(query))
+                {
+                    snippets[hit.Id] = hit.Snippet;
+                }
+            }
+
+            List<string> wanted = TaskLabels.Normalize(labels);
+            Dictionary<string, List<string>> labelsByTask = _tasks.GetLabelsForBoard(boardId);
+            Dictionary<string, List<TaskItem>> tasksByColumn = new Dictionary<string, List<TaskItem>>();
+            foreach (TaskItem task in _tasks.GetActiveForBoard(boardId))
+            {
+                if (snippets != null && !snippets.ContainsKey(task.Id))
+                {
+                    continue;
+                }
+                List<string> taskLabels = labelsByTask.TryGetValue(task.Id, out List<string> found) ? found : new List<string>();
+                if (!HasAllLabels(taskLabels, wanted))
+                {
+                    continue;
+                }
+                if (!tasksByColumn.TryGetValue(task.ColumnId, out List<TaskItem> list))
+                {
+                    list = new List<TaskItem>();
+                    tasksByColumn[task.ColumnId] = list;
+                }
+                list.Add(task);
+            }
+
+            foreach (BoardColumn column in _columns.GetActiveForBoard(boardId))
+            {
+                if (tasksByColumn.TryGetValue(column.Id, out List<TaskItem> list))
+                {
+                    foreach (TaskItem task in list)
+                    {
+                        response.Tasks.Add(new McpTaskListItem
+                        {
+                            Id = task.Id,
+                            Title = task.Title,
+                            ColumnId = column.Id,
+                            ColumnName = column.Name,
+                            Labels = labelsByTask.TryGetValue(task.Id, out List<string> found) ? found : new List<string>(),
+                            Snippet = snippets != null && snippets.TryGetValue(task.Id, out string snippet) ? snippet : null,
+                            UpdatedAt = task.UpdatedAt,
+                        });
+                    }
+                }
+            }
+
+            return response;
+        }
+
+        private static bool HasAllLabels(List<string> taskLabels, List<string> wanted)
+        {
+            foreach (string label in wanted)
+            {
+                bool present = false;
+                foreach (string candidate in taskLabels)
+                {
+                    if (string.Equals(candidate, label, StringComparison.OrdinalIgnoreCase))
+                    {
+                        present = true;
+                        break;
+                    }
+                }
+                if (!present)
+                {
+                    return false;
+                }
+            }
+            return true;
         }
 
         public McpTaskResponse GetTask(string taskId)
@@ -424,6 +524,7 @@ namespace Lorestead.Core.Mcp
                 ColumnName = column?.Name,
                 Title = task.Title,
                 Body = task.Body,
+                Labels = task.Labels ?? new List<string>(),
                 CreatedAt = task.CreatedAt,
                 UpdatedAt = task.UpdatedAt,
             };
@@ -445,7 +546,7 @@ namespace Lorestead.Core.Mcp
             return response;
         }
 
-        public async Task<McpCreateResponse> CreateTask(string columnId, string title, string body, string[] noteIds)
+        public async Task<McpCreateResponse> CreateTask(string columnId, string title, string body, string[] noteIds, string[] labels = null)
         {
             RequireColumn(columnId);
             TaskItem task = new TaskItem
@@ -456,13 +557,16 @@ namespace Lorestead.Core.Mcp
                 Body = body ?? string.Empty,
                 Position = FractionalIndex.Between(_tasks.GetMaxPosition(columnId), null),
                 NoteIds = ResolveNoteIds(noteIds),
+                Labels = new List<string>(labels ?? Array.Empty<string>()),
             };
             _tasks.Save(task);
             await NotifyWrite();
             return new McpCreateResponse { Id = task.Id };
         }
 
-        public async Task<McpSaveResponse> UpdateTask(string taskId, string title, string body)
+        // labels replaces the whole list (an empty array clears it); null keeps it,
+        // same as the other fields.
+        public async Task<McpSaveResponse> UpdateTask(string taskId, string title, string body, string[] labels = null)
         {
             TaskItem task = RequireTask(taskId);
             if (title != null)
@@ -472,6 +576,10 @@ namespace Lorestead.Core.Mcp
             if (body != null)
             {
                 task.Body = body;
+            }
+            if (labels != null)
+            {
+                task.Labels = new List<string>(labels);
             }
             _tasks.Save(task);
             await NotifyWrite();

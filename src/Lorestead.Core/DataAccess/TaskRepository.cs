@@ -168,6 +168,38 @@ namespace Lorestead.Core.DataAccess
             return labels;
         }
 
+        // Labels for a handful of tasks by id (search hits), one query instead of
+        // a read per hit. Order within a task is the order given.
+        public Dictionary<string, List<string>> GetLabelsForTasks(IReadOnlyList<string> taskIds)
+        {
+            Dictionary<string, List<string>> labels = new Dictionary<string, List<string>>();
+            if (taskIds.Count > 0)
+            {
+                using SqliteConnection connection = _connectionManager.CreateConnection();
+                using SqliteCommand select = connection.CreateCommand();
+                List<string> names = new List<string>();
+                for (int i = 0; i < taskIds.Count; i++)
+                {
+                    string name = "@id" + i;
+                    names.Add(name);
+                    select.Parameters.AddWithValue(name, taskIds[i]);
+                }
+                select.CommandText = $"SELECT task_id, label FROM task_label WHERE task_id IN ({string.Join(", ", names)}) ORDER BY task_id, ord";
+                using SqliteDataReader reader = select.ExecuteReader();
+                while (reader.Read())
+                {
+                    string taskId = reader.GetString(0);
+                    if (!labels.TryGetValue(taskId, out List<string> list))
+                    {
+                        list = new List<string>();
+                        labels[taskId] = list;
+                    }
+                    list.Add(reader.GetString(1));
+                }
+            }
+            return labels;
+        }
+
         // Every label in use on any live task, most used first, for the dialog's
         // suggestions. Spellings that differ only by case fold together.
         public List<string> GetAllLabels()

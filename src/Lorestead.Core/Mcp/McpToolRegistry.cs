@@ -55,19 +55,23 @@ namespace Lorestead.Core.Mcp
 
                 McpServerTool.Create((string boardId) =>
                     Run(() => PayloadJson.Serialize(tools.GetBoard(boardId))),
-                    Options("get_board", "A board's columns, each with its tasks as ids and titles. Use get_task for a task's content.")),
+                    Options("get_board", "A board's columns, each with its tasks as ids, titles and labels. Use get_task for a task's content, or list_tasks to filter a board by text or labels.")),
+
+                McpServerTool.Create((string boardId, string query = null, string[] labels = null) =>
+                    Run(() => PayloadJson.Serialize(tools.ListTasks(boardId, query, labels))),
+                    Options("list_tasks", "A board's tasks filtered by full-text query and/or labels, with their column and labels. Every label given must be on the task (case-insensitive). Omit both to list the whole board in board order.")),
 
                 McpServerTool.Create((string taskId) =>
                     Run(() => PayloadJson.Serialize(tools.GetTask(taskId))),
-                    Options("get_task", "A task's full body and metadata (including its board and column names, not just ids), plus its attachment list and linked notes.")),
+                    Options("get_task", "A task's full body and metadata (including its board and column names, not just ids, and its labels), plus its attachment list and linked notes.")),
 
-                McpServerTool.Create((string columnId, string title, string body = null, string[] noteIds = null) =>
-                    RunAsync(async () => PayloadJson.Serialize(await tools.CreateTask(columnId, title, body, noteIds))),
-                    Options("create_task", "Create a task in a column. noteIds is an optional list of note ids to link.")),
+                McpServerTool.Create((string columnId, string title, string body = null, string[] noteIds = null, string[] labels = null) =>
+                    RunAsync(async () => PayloadJson.Serialize(await tools.CreateTask(columnId, title, body, noteIds, labels))),
+                    Options("create_task", "Create a task in a column. noteIds is an optional list of note ids to link; labels is an optional list of label strings (any text - a new label is created by using it).")),
 
-                McpServerTool.Create((string taskId, string title = null, string body = null) =>
-                    RunAsync(async () => PayloadJson.Serialize(await tools.UpdateTask(taskId, title, body))),
-                    Options("update_task", "Replace a task's title and/or body. Omitted fields are kept. For changes to existing content prefer edit_task - a full body replace overwrites concurrent edits.")),
+                McpServerTool.Create((string taskId, string title = null, string body = null, string[] labels = null) =>
+                    RunAsync(async () => PayloadJson.Serialize(await tools.UpdateTask(taskId, title, body, labels))),
+                    Options("update_task", "Replace a task's title, body and/or labels. Omitted fields are kept; labels replaces the whole list, so pass the full set (an empty list clears it). For changes to existing content prefer edit_task - a full body replace overwrites concurrent edits.")),
 
                 McpServerTool.Create((string taskId, string oldText, string newText, bool replaceAll = false) =>
                     RunAsync(async () => PayloadJson.Serialize(await tools.EditTask(taskId, oldText, newText, replaceAll))),

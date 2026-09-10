@@ -351,6 +351,96 @@ namespace Lorestead.IntegrationTests
         }
 
         [Fact]
+        public async Task TaskLabelsRoundTripThroughEveryRead()
+        {
+            Board board = Items.Board("Work");
+            _db.Boards.Save(board);
+            BoardColumn column = Items.Column(board.Id, "Todo");
+            _db.Columns.Save(column);
+
+            McpCreateResponse created = await _tools.CreateTask(column.Id, "Tagged flywheel", null, null,
+                new[] { " Agent ", "bug", "agent" });
+
+            McpTaskResponse task = _tools.GetTask(created.Id);
+            Assert.Equal(new[] { "Agent", "bug" }, task.Labels);
+
+            McpBoardResponse detail = _tools.GetBoard(board.Id);
+            McpTaskSummary summary = Assert.Single(Assert.Single(detail.Columns).Tasks);
+            Assert.Equal(new[] { "Agent", "bug" }, summary.Labels);
+
+            McpTaskHit hit = Assert.Single(_tools.Search("flywheel", 20, "tasks").Tasks);
+            Assert.Equal(new[] { "Agent", "bug" }, hit.Labels);
+        }
+
+        [Fact]
+        public async Task UpdateTaskReplacesLabelsAndKeepsThemWhenOmitted()
+        {
+            Board board = Items.Board();
+            _db.Boards.Save(board);
+            BoardColumn column = Items.Column(board.Id);
+            _db.Columns.Save(column);
+            McpCreateResponse created = await _tools.CreateTask(column.Id, "T", null, null, new[] { "one", "two" });
+
+            await _tools.UpdateTask(created.Id, "Renamed", null);
+            Assert.Equal(new[] { "one", "two" }, _tools.GetTask(created.Id).Labels);
+
+            await _tools.UpdateTask(created.Id, null, null, new[] { "three" });
+            McpTaskResponse task = _tools.GetTask(created.Id);
+            Assert.Equal("Renamed", task.Title);
+            Assert.Equal(new[] { "three" }, task.Labels);
+
+            await _tools.UpdateTask(created.Id, null, null, Array.Empty<string>());
+            Assert.Empty(_tools.GetTask(created.Id).Labels);
+        }
+
+        [Fact]
+        public async Task ListTasksFiltersByQueryAndLabelsInBoardOrder()
+        {
+            Board board = Items.Board("Plan");
+            _db.Boards.Save(board);
+            BoardColumn todo = Items.Column(board.Id, "Todo");
+            todo.Position = "F";
+            _db.Columns.Save(todo);
+            BoardColumn done = Items.Column(board.Id, "Done");
+            done.Position = "V";
+            _db.Columns.Save(done);
+            Board other = Items.Board("Other");
+            _db.Boards.Save(other);
+            BoardColumn elsewhere = Items.Column(other.Id);
+            _db.Columns.Save(elsewhere);
+
+            McpCreateResponse agentBug = await _tools.CreateTask(todo.Id, "Fix crash", "the agent found a bug", null, new[] { "agent", "bug" });
+            McpCreateResponse agentOnly = await _tools.CreateTask(todo.Id, "Write docs", "plain body", null, new[] { "Agent" });
+            McpCreateResponse doneBug = await _tools.CreateTask(done.Id, "Old crash", "a bug from before", null, new[] { "bug" });
+            McpCreateResponse plain = await _tools.CreateTask(done.Id, "Untagged", null, null, null);
+            await _tools.CreateTask(elsewhere.Id, "Other board crash", "bug", null, new[] { "agent", "bug" });
+
+            // No filter: the whole board, Todo before Done, each in position order.
+            McpTaskListResponse all = _tools.ListTasks(board.Id, null, null);
+            Assert.Equal("Plan", all.BoardName);
+            Assert.Equal(new[] { agentBug.Id, agentOnly.Id, doneBug.Id, plain.Id }, all.Tasks.Select(t => t.Id).ToArray());
+            Assert.Equal("Todo", all.Tasks[0].ColumnName);
+            Assert.All(all.Tasks, t => Assert.Null(t.Snippet));
+
+            // Labels AND together and match regardless of case.
+            McpTaskListResponse agents = _tools.ListTasks(board.Id, null, new[] { "AGENT" });
+            Assert.Equal(new[] { agentBug.Id, agentOnly.Id }, agents.Tasks.Select(t => t.Id).ToArray());
+            McpTaskListResponse agentBugs = _tools.ListTasks(board.Id, null, new[] { "agent", "bug" });
+            Assert.Equal(agentBug.Id, Assert.Single(agentBugs.Tasks).Id);
+
+            // Query hits title and body and carries a snippet; combined with labels.
+            McpTaskListResponse crashes = _tools.ListTasks(board.Id, "crash", null);
+            Assert.Equal(new[] { agentBug.Id, doneBug.Id }, crashes.Tasks.Select(t => t.Id).ToArray());
+            Assert.All(crashes.Tasks, t => Assert.False(string.IsNullOrEmpty(t.Snippet)));
+            McpTaskListResponse both = _tools.ListTasks(board.Id, "crash", new[] { "agent" });
+            Assert.Equal(agentBug.Id, Assert.Single(both.Tasks).Id);
+            Assert.Equal(new[] { "agent", "bug" }, both.Tasks[0].Labels);
+
+            Assert.Empty(_tools.ListTasks(board.Id, "zzz", null).Tasks);
+            Assert.Throws<InvalidOperationException>(() => _tools.ListTasks(Items.NewId(), null, null));
+        }
+
+        [Fact]
         public async Task EditTaskReplacesUniqueTextOnly()
         {
             Board board = Items.Board();

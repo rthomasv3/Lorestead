@@ -13,6 +13,7 @@ namespace Lorestead.Core.Mcp.Contracts
         public string ColumnName { get; set; }
         public string Title { get; set; }
         public string Body { get; set; }
+        public List<string> Labels { get; set; } = new List<string>();
         public string CreatedAt { get; set; }
         public string UpdatedAt { get; set; }
         public List<McpAttachmentInfo> Attachments { get; set; } = new List<McpAttachmentInfo>();
