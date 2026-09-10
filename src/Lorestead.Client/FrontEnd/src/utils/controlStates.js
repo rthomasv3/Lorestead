@@ -21,3 +21,9 @@ export const CONTROL_GHOST = 'text-on-surface-muted enabled:hover:bg-hover-wash 
 // Destructive ghost: rests in the same muted tone as its neighbours and only
 // turns red under the pointer, so a row of icons doesn't shout before you aim.
 export const CONTROL_GHOST_DANGER = 'text-on-surface-muted enabled:hover:bg-red-500/10 enabled:hover:text-red-500'
+
+// Count bubble on an icon button (notes tools rail, board filter); the button
+// itself supplies `relative`. tabular-nums gives a lone "1" the same advance
+// width as any other digit, so it sits centered instead of hugging one side.
+export const BADGE_CLASS =
+  'absolute -top-0.5 -right-0.5 min-w-4 h-4 px-0.5 rounded-full bg-accent-strong text-white text-[10px] leading-4 text-center tabular-nums'

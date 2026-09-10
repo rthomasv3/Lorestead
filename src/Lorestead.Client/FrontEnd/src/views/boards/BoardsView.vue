@@ -3,6 +3,8 @@ import { ref, watch, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { SplitterGroup, SplitterPanel, SplitterResizeHandle } from 'reka-ui'
 import BoardListPanel from './BoardListPanel.vue'
+import BoardHeader from './BoardHeader.vue'
+import BoardFilterDrawer from './BoardFilterDrawer.vue'
 import KanbanBoard from './KanbanBoard.vue'
 import TaskEditDialog from './TaskEditDialog.vue'
 import ConfirmDialog from '../../components/ConfirmDialog.vue'
@@ -10,6 +12,7 @@ import EmptyState from '../../components/EmptyState.vue'
 import Button from '../../components/Button.vue'
 import { useBoardsStore } from '../../stores/boardsStore.js'
 import { useIsMobile } from '../../composables/useIsMobile.js'
+import { BADGE_CLASS } from '../../utils/controlStates.js'
 
 const route = useRoute()
 const router = useRouter()
@@ -47,9 +50,17 @@ function closeBoard() {
   else router.replace('/boards')
 }
 
+// Counts the whole list, not the filtered one - a delete confirmation must name
+// every task the list holds, including the ones a filter is hiding.
 function columnTaskCount(column) {
   return (boardsStore.tasksByColumn.get(column?.id) ?? []).length
 }
+
+// Mobile filter drawer. A drawer left open belongs to the board it was opened
+// on, so a board switch closes it (the store resets the filter itself).
+const filterDrawerOpen = ref(false)
+
+watch(() => route.params.id, () => (filterDrawerOpen.value = false))
 
 // Search jumps set the request before navigating here; immediate covers the
 // case where the view is already mounted as well as a fresh mount.
@@ -83,8 +94,12 @@ onUnmounted(() => boardsStore.clearContent())
             ? 'Create a board with the + button to get started.'
             : 'Select a board from the list.' }}
         </EmptyState>
-        <KanbanBoard v-else @open-task="openTask" @request-delete-column="(column) => (pendingDeleteColumn = column)"
-          @request-delete-task="(task) => (pendingDeleteTask = task)" />
+        <div v-else class="h-full flex flex-col min-h-0">
+          <BoardHeader />
+          <KanbanBoard class="flex-1 min-h-0" @open-task="openTask"
+            @request-delete-column="(column) => (pendingDeleteColumn = column)"
+            @request-delete-task="(task) => (pendingDeleteTask = task)" />
+        </div>
       </SplitterPanel>
     </SplitterGroup>
 
@@ -102,10 +117,17 @@ onUnmounted(() => boardsStore.clearContent())
           <span class="flex-1 min-w-0 truncate text-sm font-medium">
             {{ boardsStore.selectedBoard?.name || 'Untitled board' }}
           </span>
+          <Button variant="ghost" size="icon" class="relative" :active="filterDrawerOpen" aria-label="Filter tasks"
+            @click="filterDrawerOpen = true">
+            <i-lucide-filter class="size-5" />
+            <span v-if="boardsStore.filterActive" :class="BADGE_CLASS">{{ boardsStore.filterCount }}</span>
+          </Button>
         </div>
         <KanbanBoard class="flex-1 min-h-0" @open-task="openTask"
           @request-delete-column="(column) => (pendingDeleteColumn = column)"
           @request-delete-task="(task) => (pendingDeleteTask = task)" />
+
+        <BoardFilterDrawer :open="filterDrawerOpen" @update:open="(v) => (filterDrawerOpen = v)" />
       </template>
     </div>
 

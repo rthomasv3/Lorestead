@@ -2,8 +2,9 @@
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { dropTargetForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter'
 import { useRouter } from 'vue-router'
-import { DialogTitle, VisuallyHidden, PopoverRoot, PopoverAnchor, PopoverPortal, PopoverContent } from 'reka-ui'
+import { DialogTitle, VisuallyHidden } from 'reka-ui'
 import AppDialog from '../../components/AppDialog.vue'
+import ChipInput from '../../components/ChipInput.vue'
 import MarkdownEditor from '../../components/MarkdownEditor.vue'
 import MarkdownPreview from '../../components/MarkdownPreview.vue'
 import AttachmentCard from '../../components/AttachmentCard.vue'
@@ -326,51 +327,15 @@ async function removeAttachment(id) {
 
 // --- Linked notes (chips + autocomplete) ---
 
-const linkQuery = ref('')
-const linkIndex = ref(0)
-const linkInputFocused = ref(false)
+// Every live note is a candidate; the control drops the ones already linked.
+const noteSuggestions = computed(() =>
+  notesStore.summaries
+    .filter((s) => !s.deleted)
+    .map((s) => ({ value: s.id, label: s.title || 'Untitled' })))
 
-const linkedNotes = computed(() =>
-  noteIds.value
-    .map((id) => notesStore.byId.get(id))
-    .filter(Boolean))
-
-const linkSuggestions = computed(() => {
-  const q = linkQuery.value.trim().toLowerCase()
-  if (!q) return []
-  return notesStore.summaries
-    .filter((s) => !s.deleted
-      && !noteIds.value.includes(s.id)
-      && (s.title || 'Untitled').toLowerCase().includes(q))
-    .slice(0, 8)
-})
-
-function addLink(note) {
-  noteIds.value = [...noteIds.value, note.id]
-  linkQuery.value = ''
-  linkIndex.value = 0
+function onNoteIdsChange(ids) {
+  noteIds.value = ids
   markDirty()
-}
-
-function removeLink(id) {
-  noteIds.value = noteIds.value.filter((n) => n !== id)
-  markDirty()
-}
-
-function onLinkKeydown(e) {
-  if (e.key === 'ArrowDown') {
-    e.preventDefault()
-    linkIndex.value = Math.min(linkIndex.value + 1, linkSuggestions.value.length - 1)
-  } else if (e.key === 'ArrowUp') {
-    e.preventDefault()
-    linkIndex.value = Math.max(linkIndex.value - 1, 0)
-  } else if (e.key === 'Enter') {
-    e.preventDefault()
-    const note = linkSuggestions.value[linkIndex.value]
-    if (note) addLink(note)
-  } else if (e.key === 'Backspace' && !linkQuery.value && noteIds.value.length > 0) {
-    removeLink(noteIds.value[noteIds.value.length - 1])
-  }
 }
 
 async function openLinkedNote(id) {
@@ -484,45 +449,22 @@ function onDialogKeydown(e) {
 
       <div>
         <div class="text-sm font-medium text-on-surface-muted mb-1.5 ml-1">Linked notes</div>
-        <!-- A popover rather than an absolute dropdown: positioned inside the
-             dialog's scroll area the list extended the scrollable content, so
-             opening it scrolled the dialog and cut the list off. The portal
-             takes it out of that flow entirely; focus stays in the input, so
-             both auto-focus hops are suppressed. -->
-        <PopoverRoot :open="linkInputFocused && linkSuggestions.length > 0">
-          <PopoverAnchor as-child>
-            <div
-              class="flex flex-wrap items-center gap-1.5 rounded-md border border-border px-2 py-1.5 min-h-9 focus-within:border-accent">
-              <span v-for="note in linkedNotes" :key="note.id"
-                class="flex items-center gap-1 rounded bg-accent-soft text-sm px-1.5 py-0.5">
-                <button class="hover:text-accent truncate max-w-48" :title="note.title || 'Untitled'"
-                  @click="openLinkedNote(note.id)">{{ note.title || 'Untitled' }}</button>
-                <HoverTip text="Remove link">
-                  <button class="text-on-surface-muted hover:text-on-surface" @click="removeLink(note.id)">
-                    <i-lucide-x class="size-3" />
-                  </button>
-                </HoverTip>
-              </span>
-              <input v-model="linkQuery" placeholder="Link a note..."
-                class="flex-1 min-w-24 bg-transparent text-sm outline-none placeholder:text-on-surface-muted/60"
-                @keydown="onLinkKeydown" @focus="linkInputFocused = true" @blur="linkInputFocused = false" />
-            </div>
-          </PopoverAnchor>
-          <PopoverPortal>
-            <PopoverContent side="bottom" align="start" :side-offset="4"
-              class="z-[60] w-[var(--reka-popover-trigger-width)] rounded-lg border border-border bg-surface-elevated shadow-lg p-1 max-h-48 overflow-y-auto"
-              @open-auto-focus.prevent @close-auto-focus.prevent>
-              <!-- Selection follows the mouse, so hovering a row selects it and
-                   there is no separate hover state to paint. -->
-              <button v-for="(note, index) in linkSuggestions" :key="note.id"
-                class="w-full text-left rounded-md px-2.5 py-1.5 text-sm truncate"
-                :class="index === linkIndex ? 'bg-accent-soft' : ''"
-                @mouseenter="linkIndex = index" @mousedown.prevent="addLink(note)">
-                {{ note.title || 'Untitled' }}
-              </button>
-            </PopoverContent>
-          </PopoverPortal>
-        </PopoverRoot>
+        <ChipInput :model-value="noteIds" :suggestions="noteSuggestions" placeholder="Link a note..."
+          @update:model-value="onNoteIdsChange">
+          <!-- A chip is the note's title as a jump link; an id the notes store
+               has not loaded renders nothing, as before. -->
+          <template #chip="{ value, remove, chipClass }">
+            <span v-if="notesStore.byId.get(value)" :class="chipClass">
+              <button class="hover:text-accent truncate max-w-48" :title="notesStore.byId.get(value).title || 'Untitled'"
+                @click.stop="openLinkedNote(value)">{{ notesStore.byId.get(value).title || 'Untitled' }}</button>
+              <HoverTip text="Remove link">
+                <button class="text-on-surface-muted hover:text-on-surface" @click.stop="remove()">
+                  <i-lucide-x class="size-3" />
+                </button>
+              </HoverTip>
+            </span>
+          </template>
+        </ChipInput>
       </div>
     </div>
 

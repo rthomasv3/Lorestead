@@ -52,7 +52,7 @@ function onTaskDrop({ taskId, targetTaskId, edge, columnId }) {
          its right padding, cramming the add-list button against the edge. -->
     <div class="h-full w-max min-w-full flex items-start gap-3 p-3">
       <KanbanColumn v-for="column in boardsStore.columns" :key="column.id" :column="column"
-        :tasks="boardsStore.tasksByColumn.get(column.id) ?? []" :renaming="renamingColumnId === column.id"
+        :tasks="boardsStore.visibleTasksByColumn.get(column.id) ?? []" :renaming="renamingColumnId === column.id"
         @rename="(name) => boardsStore.renameColumn(column.id, name)" @rename-done="renamingColumnId = null"
         @request-rename="renamingColumnId = column.id" @request-delete="emit('request-delete-column', column)"
         @add-task="addTask(column.id)" @open-task="(task) => emit('open-task', task)"

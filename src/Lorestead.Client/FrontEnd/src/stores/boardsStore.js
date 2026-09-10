@@ -26,6 +26,45 @@ export const useBoardsStore = defineStore('boards', () => {
     return map
   })
 
+  // --- Board filter (frontend only) ---
+  // The header search and label picker narrow what the columns render; the
+  // full lists above stay authoritative for drag-drop neighbors and counts.
+  // Both reset on board switch - a filter belongs to the board it was typed on.
+  const filterQuery = ref('')
+  const filterLabels = ref([])
+
+  const filterTerms = computed(() =>
+    filterQuery.value.trim().toLowerCase().split(/\s+/).filter(Boolean))
+
+  // The search counts as one criterion however many words it holds; each
+  // selected label is another. Drives the mobile filter button's badge.
+  const filterCount = computed(() =>
+    (filterTerms.value.length > 0 ? 1 : 0) + filterLabels.value.length)
+
+  const filterActive = computed(() => filterCount.value > 0)
+
+  // Every term must appear somewhere in the title or the raw body; every
+  // selected label must be on the task (AND across labels).
+  function matchesFilter(task) {
+    const haystack = `${task.title ?? ''}\n${task.body ?? ''}`.toLowerCase()
+    return filterTerms.value.every((term) => haystack.includes(term))
+      && filterLabels.value.every((label) => (task.labels ?? []).includes(label))
+  }
+
+  const visibleTasksByColumn = computed(() => {
+    if (!filterActive.value) return tasksByColumn.value
+    const map = new Map()
+    for (const [columnId, list] of tasksByColumn.value) {
+      map.set(columnId, list.filter(matchesFilter))
+    }
+    return map
+  })
+
+  function clearFilter() {
+    filterQuery.value = ''
+    filterLabels.value = []
+  }
+
   async function load() {
     const response = await boardService.getBoards()
     boards.value = response.boards ?? []
@@ -50,6 +89,7 @@ export const useBoardsStore = defineStore('boards', () => {
 
   async function select(id) {
     selectedBoardId.value = id
+    clearFilter()
     if (!id) {
       columns.value = []
       tasks.value = []
@@ -195,6 +235,12 @@ export const useBoardsStore = defineStore('boards', () => {
     columns,
     tasks,
     tasksByColumn,
+    filterQuery,
+    filterLabels,
+    filterCount,
+    filterActive,
+    visibleTasksByColumn,
+    clearFilter,
     openTaskRequest,
     load,
     refreshBoard,
