@@ -38,7 +38,12 @@ Download the latest release from the [releases page](https://github.com/rthomasv
 - **Windows** - run `Lorestead-win-x64-Setup.exe`
   - SmartScreen or Defender may warn about the installer while the app is new and its signing certificate builds reputation. Every release is built and signed by this repo's [release workflow](.github/workflows/release.yml), so the whole trail from source to download can be audited.
 - **macOS** - run `Lorestead-osx-arm64-Setup.pkg` (Apple Silicon)
-- **Linux** - download `Lorestead-linux-x64.AppImage`, make it executable with `chmod +x`, and run it
+- **Linux** - run the install script, which puts the AppImage in `~/.local/share/Lorestead` and adds Lorestead to your app menu:
+  ```bash
+  curl -fsSL https://raw.githubusercontent.com/rthomasv3/Lorestead/main/install.sh | sh
+  ```
+  - To uninstall, run the same command with `sh -s -- --uninstall` in place of `sh`. Your notes are kept.
+  - Or skip the script: download `Lorestead-linux-x64.AppImage`, make it executable with `chmod +x`, and run it
 
 Portable zips for Windows and macOS are on the same page. The app updates itself (AppImage updates in-place): check from Settings, or turn on auto-update and forget about it. No sync server is needed to use the app.
 
@@ -110,7 +115,7 @@ A binary named `Lorestead.Mcp` ships inside every install and talks straight to 
 
 - **Windows** - `%LocalAppData%\Lorestead\current\Lorestead.Mcp.exe`
 - **macOS** - `/Applications/Lorestead.app/Contents/MacOS/Lorestead.Mcp`
-- **Linux** - the AppImage itself: `Lorestead.AppImage --mcp`
+- **Linux** - the AppImage itself: `~/.local/share/Lorestead/Lorestead.AppImage --mcp` if you used the install script, otherwise `<path to your AppImage> --mcp`
 
 For Claude Code, that is one command:
 

@@ -8,7 +8,7 @@ A binary named `Lorestead.Mcp` ships inside every install and talks straight to 
 
 - **Windows:** `%LocalAppData%\Lorestead\current\Lorestead.Mcp.exe` - the `current` folder keeps the same path across updates.
 - **macOS:** `/Applications/Lorestead.app/Contents/MacOS/Lorestead.Mcp`
-- **Linux:** the AppImage itself is the path. Run `Lorestead.AppImage --mcp` and it starts the MCP server instead of the app.
+- **Linux:** the AppImage itself is the path. Run `Lorestead.AppImage --mcp` and it starts the MCP server instead of the app. If you installed with the install script, it's `~/.local/share/Lorestead/Lorestead.AppImage` - in JSON configs, spell out the full `/home/you/...` path, since `~` isn't expanded there, and pass `--mcp` in `args`.
 
 It finds the database the same way the app does. Set `LORESTEAD_DATA_DIR` if you keep yours somewhere unusual. Edits show up in the app within a second or two, no restart needed.
 
