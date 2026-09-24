@@ -1,6 +1,6 @@
 <script setup>
 import { ref, watch, onMounted, onUnmounted, computed, nextTick } from 'vue'
-import { EditorView, keymap, lineNumbers, highlightActiveLine, placeholder, Decoration, ViewPlugin, tooltips } from '@codemirror/view'
+import { EditorView, keymap, lineNumbers, highlightActiveLine, drawSelection, placeholder, Decoration, ViewPlugin, tooltips } from '@codemirror/view'
 import { EditorState, EditorSelection, Compartment, Prec, RangeSetBuilder } from '@codemirror/state'
 import { defaultKeymap, history, historyKeymap } from '@codemirror/commands'
 import { markdown } from '@codemirror/lang-markdown'
@@ -89,7 +89,6 @@ function settingsExtensions() {
       fontFamily: editor.fontFamily && editor.fontFamily.trim().length > 0 ? editor.fontFamily : 'var(--font-mono)',
       lineHeight: '1.6',
     },
-    '.cm-content': { caretColor: 'var(--color-accent)' },
     '&.cm-focused': { outline: 'none' },
     '.cm-gutters': {
       backgroundColor: 'transparent',
@@ -102,7 +101,9 @@ function settingsExtensions() {
     '.cm-md-underline': { textDecoration: 'underline', fontStyle: 'normal !important' },
     '.cm-activeLine': { backgroundColor: 'color-mix(in srgb, var(--color-on-surface) 5%, transparent)' },
     '.cm-activeLineGutter': { backgroundColor: 'transparent', color: 'var(--color-on-surface)' },
-    '.cm-cursor': { borderLeftColor: 'var(--color-on-surface)' },
+    // The caret and selection are drawn by drawSelection(), not the browser, which
+    // is what lets them take the accent. The native ones never saw these rules.
+    '.cm-cursor': { borderLeftColor: 'var(--color-accent)' },
     // Our own drop caret (see showDropCaret) - CodeMirror's dropCursor never fires
     // under pragmatic-drag-and-drop, so this is hand-drawn.
     '.cm-drop-caret': {
@@ -111,6 +112,7 @@ function settingsExtensions() {
       backgroundColor: 'var(--color-accent)',
       pointerEvents: 'none',
     },
+    // !important: the base theme's focused-selection selector is more specific.
     '.cm-selectionBackground, &.cm-focused .cm-selectionBackground': {
       backgroundColor: 'color-mix(in srgb, var(--color-accent) 25%, transparent) !important',
     },
@@ -237,10 +239,9 @@ const searchTheme = EditorView.theme({
     backgroundColor: 'color-mix(in srgb, var(--color-accent) 22%, transparent)',
     borderRadius: '2px',
   },
-  // The current match has to carry itself: the editor loses focus the moment you
-  // type in the find field, and without drawSelection() the browser stops
-  // painting the selection that would otherwise mark it. A solid accent-strong
-  // fill is the one tone the theme guarantees white text against.
+  // The current match has to carry itself: stepping selects it, but the drawn
+  // selection is a wash barely stronger than every other match's. A solid
+  // accent-strong fill is the one tone the theme guarantees white text against.
   '.cm-searchMatch.cm-searchMatch-selected': {
     backgroundColor: 'var(--color-accent-strong)',
     color: 'white',
@@ -573,6 +574,7 @@ function createView() {
         underscoreEmphasis,
         EditorView.domEventHandlers({ paste: onPaste, drop: onDrop, dragover: onDragOver }),
         EditorView.lineWrapping,
+        drawSelection(),
         // placeholder('Start writing...'),
         configurable.of(settingsExtensions()),
         readonlyCompartment.of(EditorState.readOnly.of(props.readonly)),
