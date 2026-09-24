@@ -175,20 +175,35 @@ jobs:
 
   linux:
     needs: version
-    # Jammy is deliberate, not just old: the AppImage bundles this runner's
-    # webkit2gtk-4.1 binaries, so its glibc sets the compatibility floor.
-    runs-on: ubuntu-22.04
+    # Build inside a Jammy container rather than on the ubuntu-22.04 runner image,
+    # which GitHub retires in April 2027. Jammy is deliberate, not just old: the
+    # AppImage bundles this environment's webkit2gtk-4.1 binaries and the AOT
+    # binaries link its glibc, so the container sets the compatibility floor.
+    runs-on: ubuntu-latest
+    container: ubuntu:22.04
     env:
       # vpk targets an older runtime than the repo's .NET 10; roll-forward bridges that.
       DOTNET_ROLL_FORWARD: Major
+      # The container has no pre-seeded tzdata config; without this, apt-get
+      # hangs on an interactive timezone prompt.
+      DEBIAN_FRONTEND: noninteractive
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Install webkit build dependencies
+      - name: Install build dependencies
         # Same package set as build/linux/Dockerfile so local docker builds and
-        # CI harvest identical webkit binaries. squashfs-tools: vpk shells out
-        # to mksquashfs to assemble the AppImage.
-        run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev squashfs-tools
+        # CI harvest identical webkit binaries. No sudo: container jobs run as
+        # root. Runs before checkout so git is present and checkout clones
+        # rather than falling back to a tarball download. clang, zlib1g-dev,
+        # binutils: NativeAOT linking. squashfs-tools: vpk shells out to
+        # mksquashfs to assemble the AppImage. xz-utils: setup-node extracts a
+        # .tar.xz.
+        run: |
+          apt-get update
+          apt-get install -y \
+            curl ca-certificates git file xz-utils \
+            clang zlib1g-dev binutils squashfs-tools \
+            libwebkit2gtk-4.1-dev libgtk-3-dev
+
+      - uses: actions/checkout@v4
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -204,7 +219,11 @@ jobs:
 
       - name: Install vpk
         # Keep the CLI on the same version as the Velopack library reference.
-        run: dotnet tool install -g vpk --version 1.2.0
+        # In a container job the global dotnet tools dir is not on PATH (the
+        # hosted runner image normally handles that), so add it.
+        run: |
+          dotnet tool install -g vpk --version 1.2.0
+          echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
 
       - name: Download existing release feed
         # Enables delta package generation; fails harmlessly before the first release.

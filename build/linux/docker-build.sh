@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Local AppImage build inside the jammy container (same env as the GitHub runner).
+# Local AppImage build inside the jammy container (same env as the release workflow's linux job).
 #
 # Usage: ./docker-build.sh [--version <semver>]   (defaults to 0.0.1-local.1)
 set -euo pipefail

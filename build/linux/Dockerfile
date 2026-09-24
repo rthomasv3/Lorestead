@@ -1,4 +1,5 @@
-# Local AppImage build environment mirroring the GitHub ubuntu-22.04 runner.
+# Local AppImage build environment mirroring the release workflow's ubuntu:22.04
+# container (keep the apt package list in sync with its linux job).
 # Jammy is deliberate: its webkit2gtk-4.1 binaries set the AppImage's glibc floor.
 FROM ubuntu:22.04
 

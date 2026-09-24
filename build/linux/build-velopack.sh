@@ -7,8 +7,8 @@
 # Usage: ./build-velopack.sh --version <semver>
 #
 # Must run in the jammy build environment (libwebkit2gtk-4.1-dev, .NET 10,
-# node 24, vpk): the GitHub workflow uses ubuntu-22.04, docker-build.sh mirrors
-# it locally. Paths are Ubuntu-only on purpose -- the harvested webkit binaries
+# node 24, vpk): the GitHub workflow runs in an ubuntu:22.04 container,
+# docker-build.sh mirrors it locally. Paths are Ubuntu-only on purpose -- the harvested webkit binaries
 # can only contain jammy's hardcoded paths, so other layouts would be dead code.
 set -euo pipefail
 
