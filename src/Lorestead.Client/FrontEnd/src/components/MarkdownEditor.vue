@@ -2,7 +2,7 @@
 import { ref, watch, onMounted, onUnmounted, computed, nextTick } from 'vue'
 import { EditorView, keymap, lineNumbers, highlightActiveLine, drawSelection, placeholder, Decoration, ViewPlugin, tooltips } from '@codemirror/view'
 import { EditorState, EditorSelection, Compartment, Prec, RangeSetBuilder } from '@codemirror/state'
-import { defaultKeymap, history, historyKeymap } from '@codemirror/commands'
+import { history, historyKeymap } from '@codemirror/commands'
 import { markdown } from '@codemirror/lang-markdown'
 import { syntaxHighlighting, defaultHighlightStyle, syntaxTree } from '@codemirror/language'
 import { autocompletion, acceptCompletion } from '@codemirror/autocomplete'
@@ -14,6 +14,7 @@ import { getCursor, setCursor, flushCursors } from '../utils/cursorPositions.js'
 import { toolbarKeymap } from '../utils/editorToolbar.js'
 import { editorIndentUnit, indentKeymap, dedentKeymap } from '../utils/editorIndent.js'
 import { listKeymap } from '../utils/editorLists.js'
+import { multipleCursors, cursorKeymap, editorDefaultKeymap } from '../utils/editorCursors.js'
 import {
   attachmentLink, clipboardPayload, filePathsFrom, filesFromPaths, pastedFiles,
 } from '../utils/attachmentFiles.js'
@@ -548,7 +549,8 @@ function createView() {
           // Ahead of defaultKeymap so Escape reaches the find bar before
           // simplifySelection takes it.
           ...findKeymap(),
-          ...defaultKeymap,
+          ...cursorKeymap,
+          ...editorDefaultKeymap,
           ...historyKeymap,
         ]),
         // For the query state and the search cursor behind findNext/replaceAll.
@@ -575,6 +577,7 @@ function createView() {
         EditorView.domEventHandlers({ paste: onPaste, drop: onDrop, dragover: onDragOver }),
         EditorView.lineWrapping,
         drawSelection(),
+        multipleCursors,
         // placeholder('Start writing...'),
         configurable.of(settingsExtensions()),
         readonlyCompartment.of(EditorState.readOnly.of(props.readonly)),

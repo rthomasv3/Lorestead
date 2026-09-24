@@ -1,5 +1,6 @@
 // What Tab, Shift-Tab and Backspace do to indentation in the markdown editor.
 
+import { EditorSelection } from '@codemirror/state'
 import { indentUnit, getIndentUnit } from '@codemirror/language'
 import { indentMore, indentLess } from '@codemirror/commands'
 
@@ -56,23 +57,34 @@ function dedentBackward(view) {
   const { state } = view
   if (state.readOnly) return false
 
-  const range = state.selection.main
-  if (!range.empty) return false
-
-  const line = state.doc.lineAt(range.head)
-  const before = line.text.slice(0, range.head - line.from)
-  // Spaces only: a tab is one character and deleting it is already right, and
-  // anything else means the cursor is past the indentation.
-  if (before.length === 0 || /[^ ]/.test(before)) return false
-
-  // Back to the previous tab stop, so Backspace undoes a Tab exactly while the
-  // indentation is on the grid, and squares it up when something else left it
-  // off - a list continuation aligning under a two-column `- ` marker, say.
+  // Every cursor has to be in plain indentation, or none is dedented and
+  // markdown's delete takes the key for all of them - one Backspace doing two
+  // different things down a column would be worse than either.
   const unit = getIndentUnit(state)
-  const drop = before.length % unit || unit
-  view.dispatch(state.update({
-    changes: { from: range.head - drop, to: range.head },
-    userEvent: 'delete.dedent',
-  }))
+  const drops = []
+  for (const range of state.selection.ranges) {
+    if (!range.empty) return false
+
+    const line = state.doc.lineAt(range.head)
+    const before = line.text.slice(0, range.head - line.from)
+    // Spaces only: a tab is one character and deleting it is already right, and
+    // anything else means the cursor is past the indentation.
+    if (before.length === 0 || /[^ ]/.test(before)) return false
+
+    // Back to the previous tab stop, so Backspace undoes a Tab exactly while the
+    // indentation is on the grid, and squares it up when something else left it
+    // off - a list continuation aligning under a two-column `- ` marker, say.
+    drops.push(before.length % unit || unit)
+  }
+
+  // changeByRange visits the ranges in the same order as the loop above.
+  let index = 0
+  view.dispatch(state.update(state.changeByRange((range) => {
+    const drop = drops[index++]
+    return {
+      changes: { from: range.head - drop, to: range.head },
+      range: EditorSelection.cursor(range.head - drop),
+    }
+  }), { userEvent: 'delete.dedent' }))
   return true
 }
