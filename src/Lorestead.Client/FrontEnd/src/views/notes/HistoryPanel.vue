@@ -34,18 +34,27 @@ watch(() => notesStore.selectedId, () => {
 })
 
 // Cards are classified here because the frontend already holds every version's
-// title and body (decisions.md): body changed -> preview and counts; title only
-// -> a rename card; neither -> hidden, since move, reorder, trash and restore
-// have nothing to render and a restore would not undo them anyway.
+// title and body: body changed -> preview and counts; title only -> a rename
+// card; neither -> hidden, since move, reorder, trash and restore have nothing
+// to render and a restore would not undo them anyway.
 const cards = computed(() => {
   const versions = notesStore.currentHistory
+  const newest = versions[0]
   const result = []
+  // Versions still holding the note's current title and body are the note itself,
+  // not history - opening one shows no diff. Only the leading run counts: an older
+  // version matching after a restore is real history. A conflict stays visible, as
+  // its badge is the only sign that a concurrent edit was overwritten.
+  let atCurrent = true
   for (let i = 0; i < versions.length; i += 1) {
     const version = versions[i]
     // The list is newest first, so a version's predecessor is the next one along.
     const previous = versions[i + 1] ?? null
     const bodyChanged = !previous || version.body !== previous.body
     const titleChanged = previous && version.title !== previous.title
+
+    atCurrent = atCurrent && version.title === newest.title && version.body === newest.body
+    if (atCurrent && !version.supersededConcurrent) continue
 
     if (bodyChanged) {
       result.push({
