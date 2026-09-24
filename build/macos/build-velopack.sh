@@ -3,9 +3,8 @@
 # the .app bundle from the flat publish dir (everything lands in
 # Contents/MacOS, which is where Galdr's FolderContent expects wwwroot), then
 # signs, notarizes, and packages - replacing Vellerune's manual
-# codesign/productbuild flow. The MCP exe ships inside the bundle
-# (decisions.md 2026-07-29): agent configs point at
-# /Applications/Lorestead.app/Contents/MacOS/Lorestead.Mcp.
+# codesign/productbuild flow. The MCP exe ships inside the bundle: agent
+# configs point at /Applications/Lorestead.app/Contents/MacOS/Lorestead.Mcp.
 #
 # Usage: ./build-velopack.sh --version <semver> \
 #            [--sign-app-identity <subject>] [--sign-install-identity <subject>] \

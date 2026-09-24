@@ -35,11 +35,11 @@ const isMobile = useIsMobile()
 // gets this desktop layout, but still has no native save dialog).
 const mobilePlatform = useMobilePlatform()
 
-// The route param IS the selection (decisions.md): every navigation source -
-// tree click, search, wiki-link, backlink - pushes /notes/:id, and this watcher
-// is the one place that turns it into a fetch. The name guard matters on the
-// way out: leaving the section changes params before this view unmounts, and
-// reacting to that would wipe the selection the sidebar link needs.
+// The route param IS the selection: every navigation source - tree click,
+// search, wiki-link, backlink - pushes /notes/:id, and this watcher is the one
+// place that turns it into a fetch. The name guard matters on the way out:
+// leaving the section changes params before this view unmounts, and reacting to
+// that would wipe the selection the sidebar link needs.
 watch(() => route.params.id || null, (id) => {
   if (route.name === 'notes') notesStore.select(id)
 }, { immediate: true })
@@ -136,8 +136,8 @@ function flush() {
   return flushFor(editingNoteId.value)
 }
 
-// data.md: an empty title auto-fills from the body's first line; edits to the title
-// itself never write back to the body.
+// An empty title auto-fills from the body's first line; edits to the title itself
+// never write back to the body.
 async function maybeAutoFillTitle(noteId, text) {
   const summary = notesStore.byId.get(noteId)
   if (summary && !summary.title && text.trim()) {
@@ -290,7 +290,7 @@ function runToolbar(name) {
 
 // The pending autosave is cancelled first: it is the later write under LWW, so it
 // would overwrite the restored text the moment it fired. The store's re-select then
-// swaps the buffer through the currentNote watch below (decisions.md).
+// swaps the buffer through the currentNote watch below.
 async function onRestoreVersion(version) {
   if (readonly.value || !editingNoteId.value || !version) return
   clearTimeout(saveTimer)
@@ -301,7 +301,7 @@ async function onRestoreVersion(version) {
 function toggleTool(name) {
   notesStore.toolOpen = notesStore.toolOpen === name ? null : name
   // History carries every retained version's payload, so it is fetched on open and
-  // dropped on close rather than riding along with the note (decisions.md).
+  // dropped on close rather than riding along with the note.
   if (notesStore.toolOpen === 'history') notesStore.loadHistory()
   else notesStore.clearHistory()
 }
@@ -367,8 +367,8 @@ watch(
 onMounted(() => {
   if (!notesStore.loaded) notesStore.load()
   // Content is fetched fresh on every mount via the route param watcher above -
-  // the store carries no content across routes (decisions.md), and select()
-  // awaits any save still in flight from the unmount flush.
+  // the store carries no content across routes, and select() awaits any save
+  // still in flight from the unmount flush.
   // History is not part of getNote, so the reopened panel loads its own data.
   if (notesStore.toolOpen === 'history') notesStore.loadHistory()
 })

@@ -151,10 +151,10 @@ export const useNotesStore = defineStore('notes', () => {
     }
   }
 
-  // Content never survives navigation (decisions.md): the store keeps only where
-  // you were - selection, expansion, open panels - and the view drops the rest on
-  // unmount, so a remount can only show what the database returns. Local SQLite by
-  // primary key resolves well inside the route transition.
+  // Content never survives navigation: the store keeps only where you were -
+  // selection, expansion, open panels - and the view drops the rest on unmount, so
+  // a remount can only show what the database returns. Local SQLite by primary key
+  // resolves well inside the route transition.
   function clearContent() {
     currentNote.value = null
     currentAttachments.value = []

@@ -11,10 +11,10 @@ export const useSyncStore = defineStore('sync', () => {
 
   const connected = computed(() => !!status.value?.connected && !status.value?.error)
 
-  // The one place sync state surfaces (settings.md): error text beats everything,
-  // then the setup states (muted, not failures), then the in-flight state, then
-  // what the live connection knows. Every message is a short sentence-case state;
-  // raw error detail lives in the log, never here.
+  // The one place sync state surfaces: error text beats everything, then the setup
+  // states (muted, not failures), then the in-flight state, then what the live
+  // connection knows. Every message is a short sentence-case state; raw error
+  // detail lives in the log, never here.
   const label = computed(() => {
     const s = status.value
     let text = 'Not connected'

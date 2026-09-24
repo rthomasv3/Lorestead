@@ -40,10 +40,10 @@ window.addEventListener('note:navigate', async (event) => {
 // the decision, because it depends on whether their editor is mid-edit.
 //
 // Content refreshes are gated on the route that shows them: an unmounted view has
-// dropped its content and refetches everything on mount anyway (decisions.md), so
-// refreshing it from here would just repopulate state nobody is showing. The
-// summary lists (load) stay ungated - they are navigation data, kept warm so the
-// tree and board list render instantly on return.
+// dropped its content and refetches everything on mount anyway, so refreshing it
+// from here would just repopulate state nobody is showing. The summary lists
+// (load) stay ungated - they are navigation data, kept warm so the tree and board
+// list render instantly on return.
 // Drops from outside the app: the page default that would navigate to the file,
 // and the pairing that gets a host-taken drop to the zone it landed on.
 watchNativeDrops()

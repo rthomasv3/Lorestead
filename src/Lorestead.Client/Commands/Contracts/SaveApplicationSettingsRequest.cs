@@ -1,7 +1,8 @@
 namespace Lorestead.Client.Commands.Contracts;
 
-// Excludes server_url (Sync Server section, Phase 5), last_update_check_at (backend-managed)
-// and the window columns (persisted by OnWindowChanged, never shown in the UI).
+// Excludes server_url (saved by the Sync Server section via saveSyncServerUrl),
+// last_update_check_at (backend-managed) and the window columns (persisted by
+// OnWindowChanged, never shown in the UI).
 public sealed class SaveApplicationSettingsRequest
 {
     public int HistoryRetention { get; set; }

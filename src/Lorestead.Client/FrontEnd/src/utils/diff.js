@@ -14,7 +14,7 @@ function splitLines(text) {
 // Added and removed CHARACTER counts, which is not the same as a length delta:
 // replacing ten characters with ten others is 10 added and 10 removed at zero
 // delta. Word granularity so the number agrees with the highlights the detail
-// view draws (decisions.md).
+// view draws.
 export function changeCounts(oldText, newText) {
   let added = 0
   let removed = 0

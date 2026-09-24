@@ -194,8 +194,8 @@ function leaveEdit() {
   flush()
 }
 
-// Blur returns to reading mode (ui/pages/task-edit.md) - but not when focus just
-// moved to the toolbar, or every button click would close the editor.
+// Blur returns to reading mode - but not when focus just moved to the toolbar, or
+// every button click would close the editor.
 function onEditorFocusOut(e) {
   if (!e.currentTarget.contains(e.relatedTarget)) {
     leaveEdit()

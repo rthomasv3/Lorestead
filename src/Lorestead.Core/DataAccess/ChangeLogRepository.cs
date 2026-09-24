@@ -140,11 +140,10 @@ namespace Lorestead.Core.DataAccess
         }
 
         // Per-item history cap, ordered by authored time because LWW already treats
-        // changed_at as the ordering authority (decisions.md). Not by seq (a serverless
-        // install never stamps one, so nothing was ever eligible and history grew
-        // unbounded) and not by id (that is local *arrival* order - a sync pull inserts
-        // older remote entries with the highest ids, which would evict newer local
-        // versions).
+        // changed_at as the ordering authority. Not by seq (a serverless install never
+        // stamps one, so nothing was ever eligible and history grew unbounded) and not
+        // by id (that is local *arrival* order - a sync pull inserts older remote
+        // entries with the highest ids, which would evict newer local versions).
         //
         // The one survivor is the newest pending entry: deleting it drops an edit from
         // the outbox, and a local edit can legitimately sort older than a pulled remote

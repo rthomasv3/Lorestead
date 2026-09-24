@@ -19,11 +19,11 @@ public static class ServerApp
     // Server-side writes in these endpoints never append outbox entries.
     private const string ServerDeviceId = "server";
     // MCP tool writes DO ride the outbox path and get stamped; this id marks agent
-    // edits in the change log (features/mcp.md).
+    // edits in the change log.
     private const string McpDeviceId = "server-mcp";
 
     [UnconditionalSuppressMessage("AOT", "IL3050",
-        Justification = "Array.CreateInstance in framework DI internals, reached via AddMcpServer - the Phase 0 spike runtime-proved this exact path under Native AOT (decisions.md).")]
+        Justification = "Array.CreateInstance in framework DI internals, reached via AddMcpServer - this exact path is runtime-proved under Native AOT.")]
     public static WebApplication Create(ServerConfig config, ConnectionManager connectionManager, string[] args)
     {
         WebApplicationBuilder builder = WebApplication.CreateSlimBuilder(args);

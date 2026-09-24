@@ -2,9 +2,9 @@ using Microsoft.Data.Sqlite;
 
 namespace Lorestead.Core.DataAccess
 {
-    // Full-resync wipe (features/sync.md): everything rebuildable from the server
-    // goes; pending outbox entries and this device's identity stay. Client-only -
-    // it touches client-only tables.
+    // Full-resync wipe: everything rebuildable from the server goes; pending outbox
+    // entries and this device's identity stay. Client-only - it touches client-only
+    // tables.
     public sealed class ResyncRepository
     {
         private readonly ConnectionManager _connectionManager;
@@ -36,9 +36,9 @@ namespace Lorestead.Core.DataAccess
             transaction.Commit();
         }
 
-        // Server adoption (features/sync.md): the opposite of the wipe above - all
-        // local data survives, only the seq bookkeeping is discarded so the next
-        // drain re-uploads the full retained history to the server that now answers.
+        // Server adoption: the opposite of the wipe above - all local data survives,
+        // only the seq bookkeeping is discarded so the next drain re-uploads the full
+        // retained history to the server that now answers.
         // Nulling seq makes every entry pending; the applier's seq dedup keeps the
         // follow-up pull from double-applying what the drain just pushed.
         public void ResetForServerAdoption(string serverId)

@@ -74,7 +74,7 @@ watch(() => boardsStore.openTaskRequest, (taskId) => {
 onMounted(() => {
   if (!boardsStore.loaded) boardsStore.load()
   // Columns and tasks are fetched fresh on every mount through the route param
-  // watcher above - the store carries no content across routes (decisions.md).
+  // watcher above - the store carries no content across routes.
 })
 
 onUnmounted(() => boardsStore.clearContent())

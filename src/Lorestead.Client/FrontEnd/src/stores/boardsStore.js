@@ -110,9 +110,9 @@ export const useBoardsStore = defineStore('boards', () => {
     }
   }
 
-  // Same contract as the notes store (decisions.md): the store keeps only the
-  // selection across routes; the view drops content on unmount and refetches on
-  // mount, so a remount can never show stale columns or tasks.
+  // Same contract as the notes store: the store keeps only the selection across
+  // routes; the view drops content on unmount and refetches on mount, so a remount
+  // can never show stale columns or tasks.
   function clearContent() {
     columns.value = []
     tasks.value = []

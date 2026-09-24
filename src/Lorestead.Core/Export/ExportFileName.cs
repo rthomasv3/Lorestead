@@ -11,7 +11,7 @@ namespace Lorestead.Core.Export
 
         // The intersection of what Windows, macOS and Linux accept, because the export
         // is meant to be portable. Titles themselves stay free-form - the front matter
-        // carries the real one (features/export.md).
+        // carries the real one.
         private const string IllegalCharacters = "<>:\"/\\|?*";
 
         // Long enough that no realistic title is cut, short enough that a deep subtree

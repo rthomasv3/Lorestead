@@ -23,9 +23,9 @@ internal static class Program
             SQLitePCL.Batteries_V2.Init();
 
             // Same resolver the client uses, so agent edits land in the client's DB
-            // wherever this binary happens to be installed (decisions.md). Legacy
-            // migration is deliberately client-only - a spawned binary can see a
-            // virtualized AppData shadow instead of the real files.
+            // wherever this binary happens to be installed. Legacy migration is
+            // deliberately client-only - a spawned binary can see a virtualized
+            // AppData shadow instead of the real files.
             string dataDirectory = LocalDataPaths.ResolveDataDirectory();
             Directory.CreateDirectory(dataDirectory);
 
@@ -34,15 +34,15 @@ internal static class Program
             SyncState state = new SyncStateRepository(connectionManager).EnsureInitialized();
 
             // An agent-first install is a real path for this app, so the binary that
-            // created the database is the one that seeds it (decisions.md).
+            // created the database is the one that seeds it.
             if (created)
             {
                 FirstRunSeeder.Seed(connectionManager, state.DeviceId);
             }
 
             // The -mcp suffix marks agent edits in the change log while keeping the
-            // originating device recognizable (features/mcp.md). Retention comes from
-            // the shared DB so agent writes cap history exactly as the client's do.
+            // originating device recognizable. Retention comes from the shared DB so
+            // agent writes cap history exactly as the client's do.
             ApplicationSettings settings = new SettingsRepository(connectionManager).GetApplication();
             McpToolService tools = new McpToolService(
                 connectionManager,
@@ -73,7 +73,7 @@ internal static class Program
                     },
                     // Which database this is talking to is the one thing a caller
                     // cannot see and the one thing that has actually gone wrong
-                    // before (decisions.md), so the handshake states it outright.
+                    // before, so the handshake states it outright.
                     ServerInstructions =
                         "Lorestead notes and boards, " + build + ", reading and writing the local database at "
                         + dataDirectory + ". Edits land in the same database the desktop client is using and "

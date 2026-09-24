@@ -4,7 +4,7 @@ namespace Lorestead.Core.DataAccess.Migrations
 {
     // Client-only: editor_settings is created by Db002_ClientState. Only the toggle
     // lives here - the remembered offsets themselves are device-local view state in
-    // the webview's localStorage, not a column (decisions.md).
+    // the webview's localStorage, not a column.
     public sealed class Db005_RememberCursorPosition : IMigration
     {
         public int Version => 5;

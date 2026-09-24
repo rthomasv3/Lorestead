@@ -2,7 +2,7 @@ using Microsoft.Data.Sqlite;
 
 namespace Lorestead.Core.DataAccess.Migrations
 {
-    // Which server instance this client's sync state belongs to (features/sync.md).
+    // Which server instance this client's sync state belongs to.
     // Empty means unknown - existing state is presumed to belong to whichever server
     // answers next, so an upgrade in place adopts quietly without a reset.
     public sealed class Db008_SyncServerId : IMigration

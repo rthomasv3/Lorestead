@@ -2,8 +2,7 @@
 # Builds the Lorestead Linux AppDir and packages it as an AppImage via Velopack
 # (vpk pack), with webkit2gtk bundled so it runs on distros that don't ship
 # GTK/WebKit. The custom AppRun adds a --mcp branch that execs the bundled MCP
-# server, so the AppImage file itself is the stable path agent configs point at
-# (decisions.md 2026-07-29).
+# server, so the AppImage file itself is the stable path agent configs point at.
 #
 # Usage: ./build-velopack.sh --version <semver>
 #
@@ -114,8 +113,8 @@ cp -r "$PUBLISH_DIR/wwwroot" "$APPDIR/usr/bin/"
 cp "$PUBLISH_DIR/LICENSE.txt" "$APPDIR/usr/bin/"
 cp "$PUBLISH_DIR/THIRD-PARTY-NOTICES.txt" "$APPDIR/usr/bin/"
 
-# The MCP exe ships inside the AppImage (decisions.md); its libe_sqlite3.so is
-# the same one the client bundles into usr/lib, resolved via LD_LIBRARY_PATH.
+# The MCP exe ships inside the AppImage; its libe_sqlite3.so is the same one
+# the client bundles into usr/lib, resolved via LD_LIBRARY_PATH.
 cp "$MCP_PUBLISH_DIR/$MCP_NAME" "$APPDIR/usr/bin/"
 
 for lib in libwebview.so libnfd.so libe_sqlite3.so; do
@@ -318,7 +317,7 @@ export GTK_THEME="\${GTK_THEME:-Adwaita:dark}"
 
 # MCP dispatch: \`<AppImage> --mcp <args>\` execs the bundled MCP server with
 # stdio inherited, so the AppImage file itself is the stable path an agent
-# config points at (decisions.md 2026-07-29).
+# config points at.
 if [ "\${1:-}" = "--mcp" ]; then
     shift
     exec "\${APPDIR}/usr/bin/$MCP_NAME" "\$@"

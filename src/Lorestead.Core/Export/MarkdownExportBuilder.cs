@@ -7,11 +7,11 @@ using Lorestead.Core.Entities;
 
 namespace Lorestead.Core.Export
 {
-    // Turns a set of notes into the file layout features/export.md describes: a note
-    // with children becomes Parent.md beside a sibling Parent/ folder, attachments go
-    // in one root folder, and every note carries YAML front matter. Nothing here
-    // touches the file system - the caller writes the plan out, so the whole shape of
-    // an export is unit-testable in memory.
+    // Turns a set of notes into the export's file layout: a note with children
+    // becomes Parent.md beside a sibling Parent/ folder, attachments go in one root
+    // folder, and every note carries YAML front matter. Nothing here touches the
+    // file system - the caller writes the plan out, so the whole shape of an export
+    // is unit-testable in memory.
     public static partial class MarkdownExportBuilder
     {
         public const string AttachmentsDirectory = "attachments";

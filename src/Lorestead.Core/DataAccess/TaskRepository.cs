@@ -74,8 +74,8 @@ namespace Lorestead.Core.DataAccess
             return task;
         }
 
-        // Tasks have no trash UI - delete tombstones immediately (data.md tombstone
-        // flag; sync propagates it like any other change).
+        // Tasks have no trash UI - delete tombstones immediately (the deleted flag;
+        // sync propagates it like any other change).
         public void Delete(string id)
         {
             using SqliteConnection connection = _connectionManager.CreateConnection();

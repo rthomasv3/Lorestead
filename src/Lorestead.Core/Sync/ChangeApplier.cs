@@ -55,7 +55,7 @@ namespace Lorestead.Core.Sync
                             // (outbox drain racing the pull) makes it old news. Mirror only -
                             // applying it would show the losing version on the winning device.
                             // Purges follow the same rule: a concurrent local edit resurrects the
-                            // item on the server, so deleting here would diverge (decisions.md).
+                            // item on the server, so deleting here would diverge.
                             ChangeLogRepository.AppendWithin(connection, transaction, entry);
                         }
                         else if (entry.Op == ChangeOps.Purge)

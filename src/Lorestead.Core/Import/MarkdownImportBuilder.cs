@@ -221,8 +221,7 @@ namespace Lorestead.Core.Import
         }
 
         // The exact inverse of what the export writes: a root Templates/ folder with
-        // no sibling Templates.md is the template section, not a note
-        // (features/import.md).
+        // no sibling Templates.md is the template section, not a note.
         private static bool DetectTemplatesSection(Dictionary<string, ImportFile> markdownByPath)
         {
             bool hasTemplatesContent = false;
@@ -353,7 +352,7 @@ namespace Lorestead.Core.Import
         // the result lives under X, so a match elsewhere in the tree (or in the
         // trash) is a copy with a fresh id, not an in-place update. Root scopes to
         // the whole tree; template-section files ignore the destination and match
-        // globally (features/import.md).
+        // globally.
         private static HashSet<string> BuildScope(string destinationParentId, Dictionary<string, Note> existingById)
         {
             HashSet<string> scope = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -808,7 +807,7 @@ namespace Lorestead.Core.Import
 
         // A merged note reuses an attachment it already owns when filename and size
         // match - without this, every re-import of an unchanged export would
-        // duplicate every blob (features/import.md).
+        // duplicate every blob.
         private static string FindReusableAttachment(ImportFile file, Node node, Context context)
         {
             string result = null;

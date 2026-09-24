@@ -6,7 +6,7 @@ const props = defineProps({
   open: { type: Boolean, default: false },
   // Which tool is showing. One shell holds every tool, so switching changes this
   // while `open` stays true: the panel keeps its width and the content
-  // crossfades rather than collapsing and re-expanding (ui/overview.md).
+  // crossfades rather than collapsing and re-expanding.
   contentKey: { type: [String, Number], default: null },
   storageKey: { type: String, default: 'Lorestead-tool-panel-width' },
 })

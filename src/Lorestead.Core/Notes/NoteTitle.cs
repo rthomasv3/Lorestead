@@ -6,9 +6,9 @@ namespace Lorestead.Core.Notes
     {
         // Titles stay free-form: a colon or a slash is legitimate content, and the
         // export keeps the true title in front matter while sanitizing only the
-        // filename (features/export.md). What gets removed here is what is never
-        // content - control characters, and the newlines and runs of whitespace that
-        // would break a single-line tree row and a YAML scalar.
+        // filename. What gets removed here is what is never content - control
+        // characters, and the newlines and runs of whitespace that would break a
+        // single-line tree row and a YAML scalar.
         public static string Normalize(string title)
         {
             string result = string.Empty;

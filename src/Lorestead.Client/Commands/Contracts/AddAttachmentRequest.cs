@@ -2,7 +2,7 @@ namespace Lorestead.Client.Commands.Contracts;
 
 // The blob crosses the bridge as base64 - acceptable for the 100 MB cap and keeps
 // the command layer JSON-only; dedicated endpoints exist only on the sync server.
-// Exactly one of NoteId/TaskId is set - attachments have a single owner (data.md).
+// Exactly one of NoteId/TaskId is set - attachments have a single owner.
 public sealed class AddAttachmentRequest
 {
     public string NoteId { get; set; }

@@ -8,8 +8,8 @@ namespace Lorestead.Core.DataAccess;
 // or which host spawned it. The profile root is used rather than %LOCALAPPDATA%
 // because MSIX-packaged agent hosts virtualize AppData for the processes they
 // spawn - a spawned binary silently forks a shadow copy of the DB - while leaving
-// the profile root untouched (decisions.md). Both processes derive the same path
-// independently, so there is no runtime handoff to break when the MCP runs first.
+// the profile root untouched. Both processes derive the same path independently,
+// so there is no runtime handoff to break when the MCP runs first.
 public static class LocalDataPaths
 {
     private const string OverrideVariable = "LORESTEAD_DATA_DIR";

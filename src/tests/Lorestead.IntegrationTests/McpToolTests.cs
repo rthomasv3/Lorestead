@@ -168,7 +168,7 @@ namespace Lorestead.IntegrationTests
 
             // The section of the template that list_templates owns is the whole
             // subtree, not just its root - descendants are template content by
-            // location (data.md), so they must not surface as orphan roots either.
+            // location, so they must not surface as orphan roots either.
             McpCreateResponse template = await _tools.CreateTemplate("Template", "template body");
             McpCreateResponse section = await _tools.CreateNote("Overview", null, template.Id);
             await _tools.CreateNote("Detail", null, section.Id);

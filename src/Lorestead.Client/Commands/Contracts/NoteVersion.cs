@@ -2,8 +2,7 @@ namespace Lorestead.Client.Commands.Contracts;
 
 // One history card's worth of a note. Trimmed to what history actually shows and
 // restores - parent_id, position, type and deleted are in the stored payload but
-// are deliberately not surfaced, because a restore never touches them
-// (decisions.md).
+// are deliberately not surfaced, because a restore never touches them.
 public sealed class NoteVersion
 {
     public long Id { get; set; }

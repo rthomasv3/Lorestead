@@ -258,9 +258,9 @@ namespace Lorestead.Core.DataAccess
             return select.ExecuteScalar() != null;
         }
 
-        // Trash acts on whole subtrees, mirroring delete semantics in ui/pages/notes.md:
-        // every descendant is tombstoned with the root, each as its own outbox entry.
-        // parent_id is never disturbed, so restore keeps the original location.
+        // Trash acts on whole subtrees, mirroring delete semantics: every descendant is
+        // tombstoned with the root, each as its own outbox entry. parent_id is never
+        // disturbed, so restore keeps the original location.
         public void TrashSubtree(string id)
         {
             using SqliteConnection connection = _connectionManager.CreateConnection();
@@ -282,7 +282,7 @@ namespace Lorestead.Core.DataAccess
         }
 
         // Restore also acts on the whole subtree. A restored child whose parent is still
-        // trashed goes to root level (ui/pages/notes.md - plain Restore on a child).
+        // trashed goes to root level.
         public void RestoreSubtree(string id)
         {
             using SqliteConnection connection = _connectionManager.CreateConnection();

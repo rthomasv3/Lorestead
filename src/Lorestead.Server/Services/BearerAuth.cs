@@ -10,12 +10,12 @@ namespace Lorestead.Server.Services;
 
 public static class BearerAuth
 {
-    // The auth matrix (features/mcp.md): /mcp accepts the deployment token OR a
-    // live OAuth access token; every other endpoint accepts the deployment token
-    // only - an OAuth token unlocks nothing but /mcp. The OAuth endpoints
-    // themselves are anonymous: discovery must be fetchable before any credential
-    // exists, the browser hits /authorize bare, and /token carries its client
-    // authentication in the request.
+    // The auth matrix: /mcp accepts the deployment token OR a live OAuth access
+    // token; every other endpoint accepts the deployment token only - an OAuth
+    // token unlocks nothing but /mcp. The OAuth endpoints themselves are
+    // anonymous: discovery must be fetchable before any credential exists, the
+    // browser hits /authorize bare, and /token carries its client authentication
+    // in the request.
     public static IApplicationBuilder UseBearerAuth(this IApplicationBuilder app, ServerConfig config)
     {
         byte[] expected = Encoding.UTF8.GetBytes(config.Token);

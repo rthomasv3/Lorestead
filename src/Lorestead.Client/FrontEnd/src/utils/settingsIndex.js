@@ -16,11 +16,11 @@ function section(name, anchor, labels) {
   })
 }
 
-// What Ctrl+K finds in Settings (features/search.md): one row per control, in
-// page order, with the heading each scrolls to. Labels are the page's own, and
-// this list sits beside MD_TOGGLES so the toggles cannot be indexed under a name
-// the page does not use - the two drifted apart once already, and the index also
-// missed a whole section, which made it unfindable.
+// What Ctrl+K finds in Settings: one row per control, in page order, with the
+// heading each scrolls to. Labels are the page's own, and this list sits beside
+// MD_TOGGLES so the toggles cannot be indexed under a name the page does not use
+// - the two drifted apart once already, and the index also missed a whole
+// section, which made it unfindable.
 // Every section indexes itself (label === section, collapsed breadcrumb) - the
 // search matches labels only, so a section without a self-entry is unfindable
 // by its own name.

@@ -2,9 +2,9 @@ using Microsoft.Data.Sqlite;
 
 namespace Lorestead.Core.DataAccess.Migrations
 {
-    // Shared schema for both the client DB and the server DB (data.md). The kanban column
-    // table is board_column, not the spec's `column` - COLUMN is an SQLite keyword and would
-    // force quoting in every statement; change_log.item_type keeps the wire value "column".
+    // Shared schema for both the client DB and the server DB. The kanban column table is
+    // board_column, not `column` - COLUMN is an SQLite keyword and would force quoting in
+    // every statement; change_log.item_type keeps the wire value "column".
     // Tree/board FKs are DEFERRABLE so multi-row ops (subtree purge, batch apply) commit
     // without ordering gymnastics.
     public sealed class Db001_CoreSchema : IMigration

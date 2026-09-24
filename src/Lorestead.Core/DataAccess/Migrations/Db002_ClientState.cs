@@ -2,9 +2,8 @@ using Microsoft.Data.Sqlite;
 
 namespace Lorestead.Core.DataAccess.Migrations
 {
-    // Client-only bookkeeping (data.md): the server DB runs the shared migrations without
-    // this one. Settings rows are seeded here so reads never face an empty table; defaults
-    // not fixed by the spec were chosen pragmatically (see decisions.md, Phase 1 entry).
+    // Client-only bookkeeping: the server DB runs the shared migrations without this one.
+    // Settings rows are seeded here so reads never face an empty table.
     public sealed class Db002_ClientState : IMigration
     {
         public int Version => 2;

@@ -73,7 +73,7 @@ namespace Lorestead.IntegrationTests
         }
 
         // Version 0 of every item, stamped in the past, so a later edit or deletion on
-        // any device wins LWW against a fresh device's pristine seed (decisions.md).
+        // any device wins LWW against a fresh device's pristine seed.
         [Fact]
         public void EverythingIsStampedInThePastAndPendingUpload()
         {

@@ -68,12 +68,12 @@ namespace Lorestead.Client.Services;
 // The bearer token lives in the OS credential store (Windows Credential Manager /
 // macOS Keychain / Linux Secret Service), never the DB. Linux needs an explicit
 // backing store selected before Create, with gpg as the fallback when no Secret
-// Service is running - the AudibleDownloader pattern the Phase 0 spike validated.
+// Service is running - the AudibleDownloader pattern.
 public sealed class SyncCredentialStore
 {
     private const string StoreName = "lorestead";
     // The Windows backend parses the service as a URI when building the credential
-    // target name, so it must be URI-shaped (matches the Phase 0 spike).
+    // target name, so it must be URI-shaped.
     private const string Service = "https://sync.lorestead";
     private const string Account = "bearer-token";
 

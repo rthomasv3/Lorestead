@@ -13,8 +13,7 @@ namespace Lorestead.Core.Import
     // MarkdownImportBuilder reads, so RAW is a fourth source rather than a second
     // importer. Joplin ids are 32 hex digits - a valid GUID - so they ride through
     // as lorestead-ids, which makes RAW re-imports merge and lets note-to-note
-    // :/id links resolve; the MD front matter export can do neither
-    // (features/import.md).
+    // :/id links resolve; the MD front matter export can do neither.
     public static partial class JoplinRawTransform
     {
         public sealed class Result

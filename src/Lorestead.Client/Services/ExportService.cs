@@ -46,7 +46,7 @@ public sealed class ExportService : IExportService
 
         // A lone note with no attachments is a plain .md. Anything else has to carry a
         // folder structure, so it becomes a zip - and the default filename in the
-        // dialog is what makes that switch visible (features/export.md).
+        // dialog is what makes that switch visible.
         bool single = layout.Notes.Count == 1 && layout.Attachments.Count == 0;
         string baseName = request.Scope == ExportScope.All
             ? AllNotesName

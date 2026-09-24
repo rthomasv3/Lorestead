@@ -66,8 +66,8 @@ namespace Lorestead.Core.Search
             return results;
         }
 
-        // Boards are a handful of named rows - plain substring match, no FTS
-        // (features/search.md). LIKE wildcards in the query are escaped.
+        // Boards are a handful of named rows - plain substring match, no FTS. LIKE
+        // wildcards in the query are escaped.
         public List<SearchResult> SearchBoards(string query, int limit = 0)
         {
             List<SearchResult> results = new List<SearchResult>();

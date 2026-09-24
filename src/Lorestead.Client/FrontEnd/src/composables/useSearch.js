@@ -48,8 +48,7 @@ export function useSearch() {
         }))
     })
 
-    // Content hits (notes, tasks) first; board/settings name matches after
-    // (features/search.md ordering).
+    // Content hits (notes, tasks) first; board/settings name matches after.
     const results = computed(() => [
       ...noteResults.value.map((r) => ({
         kind: 'note',

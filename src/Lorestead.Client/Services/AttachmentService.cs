@@ -141,8 +141,7 @@ public sealed class AttachmentService : IAttachmentService
         return new RenameAttachmentResponse { Ok = true };
     }
 
-    // Delete tombstones the metadata row; the blob stays until its owner is purged
-    // (features/attachments.md lifecycle).
+    // Delete tombstones the metadata row; the blob stays until its owner is purged.
     public DeleteAttachmentResponse Delete(DeleteAttachmentRequest request)
     {
         AttachmentRepository attachments = _repositories.Attachments;

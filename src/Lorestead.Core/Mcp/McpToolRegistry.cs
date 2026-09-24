@@ -8,9 +8,9 @@ using Lorestead.Core.Sync;
 namespace Lorestead.Core.Mcp
 {
     // Manual registration (McpServerTool.Create) because attribute scanning is
-    // reflection-based and not AOT-safe (decisions.md). Results are GaldrJson text so
-    // the SDK's internal STJ never serializes app DTOs; get_attachment returns real
-    // MCP content blocks instead.
+    // reflection-based and not AOT-safe. Results are GaldrJson text so the SDK's
+    // internal STJ never serializes app DTOs; get_attachment returns real MCP content
+    // blocks instead.
     public static class McpToolRegistry
     {
         public static McpServerTool[] CreateTools(McpToolService tools)

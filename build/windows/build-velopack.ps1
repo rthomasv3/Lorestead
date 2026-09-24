@@ -64,9 +64,9 @@ dotnet publish $McpCsproj `
     -o $McpPublishDir
 if ($LASTEXITCODE -ne 0) { throw 'MCP dotnet publish failed' }
 
-# The MCP exe ships inside the client install (decisions.md) so agents spawn it
-# from the stable %LocalAppData%\Lorestead\current\ path and it can never
-# version-skew against the app.
+# The MCP exe ships inside the client install so agents spawn it from the
+# stable %LocalAppData%\Lorestead\current\ path and it can never version-skew
+# against the app.
 Get-ChildItem $McpPublishDir -File |
     Where-Object { $_.Extension -ne '.pdb' } |
     Copy-Item -Destination $PublishDir -Force

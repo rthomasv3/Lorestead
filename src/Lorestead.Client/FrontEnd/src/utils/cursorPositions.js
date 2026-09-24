@@ -1,9 +1,9 @@
 // Remembered caret offsets, one JSON object keyed by note id, in the webview's
 // localStorage. Device-local view state, deliberately not a table or a settings
 // column: that would mean a migration, repository, command, contract and tests
-// for an integer, and panel widths - the closer precedent - already live here
-// (decisions.md). Clearing the webview data directory loses them, which is fine
-// for a convenience.
+// for an integer, and panel widths - the closer precedent - already live here.
+// Clearing the webview data directory loses them, which is fine for a
+// convenience.
 const STORAGE_KEY = 'Lorestead-cursor-positions'
 
 // Written on a debounce because the caret moves on every keystroke, and read

@@ -37,10 +37,10 @@ export const useUpdatesStore = defineStore('updates', () => {
     }
   }
 
-  // The one-click flow (settings.md): download if needed - progress events
-  // drive the bar - then restart into the new version. On success the process
-  // exits inside apply; an apply refusal (an agent holding the MCP exe) comes
-  // back through status.error instead.
+  // The one-click flow: download if needed - progress events drive the bar -
+  // then restart into the new version. On success the process exits inside
+  // apply; an apply refusal (an agent holding the MCP exe) comes back through
+  // status.error instead.
   async function relaunch() {
     try {
       let current = status.value

@@ -157,9 +157,9 @@ namespace Lorestead.Core.Mcp
         }
 
         // A template root and everything under it stays out of the note tree:
-        // descendants of a template are template content by location (data.md), so
-        // promoting them to roots the way a trashed parent does would hand an agent
-        // three unlabelled orphans that list_templates already owns.
+        // descendants of a template are template content by location, so promoting
+        // them to roots the way a trashed parent does would hand an agent three
+        // unlabelled orphans that list_templates already owns.
         private static bool IsTemplateContent(Note note, Dictionary<string, Note> liveById)
         {
             bool result = false;
@@ -631,8 +631,8 @@ namespace Lorestead.Core.Mcp
             TaskItem task = RequireTask(taskId);
             RequireActiveNote(noteId);
 
-            // Additive by design (features/mcp.md) - re-linking an existing note is a
-            // no-op instead of an error so agents need no read-first check.
+            // Additive by design - re-linking an existing note is a no-op instead of
+            // an error so agents need no read-first check.
             if (!task.NoteIds.Contains(noteId))
             {
                 task.NoteIds.Add(noteId);

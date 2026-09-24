@@ -90,8 +90,7 @@ function showEmbed(img, url) {
 }
 
 // attachment:// sources resolve to cached object URLs; note:// links are classified
-// against the loaded note index (decisions.md) - no lookup call, so no unresolved
-// frame. Re-runs when summaries arrive, which is why it only sets attributes:
+// against the loaded note index - no lookup call, so no unresolved frame. Re-runs when summaries arrive, which is why it only sets attributes:
 // clicks are delegated below and cannot double-bind.
 //
 // blobVersion is in the source so a deleted attachment stops showing: its embed

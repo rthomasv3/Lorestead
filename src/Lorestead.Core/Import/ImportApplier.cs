@@ -8,11 +8,11 @@ using Lorestead.Core.Sync;
 
 namespace Lorestead.Core.Import
 {
-    // Applies an ImportPlan in one transaction: a hard failure imports nothing
-    // (features/import.md). Writes go through the same *Within statics the item
-    // repositories use, so the change log, the derived link index, and sync come
-    // out exactly as they would for hand-typed content (the FirstRunSeeder
-    // precedent) - "file wins" rides the normal save path.
+    // Applies an ImportPlan in one transaction: a hard failure imports nothing.
+    // Writes go through the same *Within statics the item repositories use, so the
+    // change log, the derived link index, and sync come out exactly as they would
+    // for hand-typed content (the FirstRunSeeder precedent) - "file wins" rides the
+    // normal save path.
     public static class ImportApplier
     {
         public static void Apply(

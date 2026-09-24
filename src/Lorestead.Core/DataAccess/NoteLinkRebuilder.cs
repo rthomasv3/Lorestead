@@ -6,9 +6,9 @@ using Microsoft.Data.Sqlite;
 
 namespace Lorestead.Core.DataAccess
 {
-    // Derived backlinks index (data.md): rebuilt from the markdown source on every save,
-    // never in the change log. Link targets that don't exist locally are skipped - broken
-    // links render broken in the body; the index only tracks resolvable targets.
+    // Derived backlinks index: rebuilt from the markdown source on every save, never in
+    // the change log. Link targets that don't exist locally are skipped - broken links
+    // render broken in the body; the index only tracks resolvable targets.
     public static partial class NoteLinkRebuilder
     {
         private const string Ellipsis = "...";

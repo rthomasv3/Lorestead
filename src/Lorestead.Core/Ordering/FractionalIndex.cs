@@ -3,10 +3,10 @@ using System;
 namespace Lorestead.Core.Ordering
 {
     // Sortable string keys (Figma/Linear style): Between(a, b) yields a key strictly
-    // between its bounds, so a reorder touches exactly one row (decisions.md). The
-    // alphabet is ASCII-ordered, so SQLite BINARY collation and C# ordinal comparison
-    // agree with alphabet order. Keys never end in '0' (a trailing '0' would leave no
-    // room to generate a key immediately before it).
+    // between its bounds, so a reorder touches exactly one row. The alphabet is
+    // ASCII-ordered, so SQLite BINARY collation and C# ordinal comparison agree with
+    // alphabet order. Keys never end in '0' (a trailing '0' would leave no room to
+    // generate a key immediately before it).
     public static class FractionalIndex
     {
         private const string Alphabet = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";

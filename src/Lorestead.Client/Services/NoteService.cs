@@ -52,9 +52,9 @@ public sealed class NoteService : INoteService
 
     // Every retained version at once, payloads included: the cards show added and
     // removed character counts against the previous version, which the frontend
-    // computes with the same diff machinery as the detail view (decisions.md). That
-    // needs each version's body and its predecessor's, so a per-card fetch could not
-    // build the list at all.
+    // computes with the same diff machinery as the detail view. That needs each
+    // version's body and its predecessor's, so a per-card fetch could not build the
+    // list at all.
     public GetNoteHistoryResponse GetHistory(GetNoteHistoryRequest request)
     {
         List<NoteVersion> versions = new List<NoteVersion>();
@@ -77,9 +77,9 @@ public sealed class NoteService : INoteService
     // Title and body only. parent_id, position, type, deleted and created_at carry
     // forward from the current row: reverting those would move the note in the tree,
     // turn a template back into a note, or resurrect a trashed one around the
-    // restore-with-parent dialog, none of it visible in a panel showing a body diff
-    // (decisions.md). Enforced here rather than in the panel so the rule holds
-    // wherever a restore is called from.
+    // restore-with-parent dialog, none of it visible in a panel showing a body diff.
+    // Enforced here rather than in the panel so the rule holds wherever a restore is
+    // called from.
     public RestoreNoteVersionResponse RestoreVersion(RestoreNoteVersionRequest request)
     {
         NoteRepository notes = _repositories.Notes;

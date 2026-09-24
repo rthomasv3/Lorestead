@@ -10,15 +10,15 @@ using Lorestead.Core.Sync;
 namespace Lorestead.Core.FirstRun
 {
     // Runs once, for whichever host created the database - the client or the stdio
-    // MCP binary (decisions.md). Writes go through the same *Within statics the item
-    // repositories use, so the change log and the derived link index come out exactly
-    // as they would for hand-typed content; what the repositories' Save would do
-    // differently is stamp UtcNow, and the seed needs its baked past timestamp.
+    // MCP binary. Writes go through the same *Within statics the item repositories
+    // use, so the change log and the derived link index come out exactly as they
+    // would for hand-typed content; what the repositories' Save would do differently
+    // is stamp UtcNow, and the seed needs its baked past timestamp.
     public static class FirstRunSeeder
     {
         // Version 0 of every seeded item by definition, so a real edit or deletion on
         // any device is newer and wins LWW - a fresh device cannot resurrect deleted
-        // seed content or overwrite edits made elsewhere (decisions.md).
+        // seed content or overwrite edits made elsewhere.
         private const string SeedTimestamp = "2026-01-01T00:00:00.0000000Z";
 
         private const string ResourcePrefix = "Lorestead.Core.FirstRun.Content.";
@@ -95,7 +95,7 @@ namespace Lorestead.Core.FirstRun
         }
 
         // The blob goes in before the row's transaction commits, so a crash leaves an
-        // empty database rather than an attachment pointing at nothing (decisions.md).
+        // empty database rather than an attachment pointing at nothing.
         private static void WriteIconAttachment(SqliteConnection connection, SqliteTransaction transaction, string deviceId)
         {
             byte[] data = ReadBytes(IconResource);
@@ -118,7 +118,7 @@ namespace Lorestead.Core.FirstRun
 
         // No thumbnail is written: Core has no imaging dependency, and the frontend's
         // lazy rebuild - the path that covers attachments arriving from sync - renders
-        // one the first time the note is opened (decisions.md).
+        // one the first time the note is opened.
         private static void InsertBlob(SqliteConnection connection, string attachmentId, byte[] data)
         {
             using SqliteCommand insert = connection.CreateCommand();
@@ -171,7 +171,7 @@ namespace Lorestead.Core.FirstRun
 
         // Each card both links its note in the body and carries it in the linked-notes
         // list, so the note's backlinks panel shows the two sources as one card and
-        // both halves of the feature are visible from the start (features/links.md).
+        // both halves of the feature are visible from the start.
         private static void WriteTask(SqliteConnection connection, SqliteTransaction transaction, string id, string title, string resource, string position, string noteId, string deviceId)
         {
             TaskItem task = new TaskItem

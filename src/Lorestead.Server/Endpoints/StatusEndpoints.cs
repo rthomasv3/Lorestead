@@ -9,8 +9,7 @@ public static class StatusEndpoints
 {
     public static void MapStatusEndpoints(this WebApplication app)
     {
-        // MinVer stamps the informational version from the git tag at build time
-        // (Phase 9); until then this reads the SDK default.
+        // MinVer stamps the informational version from the git tag at build time.
         string appVersion = typeof(StatusEndpoints).Assembly
             .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "0.0.0";
 

@@ -2,9 +2,9 @@ namespace Lorestead.Core.FirstRun
 {
     // Baked, not generated: a second device seeding before sync is configured has to
     // produce the same item ids, or the subtree duplicates on the server instead of
-    // merging under LWW (decisions.md). They are UUIDv7-shaped with a fixed timestamp
-    // prefix and a readable counter, so the note:// links in the seed markdown can be
-    // matched up by eye.
+    // merging under LWW. They are UUIDv7-shaped with a fixed timestamp prefix and a
+    // readable counter, so the note:// links in the seed markdown can be matched up
+    // by eye.
     public static class SeedIds
     {
         public const string GettingStartedNote = "019b76da-a800-7000-8000-000000000001";

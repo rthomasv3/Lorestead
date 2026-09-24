@@ -3,10 +3,10 @@ using Microsoft.Data.Sqlite;
 
 namespace Lorestead.Core.DataAccess.Migrations
 {
-    // Server instance identity (features/sync.md): generated with the data and living
-    // in it, so the id tracks the data's lineage - a fresh volume gets a fresh id, a
-    // backup restore keeps its id. Clients compare it to detect a replaced server and
-    // run the adoption reset instead of colliding on a foreign seq space.
+    // Server instance identity: generated with the data and living in it, so the id
+    // tracks the data's lineage - a fresh volume gets a fresh id, a backup restore
+    // keeps its id. Clients compare it to detect a replaced server and run the
+    // adoption reset instead of colliding on a foreign seq space.
     public sealed class Db007_ServerIdentity : IMigration
     {
         public int Version => 7;

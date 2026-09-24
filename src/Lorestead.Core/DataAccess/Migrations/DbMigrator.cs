@@ -16,7 +16,7 @@ namespace Lorestead.Core.DataAccess.Migrations
 
         // Returns true when the schema was built from nothing. That is also the answer
         // to "has this install been seeded" - every host that creates the database
-        // seeds it, so there is no separate flag to record (decisions.md).
+        // seeds it, so there is no separate flag to record.
         public bool Run(SqliteConnection connection)
         {
             if (connection.State != ConnectionState.Open)

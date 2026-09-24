@@ -18,7 +18,7 @@ public sealed class ServerConfig
     public string Token { get; set; }
     public string DbFilePath { get; set; }
     public string DbKey { get; set; }
-    // data.md: last 50 versions per item, configurable 10-100.
+    // Last 50 versions per item, configurable 10-100.
     public int HistoryRetention { get; set; } = 50;
     // How long purge entries stay replayable; a device offline longer full-resyncs.
     public int PurgeRetentionDays { get; set; } = 90;
@@ -45,7 +45,7 @@ public sealed class ServerConfig
         }
 
         // Required, never optional: a misconfigured deployment must fail loudly, not
-        // silently run unencrypted (decisions.md - encryption tier 1).
+        // silently run unencrypted.
         string dbKey = Environment.GetEnvironmentVariable("LORESTEAD_DB_KEY");
 
         if (string.IsNullOrWhiteSpace(dbKey))

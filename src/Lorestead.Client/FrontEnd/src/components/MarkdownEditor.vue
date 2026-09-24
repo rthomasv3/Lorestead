@@ -158,10 +158,10 @@ function settingsExtensions() {
 }
 
 // One `[[` gesture links anything - notes and this item's attachments in a single
-// list (features/links.md). The match runs to the cursor, so what you type after
-// `[[` filters both sections; picking replaces the `[[` and the query with the
-// finished markdown. Typing something with no match and moving on just leaves the
-// `[[` as literal text.
+// list. The match runs to the cursor, so what you type after `[[` filters both
+// sections; picking replaces the `[[` and the query with the finished markdown.
+// Typing something with no match and moving on just leaves the `[[` as literal
+// text.
 const LINK_TRIGGER = /\[\[[^\]\n]*/
 
 function linkCompletions(context) {

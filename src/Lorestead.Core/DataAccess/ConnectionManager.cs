@@ -13,7 +13,7 @@ namespace Lorestead.Core.DataAccess
         // password: SQLCipher key, applied as PRAGMA key on every open (server DB);
         // null on the plain-SQLite client. The host picks the matching provider bundle.
         // Returns true when this call created the schema, which is the host's cue to
-        // run the first-run seeder (decisions.md).
+        // run the first-run seeder.
         public bool Open(string dbPath, IReadOnlyList<IMigration> migrations, string password = null)
         {
             SqliteConnectionStringBuilder builder = new SqliteConnectionStringBuilder
@@ -33,7 +33,7 @@ namespace Lorestead.Core.DataAccess
             using (SqliteCommand journal = connection.CreateCommand())
             {
                 // WAL is load-bearing: the stdio MCP binary is a second writer process and
-                // the client polls PRAGMA data_version for its edits (decisions.md).
+                // the client polls PRAGMA data_version for its edits.
                 journal.CommandText = "PRAGMA journal_mode=WAL";
                 journal.ExecuteNonQuery();
             }

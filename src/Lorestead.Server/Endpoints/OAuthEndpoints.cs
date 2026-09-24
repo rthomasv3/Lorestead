@@ -13,8 +13,8 @@ using Lorestead.Server.Services;
 namespace Lorestead.Server.Endpoints;
 
 // A deliberately tiny OAuth 2.1 authorization server for the single preconfigured
-// client (features/mcp.md, decisions.md): claude.ai custom connectors cannot send a
-// static Authorization header, so this is the only path for Claude web and mobile.
+// client: claude.ai custom connectors cannot send a static Authorization header, so
+// this is the only path for Claude web and mobile.
 // Hand-rolled minimal APIs, no library - four endpoints and opaque random tokens
 // are the whole surface, and the OAuth JSON vocabulary is snake_case, which the
 // app-wide GaldrJson camelCase policy cannot produce.
@@ -180,8 +180,8 @@ public static class OAuthEndpoints
         return result;
     }
 
-    // client_secret_basic and client_secret_post both accepted - the task's spike
-    // question is which one Claude uses, so until that answer lands, both work.
+    // client_secret_basic and client_secret_post both accepted, so the token
+    // endpoint works whichever one Claude uses.
     private static bool ClientIsAuthentic(HttpContext context, IFormCollection form, ServerConfig config)
     {
         string clientId = form["client_id"].ToString();
