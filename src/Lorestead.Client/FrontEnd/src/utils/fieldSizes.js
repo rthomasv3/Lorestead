@@ -5,9 +5,12 @@
 // down a notch as well as the padding, rather than only shrinking the box. Our
 // normal is already text-sm because the app is denser than PrimeVue's default,
 // so small lands on text-xs.
+//
+// box is field without the padding and gap, for controls whose parts run to the
+// border themselves (NumberField's - and + buttons).
 export const FIELD_SIZES = {
-  normal: { field: 'h-9 px-2.5 gap-3 text-sm', icon: 'size-4', hotkey: 'text-xs' },
-  small: { field: 'h-7 px-2 gap-2 text-xs', icon: 'size-3.5', hotkey: 'text-[10px]' },
+  normal: { field: 'h-9 px-2.5 gap-3 text-sm', box: 'h-9 text-sm', icon: 'size-4', hotkey: 'text-xs' },
+  small: { field: 'h-7 px-2 gap-2 text-xs', box: 'h-7 text-xs', icon: 'size-3.5', hotkey: 'text-[10px]' },
 }
 
 export function fieldSize(size) {

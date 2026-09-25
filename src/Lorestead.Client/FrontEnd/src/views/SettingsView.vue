@@ -15,6 +15,7 @@ import SettingRow from '../components/SettingRow.vue'
 import Toggle from '../components/Toggle.vue'
 import Button from '../components/Button.vue'
 import TextField from '../components/TextField.vue'
+import NumberField from '../components/NumberField.vue'
 import AppLogo from '../components/AppLogo.vue'
 import HoverTip from '../components/HoverTip.vue'
 
@@ -60,7 +61,10 @@ const FOCUS_OPTIONS = [
 const activeAccent = computed(() =>
   ACCENTS.includes(store.application.accentColor) ? store.application.accentColor : 'indigo')
 
-// Free-typed inputs debounce; everything else saves on change (no Save button anywhere).
+// Free-typed inputs and number fields debounce; everything else saves on change
+// (no Save button anywhere). A number field steps on every click and held-button
+// repeat, and each save's response re-syncs the store - saving per step would let
+// an older response land after a newer step and pull the value back mid-run.
 const timers = {}
 function debounced(key, fn) {
   clearTimeout(timers[key])
@@ -68,43 +72,33 @@ function debounced(key, fn) {
 }
 onBeforeUnmount(() => Object.values(timers).forEach(clearTimeout))
 
-function clamp(value, min, max, fallback) {
-  const n = Number(value)
-  if (!Number.isFinite(n)) return fallback
-  return Math.min(max, Math.max(min, Math.round(n)))
-}
-
-const historyRetention = ref('')
-const trashRetentionDays = ref('')
-const fontSize = ref('')
+// NumberField clamps to its min/max and only emits finite numbers, so these hold
+// valid values by the time a save reads them.
+const historyRetention = ref(50)
+const trashRetentionDays = ref(30)
+const fontSize = ref(14)
 const fontFamily = ref('')
-const autosaveDebounceMs = ref('')
+const autosaveDebounceMs = ref(1000)
 
 function syncInputs() {
-  historyRetention.value = String(store.application.historyRetention)
-  trashRetentionDays.value = String(store.application.trashRetentionDays)
-  fontSize.value = String(store.editor.fontSize)
+  historyRetention.value = store.application.historyRetention
+  trashRetentionDays.value = store.application.trashRetentionDays
+  fontSize.value = store.editor.fontSize
   fontFamily.value = store.editor.fontFamily
-  autosaveDebounceMs.value = String(store.editor.autosaveDebounceMs)
+  autosaveDebounceMs.value = store.editor.autosaveDebounceMs
   syncServerUrl.value = sync.status?.serverUrl ?? store.application.serverUrl ?? ''
 }
 
 function saveHistoryRetention() {
-  const value = clamp(historyRetention.value, 10, 100, store.application.historyRetention)
-  historyRetention.value = String(value)
-  store.saveApplication({ historyRetention: value })
+  store.saveApplication({ historyRetention: historyRetention.value })
 }
 
 function saveTrashRetention() {
-  const value = clamp(trashRetentionDays.value, 1, 365, store.application.trashRetentionDays)
-  trashRetentionDays.value = String(value)
-  store.saveApplication({ trashRetentionDays: value })
+  store.saveApplication({ trashRetentionDays: trashRetentionDays.value })
 }
 
 function saveFontSize() {
-  const value = clamp(fontSize.value, 8, 32, store.editor.fontSize)
-  fontSize.value = String(value)
-  store.saveEditor({ fontSize: value })
+  store.saveEditor({ fontSize: fontSize.value })
 }
 
 function saveFontFamily() {
@@ -112,9 +106,7 @@ function saveFontFamily() {
 }
 
 function saveAutosaveDebounce() {
-  const value = clamp(autosaveDebounceMs.value, 100, 10000, store.editor.autosaveDebounceMs)
-  autosaveDebounceMs.value = String(value)
-  store.saveEditor({ autosaveDebounceMs: value })
+  store.saveEditor({ autosaveDebounceMs: autosaveDebounceMs.value })
 }
 
 // Sync inputs commit on blur/Enter, not while typing - a partial URL or token
@@ -288,13 +280,13 @@ onMounted(async () => {
           </SettingRow>
 
           <SettingRow label="History retention" hint="Versions kept per item (10-100)">
-            <TextField v-model="historyRetention" type="number" min="10" max="100" class="w-24"
-              @input="debounced('history', saveHistoryRetention)" />
+            <NumberField v-model="historyRetention" :min="10" :max="100" class="w-32"
+              @update:model-value="debounced('history', saveHistoryRetention)" />
           </SettingRow>
 
           <SettingRow label="Trash retention" hint="Days before deleted items purge">
-            <TextField v-model="trashRetentionDays" type="number" min="1" max="365" class="w-24"
-              @input="debounced('trash', saveTrashRetention)" />
+            <NumberField v-model="trashRetentionDays" :min="1" :max="365" class="w-32"
+              @update:model-value="debounced('trash', saveTrashRetention)" />
           </SettingRow>
 
           <SettingRow label="New note focus">
@@ -364,8 +356,8 @@ onMounted(async () => {
           <h2 id="settings-editor" class="text-sm font-semibold">Editor</h2>
 
           <SettingRow label="Font size">
-            <TextField v-model="fontSize" type="number" min="8" max="32" class="w-24"
-              @input="debounced('fontSize', saveFontSize)" />
+            <NumberField v-model="fontSize" :min="8" :max="32" class="w-32"
+              @update:model-value="debounced('fontSize', saveFontSize)" />
           </SettingRow>
 
           <SettingRow label="Font family">
@@ -399,8 +391,8 @@ onMounted(async () => {
           </SettingRow>
 
           <SettingRow label="Autosave debounce" hint="Milliseconds after typing stops (Ctrl+S saves immediately)">
-            <TextField v-model="autosaveDebounceMs" type="number" min="100" max="10000" step="100" class="w-24"
-              @input="debounced('autosave', saveAutosaveDebounce)" />
+            <NumberField v-model="autosaveDebounceMs" :min="100" :max="10000" :step="100" class="w-32"
+              @update:model-value="debounced('autosave', saveAutosaveDebounce)" />
           </SettingRow>
 
           <SettingRow label="Markdown extensions" align="start">
