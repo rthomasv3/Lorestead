@@ -100,6 +100,9 @@ watch(query, (value) => {
     if (expandedSnapshot) {
       notesStore.expandedIds = expandedSnapshot
       expandedSnapshot = null
+      // The snapshot predates anything opened while filtering - a note created
+      // under a collapsed parent would vanish again the moment the filter clears.
+      if (notesStore.selectedId) notesStore.reveal(notesStore.selectedId)
     }
     return
   }
@@ -110,6 +113,20 @@ watch(query, (value) => {
   }, 250)
 })
 
+// Body matches come from FTS, which only reruns on a query change - so notes
+// created, renamed, or synced in while filtering refresh it on each reload. New
+// hits get their ancestors opened; expandFiltered would instead reset every
+// branch the user opened or closed since the filter started.
+watch(() => notesStore.summaries, async () => {
+  if (!filtering.value) return
+  const value = query.value.trim()
+  const results = await notesStore.search(value, { includeTrashed: true })
+  if (query.value.trim() !== value) return
+  const added = results.filter((r) => !ftsIds.value.has(r.id))
+  ftsIds.value = new Set(results.map((r) => r.id))
+  for (const r of added) notesStore.reveal(r.id)
+})
+
 const filtering = computed(() => query.value.trim().length > 0)
 
 function matches(item) {
@@ -118,9 +135,21 @@ function matches(item) {
   return item.label.toLowerCase().includes(q) || ftsIds.value.has(item.noteId)
 }
 
+function someMatch(items) {
+  return items.some((item) => matches(item) || someMatch(item.children ?? []))
+}
+
+// The open note stays in the filtered tree even when it doesn't match. Every
+// create path opens the new note, so this is what keeps a fresh "Untitled" row
+// on screen for its inline rename - and a note opened from search or a backlink
+// keeps its highlighted row.
+function isPinned(item) {
+  return item.type === 'note' && item.noteId === notesStore.selectedId
+}
+
 function prune(item) {
   const children = (item.children ?? []).map(prune).filter(Boolean)
-  if (matches(item) || children.length > 0) {
+  if (matches(item) || isPinned(item) || children.length > 0) {
     return { ...item, children }
   }
   return null
@@ -136,7 +165,8 @@ const visibleItems = computed(() => {
 // Two different empties, and they are not the same message. Templates and Trash
 // are always in the tree, so "no notes" is no note-type roots rather than an
 // empty tree - the message sits under those two rows, not instead of them.
-const noMatches = computed(() => filtering.value && visibleItems.value.length === 0)
+// Real matches only: the pinned open note would otherwise hide this message.
+const noMatches = computed(() => filtering.value && !someMatch(notesStore.treeItems))
 const noNotes = computed(() =>
   !filtering.value && !notesStore.treeItems.some((item) => item.type === 'note'))
 

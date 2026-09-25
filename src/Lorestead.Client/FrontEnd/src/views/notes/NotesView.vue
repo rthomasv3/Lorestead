@@ -284,8 +284,12 @@ function onRequestTemplate({ parentId }) {
   templateDialog.value = { open: true, parentId }
 }
 
+// reveal: "Add child from template" on a collapsed note would otherwise open a
+// note whose row is hidden inside it.
 function onTemplateCreated(rootId) {
-  if (rootId) router.push(`/notes/${rootId}`)
+  if (!rootId) return
+  notesStore.reveal(rootId)
+  router.push(`/notes/${rootId}`)
 }
 
 // --- Toolbar ---
