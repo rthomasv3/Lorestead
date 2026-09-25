@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, nextTick, onMounted, onBeforeUnmount } from 'vue'
-import { useSettingsStore, ACCENTS } from '../stores/settingsStore'
+import { useSettingsStore, ACCENTS, UI_SCALE_MIN, UI_SCALE_MAX } from '../stores/settingsStore'
 import { useSyncStore } from '../stores/syncStore'
 import { useUpdatesStore } from '../stores/updatesStore'
 import { formatTimestamp } from '../utils/dateFormat.js'
@@ -74,6 +74,7 @@ onBeforeUnmount(() => Object.values(timers).forEach(clearTimeout))
 
 // NumberField clamps to its min/max and only emits finite numbers, so these hold
 // valid values by the time a save reads them.
+const uiScale = ref(100)
 const historyRetention = ref(50)
 const trashRetentionDays = ref(30)
 const fontSize = ref(14)
@@ -81,12 +82,19 @@ const fontFamily = ref('')
 const autosaveDebounceMs = ref(1000)
 
 function syncInputs() {
+  uiScale.value = store.application.uiScale
   historyRetention.value = store.application.historyRetention
   trashRetentionDays.value = store.application.trashRetentionDays
   fontSize.value = store.editor.fontSize
   fontFamily.value = store.editor.fontFamily
   autosaveDebounceMs.value = store.editor.autosaveDebounceMs
   syncServerUrl.value = sync.status?.serverUrl ?? store.application.serverUrl ?? ''
+}
+
+// Applied through the same debounce as the save, not per step: rescaling on each
+// click would move the + button out from under the pointer mid-run.
+function saveUiScale() {
+  store.saveApplication({ uiScale: uiScale.value })
 }
 
 function saveHistoryRetention() {
@@ -263,6 +271,12 @@ onMounted(async () => {
                 </button>
               </HoverTip>
             </div>
+          </SettingRow>
+
+          <SettingRow label="Interface scale">
+            <NumberField v-model="uiScale" :min="UI_SCALE_MIN" :max="UI_SCALE_MAX"
+              :format-options="{ style: 'unit', unit: 'percent' }" class="w-32"
+              @update:model-value="debounced('uiScale', saveUiScale)" />
           </SettingRow>
 
           <SettingRow label="Date format">

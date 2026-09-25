@@ -1,6 +1,7 @@
 <script setup>
 import { ref, watch, onMounted } from 'vue'
 import { useResizablePanel } from '../composables/useResizablePanel.js'
+import { scaledPx, userScale } from '../utils/uiScale.js'
 
 const props = defineProps({
   open: { type: Boolean, default: false },
@@ -11,11 +12,14 @@ const props = defineProps({
   storageKey: { type: String, default: 'Lorestead-tool-panel-width' },
 })
 
+// The width is stored unscaled and drawn at width * Interface scale, so the panel
+// grows with the rem-sized content inside it instead of squeezing it.
 const { width, isDragging, onPointerDown } = useResizablePanel({
   defaultWidth: 280,
   minWidth: 200,
   maxWidth: 640,
   storageKey: props.storageKey,
+  scale: userScale,
 })
 
 // Content mounts only after the slide finishes so it never renders squished
@@ -44,7 +48,7 @@ function onTransitionEnd(event) {
 <template>
   <div class="relative flex h-full shrink-0"
     :class="[open ? '' : 'w-0 overflow-hidden', isDragging ? '' : 'transition-[width] duration-250 ease-[cubic-bezier(0.32,0.72,0,1)]']"
-    :style="open ? { width: width + 'px' } : { width: '0px' }" @transitionend="onTransitionEnd">
+    :style="open ? { width: scaledPx(width) } : { width: '0px' }" @transitionend="onTransitionEnd">
     <div class="absolute inset-y-0 left-0 w-2 -translate-x-1/2 z-10 cursor-ew-resize" @pointerdown="onPointerDown" />
     <div class="w-px shrink-0 h-full transition-colors" :class="isDragging ? 'bg-accent' : 'bg-border'" />
     <div class="flex flex-col h-full flex-1 min-w-0">

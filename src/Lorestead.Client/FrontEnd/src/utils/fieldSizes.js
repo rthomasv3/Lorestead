@@ -10,7 +10,7 @@
 // border themselves (NumberField's - and + buttons).
 export const FIELD_SIZES = {
   normal: { field: 'h-9 px-2.5 gap-3 text-sm', box: 'h-9 text-sm', icon: 'size-4', hotkey: 'text-xs' },
-  small: { field: 'h-7 px-2 gap-2 text-xs', box: 'h-7 text-xs', icon: 'size-3.5', hotkey: 'text-[10px]' },
+  small: { field: 'h-7 px-2 gap-2 text-xs', box: 'h-7 text-xs', icon: 'size-3.5', hotkey: 'text-[0.625rem]' },
 }
 
 export function fieldSize(size) {

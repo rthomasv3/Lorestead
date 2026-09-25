@@ -24,6 +24,7 @@ import { shortcut } from '../utils/platform.js'
 import TextField from './TextField.vue'
 import Button from './Button.vue'
 import HoverTip from './HoverTip.vue'
+import { scaledPx } from '../utils/uiScale.js'
 
 const props = defineProps({
   modelValue: { type: String, default: '' },
@@ -86,8 +87,10 @@ function settingsExtensions() {
   // Off, long lines run on and the scroller (overflow-auto) scrolls sideways.
   if (editor.wordWrap) extensions.push(EditorView.lineWrapping)
   extensions.push(EditorView.contentAttributes.of({ spellcheck: editor.spellcheckEnabled ? 'true' : 'false' }))
+  // Font size and paddings follow the Interface scale setting but not the mobile
+  // bump: the setting is pixels the user chose, so "14" stays 14px at 100%.
   extensions.push(EditorView.theme({
-    '&': { fontSize: `${editor.fontSize}px`, height: '100%' },
+    '&': { fontSize: scaledPx(editor.fontSize), height: '100%' },
     '.cm-scroller': {
       fontFamily: editor.fontFamily && editor.fontFamily.trim().length > 0 ? editor.fontFamily : 'var(--font-mono)',
       lineHeight: '1.6',
@@ -98,7 +101,7 @@ function settingsExtensions() {
       color: 'var(--color-on-surface-muted)',
       border: 'none',
     },
-    '.cm-lineNumbers .cm-gutterElement': { paddingLeft: '8px', paddingRight: '14px' },
+    '.cm-lineNumbers .cm-gutterElement': { paddingLeft: scaledPx(8), paddingRight: scaledPx(14) },
     // !important: the italic comes from the syntax-highlight class on the same
     // span, which this mark class must override.
     '.cm-md-underline': { textDecoration: 'underline', fontStyle: 'normal !important' },
@@ -136,7 +139,7 @@ function settingsExtensions() {
       maxHeight: '16em',
     },
     '.cm-tooltip-autocomplete > ul > li': {
-      padding: '4px 10px',
+      padding: `${scaledPx(4)} ${scaledPx(10)}`,
       color: 'var(--color-on-surface)',
     },
     '.cm-tooltip-autocomplete > ul > li[aria-selected]': {
@@ -144,7 +147,7 @@ function settingsExtensions() {
       color: 'var(--color-on-surface)',
     },
     '.cm-tooltip-autocomplete > ul > completion-section': {
-      padding: '3px 10px',
+      padding: `${scaledPx(3)} ${scaledPx(10)}`,
       color: 'var(--color-on-surface-muted)',
       borderBottom: '1px solid var(--color-border)',
       fontSize: '0.85em',
@@ -757,6 +760,13 @@ watch(() => props.readonly, (value) => {
 watch(editorSettings, () => {
   if (view) view.dispatch({ effects: configurable.reconfigure(settingsExtensions()) })
 }, { deep: true })
+
+// The Interface scale resizes the text through a CSS variable, which CodeMirror
+// has no way to notice - its cached line heights would put clicks and the caret
+// on the wrong line until something else triggered a measure.
+watch(() => settingsStore.application.uiScale, () => {
+  if (view) view.requestMeasure()
+})
 
 function focus() {
   if (view) view.focus()

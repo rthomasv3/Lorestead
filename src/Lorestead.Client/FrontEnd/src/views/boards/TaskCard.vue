@@ -134,7 +134,7 @@ onUnmounted(() => {
             </div>
             <div v-if="task.labels?.length" class="flex flex-wrap gap-1">
               <LabelChip v-for="label in task.labels" :key="label" :label="label"
-                class="h-4 px-1.5 text-[10px] leading-4" />
+                class="h-4 px-1.5 text-[0.625rem] leading-4" />
             </div>
             <div v-if="snippet"
               class="max-h-16 overflow-hidden text-xs text-on-surface-muted pointer-events-none [&_.markdown-preview]:text-xs">

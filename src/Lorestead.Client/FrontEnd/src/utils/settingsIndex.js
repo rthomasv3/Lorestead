@@ -27,7 +27,7 @@ function section(name, anchor, labels) {
 export const SETTINGS_INDEX = [
   ...section('Application', 'settings-application', [
     'Application',
-    'Theme', 'Accent', 'Date format', 'Time format', 'History retention', 'Trash retention',
+    'Theme', 'Accent', 'Interface scale', 'Date format', 'Time format', 'History retention', 'Trash retention',
     'New note focus', 'New task focus',
     // desktopOnly mirrors the page: the updates rows are hidden on mobile
     // platforms (store updates own that lifecycle), and search must not offer

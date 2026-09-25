@@ -23,8 +23,14 @@
     -webkit-touch-callout: none;
 }
 
+/* --ui-scale is the platform base (the mobile bump below); --ui-user-scale is the
+   Interface scale setting as a factor (1 = 100%), set on the root by the settings
+   store. The root font size is their product, so the setting multiplies the
+   mobile bump rather than replacing it. Things sized in px on purpose - the
+   editor font, a user-set pixel value - scale by --ui-user-scale alone. */
 :root {
     --ui-scale: 1rem;
+    --ui-user-scale: 1;
 }
 
 /* One height for every page header - notes tree, note edit, boards list,
@@ -50,7 +56,7 @@
 }
 
 html {
-    font-size: var(--ui-scale);
+    font-size: calc(var(--ui-scale) * var(--ui-user-scale));
 }
 
 #app {

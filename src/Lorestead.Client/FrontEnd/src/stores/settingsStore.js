@@ -52,13 +52,26 @@ function resolveTheme(theme) {
     : theme
 }
 
-function applyAppearance(theme, accent) {
+// Interface scale bounds in percent - the backend clamps to the same range.
+export const UI_SCALE_MIN = 85
+export const UI_SCALE_MAX = 130
+
+function clampScale(scale) {
+  const n = Number(scale)
+  return Number.isFinite(n) ? Math.min(UI_SCALE_MAX, Math.max(UI_SCALE_MIN, Math.round(n))) : 100
+}
+
+// The scale is a root variable, not a root font size: style.css multiplies it
+// into the platform base (--ui-scale, which carries the phone bump).
+function applyAppearance(theme, accent, uiScale) {
   const html = document.documentElement
   html.classList.remove('light', 'parchment', 'dark')
   html.classList.add(resolveTheme(THEMES.includes(theme) ? theme : 'system'))
   html.dataset.accent = ACCENTS.includes(accent) ? accent : 'indigo'
+  const scale = clampScale(uiScale)
+  html.style.setProperty('--ui-user-scale', String(scale / 100))
   try {
-    localStorage.setItem(PAINT_HINT_KEY, JSON.stringify({ theme, accent }))
+    localStorage.setItem(PAINT_HINT_KEY, JSON.stringify({ theme, accent, uiScale: scale }))
   } catch {
     // Paint hint is best-effort only.
   }
@@ -108,14 +121,14 @@ export const useSettingsStore = defineStore('settings', () => {
   async function init() {
     try {
       const hint = JSON.parse(localStorage.getItem(PAINT_HINT_KEY))
-      if (hint) applyAppearance(hint.theme, hint.accent)
+      if (hint) applyAppearance(hint.theme, hint.accent, hint.uiScale)
     } catch {
       // No hint yet - first paint uses the defaults.
     }
 
     window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
       if (application.value.theme === 'system') {
-        applyAppearance('system', application.value.accentColor)
+        applyAppearance('system', application.value.accentColor, application.value.uiScale)
       }
     })
 
@@ -127,13 +140,13 @@ export const useSettingsStore = defineStore('settings', () => {
       // DB unavailable - keep defaults; the failure is already in the log.
     }
     loaded.value = true
-    applyAppearance(application.value.theme, application.value.accentColor)
+    applyAppearance(application.value.theme, application.value.accentColor, application.value.uiScale)
   }
 
-  // Optimistic: theme/accent apply instantly; the response then re-syncs the whole row.
+  // Optimistic: theme/accent/scale apply instantly; the response then re-syncs the whole row.
   async function saveApplication(patch) {
     application.value = { ...application.value, ...patch }
-    applyAppearance(application.value.theme, application.value.accentColor)
+    applyAppearance(application.value.theme, application.value.accentColor, application.value.uiScale)
     try {
       const result = await saveApplicationSettings(toApplicationRequest(application.value))
       if (result?.application) application.value = result.application

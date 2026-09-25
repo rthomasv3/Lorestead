@@ -19,6 +19,7 @@ import ImportDialog from './ImportDialog.vue'
 import MoveNoteDialog from './MoveNoteDialog.vue'
 import IconSearch from '~icons/lucide/search'
 import { MENU_ITEM_CLASS as menuItemClass } from '../../utils/menu.js'
+import { userScale } from '../../utils/uiScale.js'
 import { exportSubtree, exportAll } from '../../services/exportService.js'
 import { useNotesStore, TEMPLATES_ID, TRASH_ID } from '../../stores/notesStore.js'
 import { useMobilePlatform } from '../../composables/usePlatform.js'
@@ -68,19 +69,32 @@ function onMoveConfirm({ target, zone }) {
 // the icons collapse into one kebab menu - all or nothing, because a partial
 // collapse would make actions appear and disappear one at a time as the
 // splitter moves. Measured (not a window breakpoint): the splitter is what
-// changes this panel's width.
+// changes this panel's width. The threshold grows with the Interface scale
+// setting, as the rem-sized row it guards does; a scale change resizes the row
+// but not the panel, so the observer never hears about it - the setting
+// re-checks instead.
 const COLLAPSE_WIDTH = 300
 
 const headerRef = ref(null)
 const collapsed = ref(false)
 let headerObserver = null
+let headerWidth = 0
+
+function updateCollapsed() {
+  collapsed.value = headerWidth < COLLAPSE_WIDTH * userScale()
+}
 
 onMounted(() => {
   headerObserver = new ResizeObserver((entries) => {
-    collapsed.value = entries[0].contentRect.width < COLLAPSE_WIDTH
+    headerWidth = entries[0].contentRect.width
+    updateCollapsed()
   })
   headerObserver.observe(headerRef.value)
 })
+
+// A frame later: the store sets the root variable, and the new rem size has to
+// be applied before it can be read.
+watch(() => settingsStore.application.uiScale, () => requestAnimationFrame(updateCollapsed))
 
 onUnmounted(() => {
   headerObserver?.disconnect()

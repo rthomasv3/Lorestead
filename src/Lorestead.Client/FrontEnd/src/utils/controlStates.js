@@ -26,4 +26,4 @@ export const CONTROL_GHOST_DANGER = 'text-on-surface-muted enabled:hover:bg-red-
 // itself supplies `relative`. tabular-nums gives a lone "1" the same advance
 // width as any other digit, so it sits centered instead of hugging one side.
 export const BADGE_CLASS =
-  'absolute -top-0.5 -right-0.5 min-w-4 h-4 px-0.5 rounded-full bg-accent-strong text-white text-[10px] leading-4 text-center tabular-nums'
+  'absolute -top-0.5 -right-0.5 min-w-4 h-4 px-0.5 rounded-full bg-accent-strong text-white text-[0.625rem] leading-4 text-center tabular-nums'

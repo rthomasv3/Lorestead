@@ -37,13 +37,13 @@ async function open(backlink) {
           <span class="text-sm truncate">{{ backlink.title || 'Untitled' }}</span>
         </div>
         <div v-if="backlink.taskId" class="flex items-center gap-1.5 mt-0.5 min-w-0">
-          <span class="text-[11px] text-on-surface-muted/70 truncate">
+          <span class="text-[0.6875rem] text-on-surface-muted/70 truncate">
             {{ backlink.boardName }} › {{ backlink.columnName }}
           </span>
           <!-- A task can mention the note in its body AND carry it in its
                linked-notes list; the badge marks the list, the snippet the body. -->
           <span v-if="backlink.via !== 'body'"
-            class="shrink-0 px-1 rounded bg-surface-alt text-[10px] leading-4 text-on-surface-muted">
+            class="shrink-0 px-1 rounded bg-surface-alt text-[0.625rem] leading-4 text-on-surface-muted">
             Linked
           </span>
         </div>

@@ -126,9 +126,9 @@ function toggleGap(index) {
           class="text-left rounded-md border border-border bg-surface-alt/40 px-2.5 py-2 hover:border-accent hover:bg-accent-soft/40"
           @click="open(card.version)">
           <div class="flex items-center gap-2 min-w-0">
-            <span class="text-[11px] text-on-surface-muted truncate">{{ stamp(card.version.changedAt) }}</span>
+            <span class="text-[0.6875rem] text-on-surface-muted truncate">{{ stamp(card.version.changedAt) }}</span>
             <HoverTip v-if="card.version.supersededConcurrent" text="Overwrote a concurrent edit" side="bottom">
-              <span class="shrink-0 px-1 rounded bg-surface-alt text-[10px] leading-4 text-amber-500">
+              <span class="shrink-0 px-1 rounded bg-surface-alt text-[0.625rem] leading-4 text-amber-500">
                 Conflict
               </span>
             </HoverTip>
@@ -141,7 +141,7 @@ function toggleGap(index) {
             Renamed {{ card.from || 'Untitled' }} &rarr; {{ card.to || 'Untitled' }}
           </p>
 
-          <div v-if="card.counts" class="flex items-center gap-2 mt-1 text-[11px] font-mono">
+          <div v-if="card.counts" class="flex items-center gap-2 mt-1 text-[0.6875rem] font-mono">
             <span v-if="card.counts.added > 0" class="text-green-500">+{{ card.counts.added }}</span>
             <span v-if="card.counts.removed > 0" class="text-red-500">-{{ card.counts.removed }}</span>
           </div>
