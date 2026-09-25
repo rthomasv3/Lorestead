@@ -1,0 +1,13 @@
+155aa79039bba0b69e3f93b301615309809a90b043bc889519b8fbbdc233e1e8  ./android-arm64/libargon2.so
+29f479bc6d4b01f5dbbcc9a1f034fa9dd1b9e2b8c4602f6ab14c3abbe278300c  ./android-arm/libargon2.so
+a331c01ecb7b1ca09d5ada6b9cb390e103a75e89ee18fffbd98f2474a035fd68  ./android-x64/libargon2.so
+3971673f44338d6b81909198a5b845d332bc6c50f36cbdfef070103b0e3563e9  ./android-x86/libargon2.so
+cc5e2221386b28c985a642cef9022f95fc53ca808e67a6c09b6f56c789754f16  ./ios-arm64/libargon2.a
+1754446e3e4d64d72fc651a925e282e293ce302c7a53eed6463b8a92f43e36dd  ./iossimulator-arm64/libargon2.a
+15ec3b589fe6d89e5405dd0bf21b7a21bc9a3ee6b0c64ca109d15cfefd79987a  ./iossimulator-x64/libargon2.a
+311614168da77483fb21e19578b411e313c54fa39391c72d28722d37e023ec60  ./linux-arm64/libargon2.so
+bd9bc85f86fe2e8b5501b1e89e73dbb4d96ac269af8f80c58525bde5c603b592  ./linux-x64/libargon2.so
+a4dbca0c47245ec4ab911dc2ce526772898360a72a3a3f18836db9badfe9e28f  ./osx-arm64/libargon2.dylib
+ef5b26d2d4a9666b556b686e9f23fd536efa2e4749f97c9647972b0bb12a862e  ./osx-x64/libargon2.dylib
+6b1bd1697216231d996fe0e0c1f7987194dcbbdbbf36d0d8d7b67edff5b862d5  ./win-arm64/libargon2.dll
+b0da4bd2c9ef6c669329fc779a93dd6f9bd8a84d1243716a6fed92157dd0dc29  ./win-x64/libargon2.dll

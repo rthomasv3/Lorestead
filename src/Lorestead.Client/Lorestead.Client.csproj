@@ -155,6 +155,8 @@
     <ProjectReference Include="..\Lorestead.Core\Lorestead.Core.csproj" />
   </ItemGroup>
 
+  <Import Project="..\..\native\argon2\Argon2.targets" />
+
   <!-- Ship beside the binaries on desktop for anyone browsing the install folder;
        About reads the embedded copy below instead, because mobile bundles have no
        file-beside-the-exe concept. Same repo file, so the two copies cannot

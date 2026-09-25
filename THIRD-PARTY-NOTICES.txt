@@ -55,7 +55,7 @@ Devlooped.CredentialManager
 
 
 ================================================================================
-2. NATIVE LIBRARIES (bundled by Galdr.Native)
+2. NATIVE LIBRARIES
 ================================================================================
 
 webview (https://github.com/webview/webview)
@@ -63,10 +63,23 @@ webview (https://github.com/webview/webview)
   Copyright (c) 2022 Steffen André Langnes
   License: MIT
 
+  Bundled by Galdr.Native.
+
 nativefiledialog-extended (https://github.com/btzy/nativefiledialog-extended)
   Copyright (c) Frogtoss Games, Inc. and nativefiledialog-extended
   contributors
   License: Zlib (see below)
+
+  Bundled by Galdr.Native.
+
+Argon2 reference implementation (https://github.com/P-H-C/phc-winner-argon2)
+  Copyright 2015 Daniel Dinu, Dmitry Khovratovich, Jean-Philippe Aumasson,
+  and Samuel Neves
+  License: dual CC0 1.0 / Apache License 2.0; used under Apache License 2.0
+  (see below)
+
+  Bundled by Lorestead from native/argon2 in its repository; derives the
+  Vault's password key.
 
 
 ================================================================================

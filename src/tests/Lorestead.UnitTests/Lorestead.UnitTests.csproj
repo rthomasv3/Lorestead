@@ -19,4 +19,6 @@
     <ProjectReference Include="..\..\Lorestead.Core\Lorestead.Core.csproj" />
   </ItemGroup>
 
+  <Import Project="..\..\..\native\argon2\Argon2.targets" />
+
 </Project>

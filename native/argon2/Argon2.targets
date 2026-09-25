@@ -1,0 +1,42 @@
+<Project>
+
+  <!-- Places libargon2 where each platform's loader finds it: beside the executable on
+       desktop (the build's runtime identifier, else the SDK host's portable one), as
+       per-ABI native libraries on Android, as a static native reference on iOS. -->
+
+  <PropertyGroup>
+    <Argon2NativeDir>$(MSBuildThisFileDirectory)</Argon2NativeDir>
+    <_Argon2Platform>$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)'))</_Argon2Platform>
+    <_Argon2Rid Condition="'$(_Argon2Platform)' == ''">$(RuntimeIdentifier)</_Argon2Rid>
+    <_Argon2Rid Condition="'$(_Argon2Platform)' == '' And '$(_Argon2Rid)' == ''">$(NETCoreSdkPortableRuntimeIdentifier)</_Argon2Rid>
+    <_Argon2HostOs Condition="$([MSBuild]::IsOSPlatform('Windows'))">win</_Argon2HostOs>
+    <_Argon2HostOs Condition="$([MSBuild]::IsOSPlatform('OSX'))">osx</_Argon2HostOs>
+    <_Argon2HostOs Condition="$([MSBuild]::IsOSPlatform('Linux'))">linux</_Argon2HostOs>
+    <_Argon2HostArch>$([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture.ToString().ToLowerInvariant())</_Argon2HostArch>
+    <_Argon2Rid Condition="'$(_Argon2Platform)' == '' And '$(_Argon2Rid)' == '' And '$(_Argon2HostOs)' != ''">$(_Argon2HostOs)-$(_Argon2HostArch)</_Argon2Rid>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(_Argon2Platform)' == '' And '$(_Argon2Rid)' != ''">
+    <None Include="$(Argon2NativeDir)$(_Argon2Rid)/*.so;$(Argon2NativeDir)$(_Argon2Rid)/*.dylib;$(Argon2NativeDir)$(_Argon2Rid)/*.dll"
+          Link="%(Filename)%(Extension)"
+          CopyToOutputDirectory="PreserveNewest"
+          Visible="false" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(_Argon2Platform)' == 'android'">
+    <AndroidNativeLibrary Include="$(Argon2NativeDir)android-arm64/libargon2.so" Abi="arm64-v8a" />
+    <AndroidNativeLibrary Include="$(Argon2NativeDir)android-arm/libargon2.so" Abi="armeabi-v7a" />
+    <AndroidNativeLibrary Include="$(Argon2NativeDir)android-x64/libargon2.so" Abi="x86_64" />
+    <AndroidNativeLibrary Include="$(Argon2NativeDir)android-x86/libargon2.so" Abi="x86" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(_Argon2Platform)' == 'ios'">
+    <NativeReference Include="$(Argon2NativeDir)ios-arm64/libargon2.a" Kind="Static" ForceLoad="true"
+                     Condition="'$(RuntimeIdentifier)' == 'ios-arm64'" />
+    <NativeReference Include="$(Argon2NativeDir)iossimulator-arm64/libargon2.a" Kind="Static" ForceLoad="true"
+                     Condition="'$(RuntimeIdentifier)' == 'iossimulator-arm64'" />
+    <NativeReference Include="$(Argon2NativeDir)iossimulator-x64/libargon2.a" Kind="Static" ForceLoad="true"
+                     Condition="'$(RuntimeIdentifier)' == 'iossimulator-x64'" />
+  </ItemGroup>
+
+</Project>

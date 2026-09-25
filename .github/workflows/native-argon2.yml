@@ -25,8 +25,8 @@ on:
 
 env:
   ARGON2_SOURCES: src/argon2.c src/core.c src/blake2/blake2b.c src/thread.c src/encoding.c
-  # Same inputs as the vault bake-off; expected outputs come from the reference
-  # implementation and were matched by Konscious, Isopoh, and libsodium (p=1).
+  # Expected outputs computed with the reference implementation and cross-checked
+  # against independent implementations; the unit tests use the same vectors.
   VERIFY_PASSWORD: correct horse battery staple
   VERIFY_EXPECTED_P4: 6EC690471257037EE9C75B275E6161C1C2F4335AB541400534DBA6769A444397
   VERIFY_EXPECTED_P1: D8EBEB50632CC1993711EDA85DB155A107F0FB1CAFAB88A3A79F3D4661AC7A0C
@@ -83,6 +83,8 @@ jobs:
             echo "== $rid ($target)"
             # shellcheck disable=SC2086
             zig cc -target "$target" $COMMON $extra -shared $ARGON2_SOURCES $impl -o "$OUT/$rid/$file"
+            # Windows links also emit an import library and a PDB; P/Invoke needs neither.
+            rm -f "$OUT/$rid"/*.lib "$OUT/$rid"/*.pdb
             ls -l "$OUT/$rid/$file"
           done
 

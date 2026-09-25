@@ -117,7 +117,7 @@ cp "$PUBLISH_DIR/THIRD-PARTY-NOTICES.txt" "$APPDIR/usr/bin/"
 # the client bundles into usr/lib, resolved via LD_LIBRARY_PATH.
 cp "$MCP_PUBLISH_DIR/$MCP_NAME" "$APPDIR/usr/bin/"
 
-for lib in libwebview.so libnfd.so libe_sqlite3.so; do
+for lib in libwebview.so libnfd.so libe_sqlite3.so libargon2.so; do
     cp "$PUBLISH_DIR/$lib" "$APPDIR/usr/lib/"
 done
 

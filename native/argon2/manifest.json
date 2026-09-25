@@ -1,0 +1,12 @@
+{
+  "source": "https://github.com/P-H-C/phc-winner-argon2",
+  "commit": "f57e61e19229e23c4445b85494dbf7c07de721cb",
+  "zigVersion": "0.16.0",
+  "workflowRun": "https://github.com/rthomasv3/Lorestead/actions/runs/36177518321",
+  "builtAt": "2026-09-25T19:08:51Z",
+  "x86Simd": "SSSE3 (upstream opt.c)",
+  "armPath": "portable (upstream ref.c)",
+  "threads": "enabled; parallelism = thread count",
+  "androidMinApi": 24,
+  "iosMinVersion": "14.0"
+}
