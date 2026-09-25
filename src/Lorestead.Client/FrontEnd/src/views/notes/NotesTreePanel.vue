@@ -188,10 +188,13 @@ function editValueFor(item) {
   return item.label === 'Untitled' ? '' : item.label
 }
 
-async function addNote(parentId) {
-  const note = await notesStore.create({ parentId })
-  if (parentId && !notesStore.expandedIds.has(parentId)) {
-    notesStore.expandedIds = new Set([...notesStore.expandedIds, parentId])
+// A new template is a root-level note typed as a template, so it shows up under
+// the Templates container. That container is the row to open, not the (null) parent.
+async function addNote(parentId, { template = false } = {}) {
+  const note = await notesStore.create({ parentId, template })
+  const expandId = template ? TEMPLATES_ID : parentId
+  if (expandId && !notesStore.expandedIds.has(expandId)) {
+    notesStore.expandedIds = new Set([...notesStore.expandedIds, expandId])
   }
   await router.push(`/notes/${note.id}`)
   // Below md the push replaces the tree with the editor, so the 'title'
@@ -328,8 +331,9 @@ function onDrop({ source, target, zone }) {
 
 // --- Context menus ---
 
+// Templates gets a menu so touch, where the hover + never shows, can still add one.
 function contextMenuFor(item) {
-  return item.type === 'note'
+  return item.type === 'note' || item.type === 'templates-root'
 }
 
 function onRestoreClick(item) {
@@ -461,11 +465,28 @@ defineExpose({ treeRef, addNote, focusTree })
             <i-lucide-trash-2 v-else class="size-4 shrink-0 text-on-surface-muted" />
             <!-- Templates/Trash never rename, but they share the row height. -->
             <TruncatedText :text="item.label" class="text-sm text-on-surface-muted border-b border-transparent" />
+            <!-- .stop: a click on a non-selectable row toggles it, and adding a
+                 template should not collapse the section it lands in. -->
+            <span v-if="item.type === 'templates-root'" class="ml-auto shrink-0 hidden group-hover:flex items-center gap-1"
+              @click.stop @dblclick.stop>
+              <HoverTip text="New template" side="bottom">
+                <span role="button"
+                  class="p-0.5 rounded text-on-surface-muted hover:text-on-surface hover:bg-on-surface/10"
+                  @click="addNote(null, { template: true })">
+                  <i-lucide-plus class="size-3.5" />
+                </span>
+              </HoverTip>
+            </span>
           </template>
         </template>
 
         <template #context-menu="{ item }">
-          <template v-if="item.trashed">
+          <ContextMenuItem v-if="item.type === 'templates-root'" :class="menuItemClass"
+            @select="addNote(null, { template: true })">
+            <i-lucide-plus class="size-4 text-on-surface-muted" />
+            New template
+          </ContextMenuItem>
+          <template v-else-if="item.trashed">
             <ContextMenuItem :class="menuItemClass" @select="onRestoreClick(item)">
               <i-lucide-archive-restore class="size-4 text-on-surface-muted" />
               Restore
