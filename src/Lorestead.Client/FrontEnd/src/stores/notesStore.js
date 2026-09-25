@@ -115,6 +115,10 @@ export const useNotesStore = defineStore('notes', () => {
   const templateRootSummaries = computed(() =>
     summaries.value.filter((s) => isTemplate(s) && !s.deleted))
 
+  // Every trashed note, children included - what Empty Trash actually deletes,
+  // not just the top-level rows under Trash.
+  const trashCount = computed(() => summaries.value.filter((s) => s.deleted).length)
+
   async function load() {
     const response = await noteService.getNotes()
     summaries.value = response.notes ?? []
@@ -214,6 +218,14 @@ export const useNotesStore = defineStore('notes', () => {
 
   async function purge(id) {
     await noteService.purgeNote({ id })
+    await load()
+    if (selectedId.value && !byId.value.get(selectedId.value)) {
+      await select(null)
+    }
+  }
+
+  async function emptyTrash() {
+    await noteService.emptyTrash()
     await load()
     if (selectedId.value && !byId.value.get(selectedId.value)) {
       await select(null)
@@ -451,6 +463,7 @@ export const useNotesStore = defineStore('notes', () => {
     previewOpen,
     treeItems,
     templateRootSummaries,
+    trashCount,
     byId,
     load,
     select,
@@ -463,6 +476,7 @@ export const useNotesStore = defineStore('notes', () => {
     restore,
     restoreAt,
     purge,
+    emptyTrash,
     duplicate,
     createFromTemplate,
     search,

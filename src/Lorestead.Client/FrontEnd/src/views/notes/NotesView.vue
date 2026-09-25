@@ -58,6 +58,7 @@ const { onEditorScroll, onPreviewScroll } = useScrollSync(editorRef, previewScro
 
 const pendingTrash = ref(null)
 const pendingPurge = ref(null)
+const pendingEmptyTrash = ref(false)
 const restoreTarget = ref(null)
 const templateDialog = ref({ open: false, parentId: null })
 
@@ -256,6 +257,11 @@ function confirmPurge() {
   pendingPurge.value = null
 }
 
+function confirmEmptyTrash() {
+  notesStore.emptyTrash()
+  pendingEmptyTrash.value = false
+}
+
 function onRequestRestore({ item, nested }) {
   if (nested) {
     restoreTarget.value = item
@@ -379,7 +385,8 @@ onMounted(() => {
     <SplitterGroup v-if="!isMobile" direction="horizontal" auto-save-id="lorestead-notes-layout">
       <SplitterPanel :default-size="22" :min-size="14" class="border-r border-border bg-surface">
         <NotesTreePanel ref="treePanel" @request-delete="onRequestDelete" @request-purge="onRequestPurge"
-          @request-restore="onRequestRestore" @request-template="onRequestTemplate" />
+          @request-restore="onRequestRestore" @request-template="onRequestTemplate"
+          @request-empty-trash="pendingEmptyTrash = true" />
       </SplitterPanel>
       <SplitterResizeHandle class="w-px bg-transparent hover:bg-accent/50 transition-colors" />
 
@@ -493,7 +500,8 @@ onMounted(() => {
          toolbar, preview, and tool panels arrive with the editor-screen step. -->
     <div v-else class="flex-1 min-w-0 flex flex-col min-h-0">
       <NotesTreePanel v-if="!route.params.id" ref="treePanel" @request-delete="onRequestDelete"
-        @request-purge="onRequestPurge" @request-restore="onRequestRestore" @request-template="onRequestTemplate" />
+        @request-purge="onRequestPurge" @request-restore="onRequestRestore" @request-template="onRequestTemplate"
+        @request-empty-trash="pendingEmptyTrash = true" />
 
       <template v-else>
         <div class="flex items-center gap-1 px-1.5 h-page-header shrink-0 border-b border-border">
@@ -566,6 +574,12 @@ onMounted(() => {
       : `&quot;${pendingPurge?.label}&quot; will be permanently deleted. This cannot be undone.`"
       confirm-label="Delete permanently" @update:open="(v) => { if (!v) pendingPurge = null }"
       @confirm="confirmPurge" />
+
+    <ConfirmDialog :open="pendingEmptyTrash" title="Empty trash?" :message="notesStore.trashCount === 1
+      ? '1 note will be permanently deleted. This cannot be undone.'
+      : `${notesStore.trashCount} notes will be permanently deleted. This cannot be undone.`"
+      confirm-label="Empty trash" @update:open="(v) => { if (!v) pendingEmptyTrash = false }"
+      @confirm="confirmEmptyTrash" />
 
     <DialogRoot :open="restoreTarget !== null" @update:open="(v) => { if (!v) restoreTarget = null }">
       <DialogPortal>

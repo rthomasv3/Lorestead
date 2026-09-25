@@ -16,6 +16,7 @@ public interface INoteService
     RestoreNoteResponse Restore(RestoreNoteRequest request);
     RestoreNoteAtResponse RestoreAt(RestoreNoteAtRequest request);
     PurgeNoteResponse Purge(PurgeNoteRequest request);
+    EmptyTrashResponse EmptyTrash();
     DuplicateNoteResponse Duplicate(DuplicateNoteRequest request);
     CreateFromTemplateResponse CreateFromTemplate(CreateFromTemplateRequest request);
     SearchNotesResponse Search(SearchNotesRequest request);

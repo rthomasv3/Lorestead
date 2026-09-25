@@ -134,6 +134,40 @@ namespace Lorestead.IntegrationTests
         }
 
         [Fact]
+        public void PurgeTrash_RemovesAllTrashedNotes_KeepsLiveOnes()
+        {
+            using TestDb db = new TestDb();
+            Note trashedRoot = Items.Note("Trashed root");
+            Note trashedChild = Items.Note("Trashed child", parentId: trashedRoot.Id);
+            Note trashedTemplate = Items.Note("Trashed template");
+            trashedTemplate.Type = NoteType.Template;
+            Note alive = Items.Note("Alive");
+            db.Notes.Save(trashedRoot);
+            db.Notes.Save(trashedChild);
+            db.Notes.Save(trashedTemplate);
+            db.Notes.Save(alive);
+            Attachment attachment = Items.Attachment(noteId: trashedChild.Id);
+            db.Attachments.Save(attachment);
+            db.Notes.TrashSubtree(trashedRoot.Id);
+            db.Notes.TrashSubtree(trashedTemplate.Id);
+
+            db.Notes.PurgeTrash();
+
+            Assert.Null(db.Notes.Get(trashedRoot.Id));
+            Assert.Null(db.Notes.Get(trashedChild.Id));
+            Assert.Null(db.Notes.Get(trashedTemplate.Id));
+            Assert.Null(db.Attachments.Get(attachment.Id));
+            Assert.NotNull(db.Notes.Get(alive.Id));
+
+            List<PendingChange> purges = db.ChangeLog.GetPending().Where(p => p.Entry.Op == ChangeOps.Purge).ToList();
+            Assert.Equal(4, purges.Count);
+            Assert.Contains(purges, p => p.Entry.ItemType == ItemTypes.Attachment && p.Entry.ItemId == attachment.Id);
+            Assert.Contains(purges, p => p.Entry.ItemType == ItemTypes.Note && p.Entry.ItemId == trashedRoot.Id);
+            Assert.Contains(purges, p => p.Entry.ItemType == ItemTypes.Note && p.Entry.ItemId == trashedChild.Id);
+            Assert.Contains(purges, p => p.Entry.ItemType == ItemTypes.Note && p.Entry.ItemId == trashedTemplate.Id);
+        }
+
+        [Fact]
         public void PurgeExpiredTrash_HonorsCutoff()
         {
             using TestDb db = new TestDb();

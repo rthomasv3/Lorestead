@@ -347,6 +347,33 @@ namespace Lorestead.Core.DataAccess
             transaction.Commit();
         }
 
+        // Empty Trash: every trashed note in one transaction, so it lands whole or not
+        // at all. A note already taken by an earlier subtree in the loop reads as an
+        // empty subtree and is a no-op.
+        public void PurgeTrash()
+        {
+            using SqliteConnection connection = _connectionManager.CreateConnection();
+            using SqliteTransaction transaction = connection.BeginTransaction();
+
+            List<string> trashed = new List<string>();
+            using (SqliteCommand select = connection.CreateCommand())
+            {
+                select.CommandText = "SELECT id FROM note WHERE deleted = 1";
+                using SqliteDataReader reader = select.ExecuteReader();
+                while (reader.Read())
+                {
+                    trashed.Add(reader.GetString(0));
+                }
+            }
+
+            foreach (string noteId in trashed)
+            {
+                PurgeSubtreeWithin(connection, transaction, noteId);
+            }
+
+            transaction.Commit();
+        }
+
         public void PurgeExpiredTrash(string cutoffIso)
         {
             List<string> expired = new List<string>();

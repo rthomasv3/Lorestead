@@ -172,6 +172,13 @@ export function installMockBackend() {
       }
       return { ok: true }
     },
+    emptyTrash: () => {
+      const doomed = new Set(notes.filter((n) => n.deleted).flatMap((n) => subtreeIds(n.id)))
+      for (let i = notes.length - 1; i >= 0; i--) {
+        if (doomed.has(notes[i].id)) notes.splice(i, 1)
+      }
+      return { ok: true }
+    },
     createFromTemplate: ({ request }) => {
       const ids = subtreeIds(request.templateId)
       const map = new Map(ids.map((id) => [id, newId()]))

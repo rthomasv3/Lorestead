@@ -26,7 +26,7 @@ import { useFinePointer } from '../../composables/useFinePointer.js'
 import { useIsMobile } from '../../composables/useIsMobile.js'
 import { useSettingsStore } from '../../stores/settingsStore.js'
 
-const emit = defineEmits(['request-delete', 'request-purge', 'request-restore', 'request-template'])
+const emit = defineEmits(['request-delete', 'request-purge', 'request-restore', 'request-template', 'request-empty-trash'])
 
 const router = useRouter()
 const notesStore = useNotesStore()
@@ -331,8 +331,10 @@ function onDrop({ source, target, zone }) {
 
 // --- Context menus ---
 
-// Templates gets a menu so touch, where the hover + never shows, can still add one.
+// Templates and Trash get menus so touch, where the hover buttons never show, can
+// still reach them. Trash only has one while there is something to empty.
 function contextMenuFor(item) {
+  if (item.type === 'trash-root') return notesStore.trashCount > 0
   return item.type === 'note' || item.type === 'templates-root'
 }
 
@@ -477,6 +479,16 @@ defineExpose({ treeRef, addNote, focusTree })
                 </span>
               </HoverTip>
             </span>
+            <span v-else-if="item.type === 'trash-root' && notesStore.trashCount > 0"
+              class="ml-auto shrink-0 hidden group-hover:flex items-center gap-1" @click.stop @dblclick.stop>
+              <HoverTip text="Empty trash" side="bottom">
+                <span role="button"
+                  class="p-0.5 rounded text-on-surface-muted hover:text-on-surface hover:bg-on-surface/10"
+                  @click="emit('request-empty-trash')">
+                  <i-lucide-brush-cleaning class="size-3.5" />
+                </span>
+              </HoverTip>
+            </span>
           </template>
         </template>
 
@@ -485,6 +497,11 @@ defineExpose({ treeRef, addNote, focusTree })
             @select="addNote(null, { template: true })">
             <i-lucide-plus class="size-4 text-on-surface-muted" />
             New template
+          </ContextMenuItem>
+          <ContextMenuItem v-else-if="item.type === 'trash-root'" :class="menuItemClass"
+            @select="emit('request-empty-trash')">
+            <i-lucide-brush-cleaning class="size-4 text-red-500" />
+            Empty trash
           </ContextMenuItem>
           <template v-else-if="item.trashed">
             <ContextMenuItem :class="menuItemClass" @select="onRestoreClick(item)">

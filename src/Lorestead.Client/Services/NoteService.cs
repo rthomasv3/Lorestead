@@ -201,6 +201,13 @@ public sealed class NoteService : INoteService
         return new PurgeNoteResponse { Ok = true };
     }
 
+    public EmptyTrashResponse EmptyTrash()
+    {
+        _repositories.Notes.PurgeTrash();
+        _sync.NotifyLocalChange();
+        return new EmptyTrashResponse { Ok = true };
+    }
+
     public DuplicateNoteResponse Duplicate(DuplicateNoteRequest request)
     {
         NoteRepository notes = _repositories.Notes;
