@@ -1,0 +1,335 @@
+name: Native Argon2
+
+# Builds the reference Argon2 C library as a shared library for every runtime
+# the client ships on, verifies each desktop binary from .NET on its own
+# OS, and uploads one artifact laid out as <rid>/libargon2.<ext>. The library
+# has been frozen upstream since 2019, so this runs by hand: download the artifact,
+# copy it into native/argon2/ in the repo, and commit it with the manifest.
+#
+# Every binary is named libargon2 so a single DllImport("libargon2") resolves on
+# all platforms. x86 and x64 use upstream's SSSE3 path (a floor every .NET 10
+# machine clears); arm builds use the portable path (upstream has no NEON path).
+# Threads are on everywhere: parallelism 4 means four threads for one derivation.
+
+on:
+  workflow_dispatch:
+    inputs:
+      argon2_ref:
+        description: phc-winner-argon2 commit to build
+        required: true
+        default: f57e61e19229e23c4445b85494dbf7c07de721cb
+      zig_version:
+        description: Zig release used to cross-compile the desktop targets
+        required: true
+        default: 0.16.0
+
+env:
+  ARGON2_SOURCES: src/argon2.c src/core.c src/blake2/blake2b.c src/thread.c src/encoding.c
+  # Same inputs as the vault bake-off; expected outputs come from the reference
+  # implementation and were matched by Konscious, Isopoh, and libsodium (p=1).
+  VERIFY_PASSWORD: correct horse battery staple
+  VERIFY_EXPECTED_P4: 6EC690471257037EE9C75B275E6161C1C2F4335AB541400534DBA6769A444397
+  VERIFY_EXPECTED_P1: D8EBEB50632CC1993711EDA85DB155A107F0FB1CAFAB88A3A79F3D4661AC7A0C
+
+jobs:
+  # --------------------------------------------------------------------------
+  # Linux, Windows, and macOS via Zig's bundled clang and libc headers; Android
+  # via the NDK that ships on the Ubuntu runner. One job, one toolchain each.
+  # --------------------------------------------------------------------------
+  desktop-android:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out phc-winner-argon2
+        uses: actions/checkout@v4
+        with:
+          repository: P-H-C/phc-winner-argon2
+          ref: ${{ inputs.argon2_ref }}
+          path: argon2
+
+      - name: Upstream self-test (native build, known-answer tests)
+        working-directory: argon2
+        run: make test
+
+      - name: Install Zig
+        run: |
+          set -euo pipefail
+          ZIG_VERSION="${{ inputs.zig_version }}"
+          ZIG_DIR="zig-x86_64-linux-${ZIG_VERSION}"
+          curl -fsSL -o zig.tar.xz "https://ziglang.org/download/${ZIG_VERSION}/${ZIG_DIR}.tar.xz"
+          EXPECTED=$(curl -fsSL https://ziglang.org/download/index.json | jq -r ".\"${ZIG_VERSION}\".\"x86_64-linux\".shasum")
+          echo "${EXPECTED}  zig.tar.xz" | sha256sum -c
+          tar xf zig.tar.xz
+          echo "${GITHUB_WORKSPACE}/${ZIG_DIR}" >> "$GITHUB_PATH"
+
+      - name: Build desktop libraries with Zig
+        working-directory: argon2
+        run: |
+          set -euo pipefail
+          zig version
+          OUT="${GITHUB_WORKSPACE}/out"
+          COMMON="-std=c89 -O3 -Iinclude -Isrc"
+          # rid : zig target : output file : impl : extra flags
+          TARGETS=(
+            "linux-x64:x86_64-linux-gnu:libargon2.so:src/opt.c -mssse3:-fPIC -pthread -DA2_VISCTL=1 -fvisibility=hidden"
+            "linux-arm64:aarch64-linux-gnu:libargon2.so:src/ref.c:-fPIC -pthread -DA2_VISCTL=1 -fvisibility=hidden"
+            "osx-x64:x86_64-macos:libargon2.dylib:src/opt.c -mssse3:-fPIC -pthread -DA2_VISCTL=1 -fvisibility=hidden"
+            "osx-arm64:aarch64-macos:libargon2.dylib:src/ref.c:-fPIC -pthread -DA2_VISCTL=1 -fvisibility=hidden"
+            "win-x64:x86_64-windows-gnu:libargon2.dll:src/opt.c -mssse3:"
+            "win-arm64:aarch64-windows-gnu:libargon2.dll:src/ref.c:"
+          )
+          for entry in "${TARGETS[@]}"; do
+            IFS=: read -r rid target file impl extra <<< "$entry"
+            mkdir -p "$OUT/$rid"
+            echo "== $rid ($target)"
+            # shellcheck disable=SC2086
+            zig cc -target "$target" $COMMON $extra -shared $ARGON2_SOURCES $impl -o "$OUT/$rid/$file"
+            ls -l "$OUT/$rid/$file"
+          done
+
+      - name: Build Android libraries with the NDK
+        working-directory: argon2
+        run: |
+          set -euo pipefail
+          NDK="${ANDROID_NDK_LATEST_HOME:?NDK missing on runner}"
+          BIN="$NDK/toolchains/llvm/prebuilt/linux-x86_64/bin"
+          OUT="${GITHUB_WORKSPACE}/out"
+          API=24   # SupportedOSPlatformVersion in Lorestead.Client.csproj
+          COMMON="-std=c89 -O3 -Iinclude -Isrc -fPIC -pthread -DA2_VISCTL=1 -fvisibility=hidden"
+          # 16 KiB page alignment is required for arm64 on Android 15+ devices.
+          LINK="-shared -Wl,-z,max-page-size=16384"
+          # rid : NDK clang target : impl
+          TARGETS=(
+            "android-arm64:aarch64-linux-android${API}:src/ref.c"
+            "android-arm:armv7a-linux-androideabi${API}:src/ref.c"
+            "android-x64:x86_64-linux-android${API}:src/opt.c -mssse3"
+            "android-x86:i686-linux-android${API}:src/opt.c -mssse3"
+          )
+          for entry in "${TARGETS[@]}"; do
+            IFS=: read -r rid target impl <<< "$entry"
+            mkdir -p "$OUT/$rid"
+            echo "== $rid ($target)"
+            # shellcheck disable=SC2086
+            "$BIN/${target}-clang" $COMMON $LINK $ARGON2_SOURCES $impl -o "$OUT/$rid/libargon2.so"
+            ls -l "$OUT/$rid/libargon2.so"
+          done
+
+      - name: Inspect exports and imports
+        run: |
+          set -euo pipefail
+          echo "== ELF exports (expect the argon2 API only, thanks to A2_VISCTL)"
+          for f in out/linux-*/libargon2.so out/android-*/libargon2.so; do
+            echo "-- $f: $(nm -D --defined-only "$f" | grep -c ' T ') exported functions"
+            nm -D --defined-only "$f" | grep -q ' T argon2id_hash_raw$'
+          done
+          echo "== Windows DLL imports (expect KERNEL32 and the universal CRT only)"
+          for f in out/win-*/libargon2.dll; do
+            echo "-- $f"
+            objdump -p "$f" | grep 'DLL Name'
+            objdump -p "$f" | grep -A200 'Export Address Table' | grep -q 'argon2id_hash_raw'
+          done
+          echo "== Android 16 KiB alignment"
+          for f in out/android-*/libargon2.so; do
+            for align in $(readelf -lW "$f" | awk '/LOAD/ { print $NF }'); do
+              if [ $((align)) -lt 16384 ]; then echo "LOAD segment alignment $align in $f is below 16 KiB"; exit 1; fi
+            done
+          done
+          file out/*/libargon2.*
+
+      - name: Upload desktop and Android libraries
+        uses: actions/upload-artifact@v4
+        with:
+          name: argon2-desktop-android
+          path: out
+          if-no-files-found: error
+
+  # --------------------------------------------------------------------------
+  # iOS needs Apple's SDK, so it builds on macOS: a device static library and a
+  # fat simulator one (arm64 + x64), both linked into the app by the .NET iOS SDK.
+  # --------------------------------------------------------------------------
+  ios:
+    runs-on: macos-latest
+    steps:
+      - name: Check out phc-winner-argon2
+        uses: actions/checkout@v4
+        with:
+          repository: P-H-C/phc-winner-argon2
+          ref: ${{ inputs.argon2_ref }}
+          path: argon2
+
+      - name: Build iOS static libraries
+        working-directory: argon2
+        run: |
+          set -euo pipefail
+          OUT="${GITHUB_WORKSPACE}/out"
+          MIN=14.0   # SupportedOSPlatformVersion for iOS in Lorestead.Client.csproj
+          COMMON="-std=c89 -O3 -Iinclude -Isrc -DA2_VISCTL=1 -fvisibility=hidden"
+
+          build_static() {   # sdk arch impl minflag outdir
+            local sdk="$1" arch="$2" impl="$3" minflag="$4" outdir="$5"
+            mkdir -p "$outdir"
+            local objs=()
+            for src in $ARGON2_SOURCES $impl; do
+              local obj="$outdir/$(basename "${src%.c}").o"
+              # shellcheck disable=SC2086
+              xcrun --sdk "$sdk" clang $COMMON -arch "$arch" "$minflag" -c "$src" -o "$obj"
+              objs+=("$obj")
+            done
+            xcrun --sdk "$sdk" libtool -static -o "$outdir/libargon2.a" "${objs[@]}"
+            rm -f "${objs[@]}"
+          }
+
+          build_static iphoneos arm64 src/ref.c "-miphoneos-version-min=$MIN" "$OUT/ios-arm64"
+          build_static iphonesimulator arm64 src/ref.c "-mios-simulator-version-min=$MIN" "$OUT/sim-arm64"
+          build_static iphonesimulator x86_64 "src/opt.c -mssse3" "-mios-simulator-version-min=$MIN" "$OUT/sim-x64"
+
+          mkdir -p "$OUT/iossimulator-arm64" "$OUT/iossimulator-x64"
+          mv "$OUT/sim-arm64/libargon2.a" "$OUT/iossimulator-arm64/libargon2.a"
+          mv "$OUT/sim-x64/libargon2.a" "$OUT/iossimulator-x64/libargon2.a"
+          rmdir "$OUT/sim-arm64" "$OUT/sim-x64"
+
+          for f in "$OUT"/*/libargon2.a; do
+            echo "== $f"
+            xcrun lipo -info "$f"
+            xcrun nm -g "$f" | grep -q ' T _argon2id_hash_raw$'
+          done
+
+      - name: Upload iOS libraries
+        uses: actions/upload-artifact@v4
+        with:
+          name: argon2-ios
+          path: out
+          if-no-files-found: error
+
+  # --------------------------------------------------------------------------
+  # Load each shipped desktop binary from .NET on its own OS and check two
+  # known answers (p=4 with four threads, p=1). This is the gate: a build that
+  # compiles but does not load or computes wrong bytes fails here.
+  # --------------------------------------------------------------------------
+  verify:
+    needs: desktop-android
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            rid: linux-x64
+            lib: libargon2.so
+          - os: windows-latest
+            rid: win-x64
+            lib: libargon2.dll
+          - os: macos-latest
+            rid: osx-arm64
+            lib: libargon2.dylib
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Download libraries
+        uses: actions/download-artifact@v4
+        with:
+          name: argon2-desktop-android
+          path: out
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Build and run the known-answer check
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir verify && cd verify
+          cat > verify.csproj <<'EOF'
+          <Project Sdk="Microsoft.NET.Sdk">
+            <PropertyGroup>
+              <OutputType>Exe</OutputType>
+              <TargetFramework>net10.0</TargetFramework>
+              <Nullable>disable</Nullable>
+              <ImplicitUsings>disable</ImplicitUsings>
+              <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
+            </PropertyGroup>
+          </Project>
+          EOF
+          cat > Program.cs <<'EOF'
+          using System;
+          using System.Diagnostics;
+          using System.Runtime.InteropServices;
+          using System.Text;
+
+          static class Program
+          {
+              [DllImport("libargon2")]
+              static extern int argon2id_hash_raw(uint t_cost, uint m_cost, uint parallelism,
+                  byte[] pwd, nuint pwdlen, byte[] salt, nuint saltlen, byte[] hash, nuint hashlen);
+
+              static int Main(string[] args)
+              {
+                  byte[] password = Encoding.UTF8.GetBytes(args[0]);
+                  byte[] salt = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 };
+                  int failures = 0;
+                  foreach ((uint p, string expected) in new[] { (4u, args[1]), (1u, args[2]) })
+                  {
+                      byte[] hash = new byte[32];
+                      Stopwatch watch = Stopwatch.StartNew();
+                      int rc = argon2id_hash_raw(3, 65536, p, password, (nuint)password.Length, salt, (nuint)salt.Length, hash, (nuint)hash.Length);
+                      watch.Stop();
+                      string actual = Convert.ToHexString(hash);
+                      bool ok = rc == 0 && actual == expected;
+                      Console.WriteLine($"p={p} rc={rc} {watch.ElapsedMilliseconds} ms {(ok ? "OK" : "MISMATCH")} {actual}");
+                      if (!ok) failures++;
+                  }
+                  return failures;
+              }
+          }
+          EOF
+          dotnet build -c Release -o app
+          cp "../out/${{ matrix.rid }}/${{ matrix.lib }}" app/
+          dotnet app/verify.dll "$VERIFY_PASSWORD" "$VERIFY_EXPECTED_P4" "$VERIFY_EXPECTED_P1"
+
+  # --------------------------------------------------------------------------
+  # One artifact to download and commit: every rid folder plus checksums and a
+  # manifest recording exactly what produced them.
+  # --------------------------------------------------------------------------
+  package:
+    needs: [desktop-android, ios, verify]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download desktop and Android libraries
+        uses: actions/download-artifact@v4
+        with:
+          name: argon2-desktop-android
+          path: native/argon2
+
+      - name: Download iOS libraries
+        uses: actions/download-artifact@v4
+        with:
+          name: argon2-ios
+          path: native/argon2
+
+      - name: Write manifest and checksums
+        working-directory: native/argon2
+        run: |
+          set -euo pipefail
+          find . -type f -name 'libargon2.*' | sort | xargs sha256sum > SHA256SUMS
+          cat > manifest.json <<EOF
+          {
+            "source": "https://github.com/P-H-C/phc-winner-argon2",
+            "commit": "${{ inputs.argon2_ref }}",
+            "zigVersion": "${{ inputs.zig_version }}",
+            "workflowRun": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}",
+            "builtAt": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "x86Simd": "SSSE3 (upstream opt.c)",
+            "armPath": "portable (upstream ref.c)",
+            "threads": "enabled; parallelism = thread count",
+            "androidMinApi": 24,
+            "iosMinVersion": "14.0"
+          }
+          EOF
+          cat manifest.json
+          cat SHA256SUMS
+
+      - name: Upload combined artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: argon2-native-${{ inputs.argon2_ref }}
+          path: native/argon2
+          if-no-files-found: error
