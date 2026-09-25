@@ -122,10 +122,17 @@ jobs:
             nm -D --defined-only "$f" | grep -q ' T argon2id_hash_raw$'
           done
           echo "== Windows DLL imports (expect KERNEL32 and the universal CRT only)"
+          # GNU objdump does not read ARM64 PE files; LLVM's reads every PE flavor.
+          OBJDUMP=$(command -v llvm-objdump || ls /usr/bin/llvm-objdump-* 2>/dev/null | sort -V | tail -1)
+          if [ -z "$OBJDUMP" ]; then
+            sudo apt-get install -y --no-install-recommends llvm >/dev/null
+            OBJDUMP=$(command -v llvm-objdump || ls /usr/bin/llvm-objdump-* | sort -V | tail -1)
+          fi
+          echo "using $OBJDUMP"
           for f in out/win-*/libargon2.dll; do
             echo "-- $f"
-            objdump -p "$f" | grep 'DLL Name'
-            objdump -p "$f" | grep -A200 'Export Address Table' | grep -q 'argon2id_hash_raw'
+            "$OBJDUMP" -p "$f" | grep 'DLL Name'
+            "$OBJDUMP" -p "$f" | grep -A200 'Export Table' | grep -q 'argon2id_hash_raw'
           done
           echo "== Android 16 KiB alignment"
           for f in out/android-*/libargon2.so; do
