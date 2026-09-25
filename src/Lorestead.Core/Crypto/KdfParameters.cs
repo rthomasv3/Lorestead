@@ -1,4 +1,4 @@
-namespace Lorestead.Core.Vault
+namespace Lorestead.Core.Crypto
 {
     /// <summary>
     /// Argon2id cost parameters, stored alongside the wrapped key they produced.

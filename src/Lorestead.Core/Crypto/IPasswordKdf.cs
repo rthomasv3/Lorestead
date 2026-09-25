@@ -1,6 +1,6 @@
 using System;
 
-namespace Lorestead.Core.Vault
+namespace Lorestead.Core.Crypto
 {
     /// <summary>
     /// Derives a key of the requested length from a password and salt.

@@ -2,7 +2,7 @@ using System;
 using System.Security.Cryptography;
 using System.Text;
 
-namespace Lorestead.Core.Vault
+namespace Lorestead.Core.Crypto
 {
     /// <summary>
     /// Generates the vault key, salts, and recovery keys, and wraps the vault key under a password or recovery key.

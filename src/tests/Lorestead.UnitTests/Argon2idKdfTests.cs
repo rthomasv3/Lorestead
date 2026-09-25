@@ -1,6 +1,6 @@
 using System;
 using System.Text;
-using Lorestead.Core.Vault;
+using Lorestead.Core.Crypto;
 using Xunit;
 
 namespace Lorestead.UnitTests

@@ -9,6 +9,11 @@ public interface ISyncService
     void Pause();
     void Resume();
     void NotifyLocalChange();
+
+    /// <summary>
+    /// The protocol version the configured server last reported, or 0 before any successful cycle.
+    /// </summary>
+    int ServerProtocolVersion { get; }
     GetSyncStatusResponse GetStatus();
     Task<GetSyncStatusResponse> SyncNow();
     GetSyncStatusResponse SaveServerUrl(SaveSyncServerUrlRequest request);

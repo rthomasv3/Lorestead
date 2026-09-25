@@ -10,6 +10,7 @@ namespace Lorestead.Core.Sync
         public int BlobsDownloaded { get; set; }
         public bool Resynced { get; set; }
         public bool Adopted { get; set; }
+        public int ServerProtocolVersion { get; set; }
         // Item types seen in pulled entries - the client maps these to store refresh
         // events (notes:changed, boards:changed, ...).
         public HashSet<string> ChangedItemTypes { get; } = new HashSet<string>();

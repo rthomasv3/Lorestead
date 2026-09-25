@@ -35,6 +35,18 @@ namespace Lorestead.Core.Sync
                 case ItemTypes.Attachment:
                     AttachmentRepository.UpsertWithin(connection, transaction, PayloadJson.Deserialize<Attachment>(entry.Payload));
                     break;
+                case ItemTypes.Vault:
+                    VaultRepository.UpsertVaultWithin(connection, transaction, PayloadJson.Deserialize<Vault>(entry.Payload));
+                    break;
+                case ItemTypes.VaultKey:
+                    VaultRepository.UpsertKeyWithin(connection, transaction, PayloadJson.Deserialize<VaultKey>(entry.Payload));
+                    break;
+                case ItemTypes.VaultItem:
+                    VaultItemRepository.UpsertWithin(connection, transaction, PayloadJson.Deserialize<VaultItem>(entry.Payload));
+                    break;
+                case ItemTypes.VaultAttachment:
+                    VaultAttachmentRepository.UpsertWithin(connection, transaction, PayloadJson.Deserialize<VaultAttachment>(entry.Payload));
+                    break;
                 default:
                     throw new InvalidOperationException($"Unknown change_log item_type '{entry.ItemType}'.");
             }
@@ -58,6 +70,18 @@ namespace Lorestead.Core.Sync
                     break;
                 case ItemTypes.Attachment:
                     AttachmentRepository.DeleteRowWithin(connection, transaction, entry.ItemId);
+                    break;
+                case ItemTypes.Vault:
+                    VaultRepository.DeleteVaultRowWithin(connection, transaction, entry.ItemId);
+                    break;
+                case ItemTypes.VaultKey:
+                    VaultRepository.DeleteKeyRowWithin(connection, transaction, entry.ItemId);
+                    break;
+                case ItemTypes.VaultItem:
+                    VaultItemRepository.DeleteRowWithin(connection, transaction, entry.ItemId);
+                    break;
+                case ItemTypes.VaultAttachment:
+                    VaultAttachmentRepository.DeleteRowWithin(connection, transaction, entry.ItemId);
                     break;
                 default:
                     throw new InvalidOperationException($"Unknown change_log item_type '{entry.ItemType}'.");

@@ -48,6 +48,7 @@ public sealed class SyncEngine : ISyncService, IDisposable
     private bool _syncing;
     private string _error;
     private string _lastSyncAt;
+    private int _serverProtocolVersion;
 
     public SyncEngine(
         ConnectionManager connectionManager,
@@ -125,6 +126,17 @@ public sealed class SyncEngine : ISyncService, IDisposable
         {
             signal.TrySetResult(true);
             RequestSync();
+        }
+    }
+
+    public int ServerProtocolVersion
+    {
+        get
+        {
+            lock (_statusLock)
+            {
+                return _serverProtocolVersion;
+            }
         }
     }
 
@@ -318,6 +330,7 @@ public sealed class SyncEngine : ISyncService, IDisposable
                 lock (_statusLock)
                 {
                     _lastSyncAt = DateTime.UtcNow.ToString("O", CultureInfo.InvariantCulture);
+                    _serverProtocolVersion = result.ServerProtocolVersion;
                 }
 
                 PublishChangeEvents(result);

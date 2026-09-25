@@ -48,6 +48,21 @@ public sealed class RepositoryFactory
         get { return new AttachmentRepository(_connectionManager, GetDeviceId(), GetHistoryRetention()); }
     }
 
+    public VaultRepository Vault
+    {
+        get { return new VaultRepository(_connectionManager, GetDeviceId(), GetHistoryRetention()); }
+    }
+
+    public VaultItemRepository VaultItems
+    {
+        get { return new VaultItemRepository(_connectionManager, GetDeviceId(), GetHistoryRetention()); }
+    }
+
+    public VaultAttachmentRepository VaultAttachments
+    {
+        get { return new VaultAttachmentRepository(_connectionManager, GetDeviceId(), GetHistoryRetention()); }
+    }
+
     public SearchRepository Search
     {
         get

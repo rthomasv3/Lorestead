@@ -16,6 +16,9 @@ namespace Lorestead.IntegrationTests
         public BoardColumnRepository Columns { get; }
         public TaskRepository Tasks { get; }
         public AttachmentRepository Attachments { get; }
+        public VaultRepository Vault { get; }
+        public VaultItemRepository VaultItems { get; }
+        public VaultAttachmentRepository VaultAttachments { get; }
         public ChangeLogRepository ChangeLog { get; }
         public SettingsRepository Settings { get; }
         public SyncStateRepository SyncState { get; }
@@ -36,6 +39,9 @@ namespace Lorestead.IntegrationTests
             Columns = new BoardColumnRepository(ConnectionManager, DeviceId, historyRetention);
             Tasks = new TaskRepository(ConnectionManager, DeviceId, historyRetention);
             Attachments = new AttachmentRepository(ConnectionManager, DeviceId, historyRetention);
+            Vault = new VaultRepository(ConnectionManager, DeviceId, historyRetention);
+            VaultItems = new VaultItemRepository(ConnectionManager, DeviceId, historyRetention);
+            VaultAttachments = new VaultAttachmentRepository(ConnectionManager, DeviceId, historyRetention);
             ChangeLog = new ChangeLogRepository(ConnectionManager);
             Settings = new SettingsRepository(ConnectionManager);
             SyncState = new SyncStateRepository(ConnectionManager);

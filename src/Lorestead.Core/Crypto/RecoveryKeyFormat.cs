@@ -4,7 +4,7 @@ using System.IO;
 using System.Security.Cryptography;
 using System.Text;
 
-namespace Lorestead.Core.Vault
+namespace Lorestead.Core.Crypto
 {
     /// <summary>
     /// Encodes a recovery key as a twelve-word BIP39 phrase: English list, 11 bits per word, 4-bit SHA-256 checksum.
@@ -125,7 +125,7 @@ namespace Lorestead.Core.Vault
 
         private static string[] LoadWords()
         {
-            using Stream stream = typeof(RecoveryKeyFormat).Assembly.GetManifestResourceStream("Lorestead.Core.Vault.bip39-english.txt");
+            using Stream stream = typeof(RecoveryKeyFormat).Assembly.GetManifestResourceStream("Lorestead.Core.Crypto.bip39-english.txt");
             if (stream == null)
             {
                 throw new InvalidOperationException("The BIP39 wordlist resource is missing.");

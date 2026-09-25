@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Text;
 
-namespace Lorestead.Core.Vault
+namespace Lorestead.Core.Crypto
 {
     /// <summary>
     /// Associated data that ties a ciphertext to the row and field it was written for,

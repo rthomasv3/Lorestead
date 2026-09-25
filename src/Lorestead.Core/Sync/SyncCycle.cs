@@ -20,6 +20,7 @@ namespace Lorestead.Core.Sync
         private readonly ChangeLogRepository _changeLog;
         private readonly SyncStateRepository _syncState;
         private readonly AttachmentRepository _attachments;
+        private readonly VaultAttachmentRepository _vaultAttachments;
         private readonly ChangeApplier _applier;
 
         public SyncCycle(ConnectionManager connectionManager, string deviceId, SyncServerClient server, int historyRetention = 50)
@@ -30,6 +31,7 @@ namespace Lorestead.Core.Sync
             _changeLog = new ChangeLogRepository(connectionManager);
             _syncState = new SyncStateRepository(connectionManager);
             _attachments = new AttachmentRepository(connectionManager, deviceId);
+            _vaultAttachments = new VaultAttachmentRepository(connectionManager, deviceId);
             _applier = new ChangeApplier(connectionManager, deviceId, historyRetention);
         }
 
@@ -69,6 +71,7 @@ namespace Lorestead.Core.Sync
         private async Task EnsureServerIdentity(SyncCycleResult result)
         {
             StatusResponse status = await _server.GetStatus();
+            result.ServerProtocolVersion = status.ProtocolVersion;
 
             if (!string.IsNullOrEmpty(status.ServerId))
             {
@@ -133,6 +136,22 @@ namespace Lorestead.Core.Sync
                     result.BlobsUploaded++;
                 }
             }
+
+            IEnumerable<string> vaultAttachmentIds = batch
+                .Where(p => p.Entry.ItemType == ItemTypes.VaultAttachment && p.Entry.Op == ChangeOps.Upsert)
+                .Select(p => p.Entry.ItemId)
+                .Distinct();
+
+            foreach (string attachmentId in vaultAttachmentIds)
+            {
+                VaultAttachment attachment = _vaultAttachments.Get(attachmentId);
+                byte[] blob = attachment == null || attachment.Deleted ? null : _vaultAttachments.GetBlob(attachmentId);
+
+                if (blob != null && await _server.PutVaultBlob(attachmentId, blob))
+                {
+                    result.BlobsUploaded++;
+                }
+            }
         }
 
         private async Task Pull(SyncCycleResult result)
@@ -171,6 +190,17 @@ namespace Lorestead.Core.Sync
                 if (data != null)
                 {
                     _attachments.SaveBlob(attachmentId, data);
+                    result.BlobsDownloaded++;
+                }
+            }
+
+            foreach (string attachmentId in _vaultAttachments.GetIdsMissingBlob())
+            {
+                byte[] data = await _server.GetVaultBlob(attachmentId);
+
+                if (data != null)
+                {
+                    _vaultAttachments.SaveBlob(attachmentId, data);
                     result.BlobsDownloaded++;
                 }
             }

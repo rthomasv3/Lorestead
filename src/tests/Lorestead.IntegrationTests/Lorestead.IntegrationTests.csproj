@@ -32,4 +32,6 @@
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
 
+  <Import Project="..\..\..\native\argon2\Argon2.targets" />
+
 </Project>

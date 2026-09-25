@@ -18,7 +18,7 @@
     <EmbeddedResource Include="FirstRun\Content\*.md" />
     <EmbeddedResource Include="..\..\icon\icon-256.png"
                       LogicalName="Lorestead.Core.FirstRun.Content.icon-256.png" />
-    <EmbeddedResource Include="Vault\bip39-english.txt" LogicalName="Lorestead.Core.Vault.bip39-english.txt" />
+    <EmbeddedResource Include="Crypto\bip39-english.txt" LogicalName="Lorestead.Core.Crypto.bip39-english.txt" />
   </ItemGroup>
 
   <ItemGroup>

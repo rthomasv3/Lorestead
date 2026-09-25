@@ -58,6 +58,57 @@ namespace Lorestead.IntegrationTests
             };
         }
 
+        public static Vault Vault()
+        {
+            return new Vault
+            {
+                Id = NewId(),
+                KeyVersion = 1,
+            };
+        }
+
+        public static VaultKey VaultKey(VaultKeyKind kind, byte[] wrappedKey, byte[] salt = null)
+        {
+            return new VaultKey
+            {
+                Id = NewId(),
+                Kind = kind,
+                WrappedKey = wrappedKey,
+                KdfSalt = salt,
+                KdfMemoryKiB = salt == null ? null : 256,
+                KdfIterations = salt == null ? null : 2,
+                KdfParallelism = salt == null ? null : 2,
+            };
+        }
+
+        public static VaultItem VaultItem(string vaultId, byte[] titleEnc, byte[] bodyEnc, byte[] linksEnc, string parentId = null)
+        {
+            return new VaultItem
+            {
+                Id = NewId(),
+                VaultId = vaultId,
+                ParentId = parentId,
+                Position = "V",
+                KeyVersion = 1,
+                TitleEnc = titleEnc,
+                BodyEnc = bodyEnc,
+                LinksEnc = linksEnc,
+            };
+        }
+
+        public static VaultAttachment VaultAttachment(string itemId, byte[] nameEnc, byte[] mimeEnc, long sizeBytes = 3)
+        {
+            return new VaultAttachment
+            {
+                Id = NewId(),
+                ItemId = itemId,
+                SizeBytes = sizeBytes,
+                KeyVersion = 1,
+                NameEnc = nameEnc,
+                MimeEnc = mimeEnc,
+            };
+        }
+
         public static Attachment Attachment(string noteId = null, string taskId = null, string filename = "file.png")
         {
             return new Attachment

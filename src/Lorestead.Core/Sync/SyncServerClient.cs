@@ -61,10 +61,32 @@ namespace Lorestead.Core.Sync
         }
 
         // Null when the blob has not been uploaded to the server yet.
-        public async Task<byte[]> GetBlob(string attachmentId)
+        public Task<byte[]> GetBlob(string attachmentId)
+        {
+            return GetBlobFrom($"{_baseUrl}/attachments/{attachmentId}/blob");
+        }
+
+        // False when the server has no metadata row yet (blob upload precedes the
+        // next drain of a not-yet-synced attachment).
+        public Task<bool> PutBlob(string attachmentId, byte[] data)
+        {
+            return PutBlobTo($"{_baseUrl}/attachments/{attachmentId}/blob", data);
+        }
+
+        public Task<byte[]> GetVaultBlob(string attachmentId)
+        {
+            return GetBlobFrom($"{_baseUrl}/vault/attachments/{attachmentId}/blob");
+        }
+
+        public Task<bool> PutVaultBlob(string attachmentId, byte[] data)
+        {
+            return PutBlobTo($"{_baseUrl}/vault/attachments/{attachmentId}/blob", data);
+        }
+
+        private async Task<byte[]> GetBlobFrom(string url)
         {
             byte[] data = null;
-            HttpResponseMessage response = await _http.GetAsync($"{_baseUrl}/attachments/{attachmentId}/blob");
+            HttpResponseMessage response = await _http.GetAsync(url);
 
             if (response.StatusCode != HttpStatusCode.NotFound)
             {
@@ -75,11 +97,9 @@ namespace Lorestead.Core.Sync
             return data;
         }
 
-        // False when the server has no metadata row yet (blob upload precedes the
-        // next drain of a not-yet-synced attachment).
-        public async Task<bool> PutBlob(string attachmentId, byte[] data)
+        private async Task<bool> PutBlobTo(string url, byte[] data)
         {
-            HttpResponseMessage response = await _http.PutAsync($"{_baseUrl}/attachments/{attachmentId}/blob", new ByteArrayContent(data));
+            HttpResponseMessage response = await _http.PutAsync(url, new ByteArrayContent(data));
             bool saved = response.StatusCode != HttpStatusCode.NotFound;
 
             if (saved)

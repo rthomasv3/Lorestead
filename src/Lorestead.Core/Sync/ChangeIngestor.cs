@@ -88,9 +88,7 @@ namespace Lorestead.Core.Sync
                 {
                     throw new ArgumentException($"Entry {i}: unknown op '{entry.Op}'.");
                 }
-                if (entry.ItemType != ItemTypes.Note && entry.ItemType != ItemTypes.Board &&
-                    entry.ItemType != ItemTypes.Column && entry.ItemType != ItemTypes.Task &&
-                    entry.ItemType != ItemTypes.Attachment)
+                if (!ItemTypes.IsKnown(entry.ItemType))
                 {
                     throw new ArgumentException($"Entry {i}: unknown item_type '{entry.ItemType}'.");
                 }

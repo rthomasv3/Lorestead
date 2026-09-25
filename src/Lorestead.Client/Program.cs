@@ -138,6 +138,7 @@ internal class Program
             .AddDays(-settings.TrashRetentionDays)
             .ToString("O", CultureInfo.InvariantCulture);
         new NoteRepository(connectionManager, deviceId).PurgeExpiredTrash(cutoff);
+        new VaultItemRepository(connectionManager, deviceId).PurgeExpiredTrash(cutoff);
     }
 
     static void RestoreWindow(IServiceProvider serviceProvider, ILoggingService logger)

@@ -1,7 +1,7 @@
 using System;
 using System.Security.Cryptography;
 
-namespace Lorestead.Core.Vault
+namespace Lorestead.Core.Crypto
 {
     /// <summary>
     /// AES-256-GCM with the stored layout [version byte][12-byte nonce][ciphertext][16-byte tag].

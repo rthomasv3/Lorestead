@@ -41,8 +41,9 @@ namespace Lorestead.IntegrationTests
             Assert.Contains("server_id", GetColumnNames(db, "sync_state"));
             Assert.Contains("word_wrap", GetColumnNames(db, "editor_settings"));
             Assert.Contains("ui_scale", GetColumnNames(db, "application_settings"));
+            AssertVaultTables(names);
 
-            Assert.Equal(10, GetSchemaVersion(db));
+            Assert.Equal(11, GetSchemaVersion(db));
         }
 
         [Fact]
@@ -56,7 +57,8 @@ namespace Lorestead.IntegrationTests
             Assert.DoesNotContain("application_settings", names);
             Assert.DoesNotContain("editor_settings", names);
             Assert.Contains("task_label", names);
-            Assert.Equal(9, GetSchemaVersion(db));
+            AssertVaultTables(names);
+            Assert.Equal(11, GetSchemaVersion(db));
         }
 
         [Fact]
@@ -74,7 +76,8 @@ namespace Lorestead.IntegrationTests
             Assert.Contains("server_id", GetColumnNames(db, "server_state"));
             Assert.NotEqual("", ScalarString(db, "SELECT server_id FROM server_state WHERE id = 1"));
             Assert.Contains("task_label", names);
-            Assert.Equal(9, GetSchemaVersion(db));
+            AssertVaultTables(names);
+            Assert.Equal(11, GetSchemaVersion(db));
         }
 
         [Fact]
@@ -88,7 +91,16 @@ namespace Lorestead.IntegrationTests
                 migrator.Add(migration);
             }
             migrator.Run(connection);
-            Assert.Equal(10, GetSchemaVersion(db));
+            Assert.Equal(11, GetSchemaVersion(db));
+        }
+
+        private static void AssertVaultTables(List<string> names)
+        {
+            Assert.Contains("vault", names);
+            Assert.Contains("vault_key", names);
+            Assert.Contains("vault_item", names);
+            Assert.Contains("vault_attachment", names);
+            Assert.Contains("vault_blob", names);
         }
 
         private static List<string> GetSchemaNames(TestDb db, string type)

@@ -4,7 +4,7 @@ Prebuilt copies of the reference Argon2 implementation
 ([P-H-C/phc-winner-argon2](https://github.com/P-H-C/phc-winner-argon2)), one folder
 per .NET runtime identifier, every file named `libargon2` so a single
 `DllImport("libargon2")` resolves on all platforms. Lorestead's vault derives its
-password key with Argon2id through `Lorestead.Core.Vault.Argon2idKdf`.
+password key with Argon2id through `Lorestead.Core.Crypto.Argon2idKdf`.
 
 `manifest.json` records the upstream commit, the compilers, the flags, and the
 workflow run that produced these files; `SHA256SUMS` covers every library.

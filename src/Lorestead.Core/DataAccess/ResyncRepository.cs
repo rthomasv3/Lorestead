@@ -21,6 +21,11 @@ namespace Lorestead.Core.DataAccess
             using SqliteCommand wipe = connection.CreateCommand();
             // FTS shadow tables empty via the delete triggers on note/task.
             wipe.CommandText = @"
+                DELETE FROM vault_blob;
+                DELETE FROM vault_attachment;
+                DELETE FROM vault_item;
+                DELETE FROM vault_key;
+                DELETE FROM vault;
                 DELETE FROM note_link;
                 DELETE FROM task_note;
                 DELETE FROM attachment_thumbnail;

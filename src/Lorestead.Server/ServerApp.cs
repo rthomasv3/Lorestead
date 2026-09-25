@@ -44,6 +44,7 @@ public static class ServerApp
         builder.Services.AddSingleton<OAuthGrantRepository>();
         builder.Services.AddSingleton(new ChangeIngestor(connectionManager, config.HistoryRetention));
         builder.Services.AddSingleton(new AttachmentRepository(connectionManager, ServerDeviceId, config.HistoryRetention));
+        builder.Services.AddSingleton(new VaultAttachmentRepository(connectionManager, ServerDeviceId, config.HistoryRetention));
 
         // Built by hand (not from DI) because the MCP tool set needs the broadcaster
         // and stamper before the container exists.
@@ -65,6 +66,7 @@ public static class ServerApp
         app.MapStatusEndpoints();
         app.MapChangeEndpoints();
         app.MapAttachmentEndpoints();
+        app.MapVaultEndpoints();
         app.MapSyncSocket();
         app.MapMcp("/mcp");
 
