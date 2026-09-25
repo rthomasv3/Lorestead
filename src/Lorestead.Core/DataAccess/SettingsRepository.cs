@@ -22,7 +22,7 @@ namespace Lorestead.Core.DataAccess
             select.CommandText = @"
                 SELECT history_retention, server_url, theme, accent_color, date_format, time_format,
                        trash_retention_days, auto_check_updates, auto_update, last_update_check_at,
-                       new_note_focus, new_task_focus, window_width, window_height, window_state
+                       new_note_focus, new_task_focus, window_width, window_height, window_state, ui_scale
                 FROM application_settings LIMIT 1";
             using SqliteDataReader reader = select.ExecuteReader();
             if (reader.Read())
@@ -44,6 +44,7 @@ namespace Lorestead.Core.DataAccess
                     WindowWidth = reader.GetInt32(12),
                     WindowHeight = reader.GetInt32(13),
                     WindowState = reader.GetString(14),
+                    UiScale = reader.GetInt32(15),
                 };
             }
             return settings;
@@ -60,7 +61,8 @@ namespace Lorestead.Core.DataAccess
                     trash_retention_days = @trash_retention_days, auto_check_updates = @auto_check_updates,
                     auto_update = @auto_update, last_update_check_at = @last_update_check_at,
                     new_note_focus = @new_note_focus, new_task_focus = @new_task_focus,
-                    window_width = @window_width, window_height = @window_height, window_state = @window_state";
+                    window_width = @window_width, window_height = @window_height, window_state = @window_state,
+                    ui_scale = @ui_scale";
             update.Parameters.AddWithValue("@history_retention", settings.HistoryRetention);
             update.Parameters.AddWithValue("@server_url", settings.ServerUrl ?? string.Empty);
             update.Parameters.AddWithValue("@theme", settings.Theme ?? string.Empty);
@@ -76,6 +78,7 @@ namespace Lorestead.Core.DataAccess
             update.Parameters.AddWithValue("@window_width", settings.WindowWidth);
             update.Parameters.AddWithValue("@window_height", settings.WindowHeight);
             update.Parameters.AddWithValue("@window_state", settings.WindowState ?? string.Empty);
+            update.Parameters.AddWithValue("@ui_scale", settings.UiScale);
             update.ExecuteNonQuery();
         }
 
@@ -87,7 +90,7 @@ namespace Lorestead.Core.DataAccess
             select.CommandText = @"
                 SELECT font_size, font_family, spellcheck_enabled, show_line_count, highlight_active_line,
                        autosave_debounce_ms, md_tables, md_task_lists, md_strikethrough, md_autolinks,
-                       md_footnotes, md_code_highlighting, md_highlight, remember_cursor_position
+                       md_footnotes, md_code_highlighting, md_highlight, remember_cursor_position, word_wrap
                 FROM editor_settings LIMIT 1";
             using SqliteDataReader reader = select.ExecuteReader();
             if (reader.Read())
@@ -108,6 +111,7 @@ namespace Lorestead.Core.DataAccess
                     MdCodeHighlighting = reader.GetInt64(11) != 0,
                     MdHighlight = reader.GetInt64(12) != 0,
                     RememberCursorPosition = reader.GetInt64(13) != 0,
+                    WordWrap = reader.GetInt64(14) != 0,
                 };
             }
             return settings;
@@ -125,7 +129,7 @@ namespace Lorestead.Core.DataAccess
                     md_task_lists = @md_task_lists, md_strikethrough = @md_strikethrough,
                     md_autolinks = @md_autolinks, md_footnotes = @md_footnotes,
                     md_code_highlighting = @md_code_highlighting, md_highlight = @md_highlight,
-                    remember_cursor_position = @remember_cursor_position";
+                    remember_cursor_position = @remember_cursor_position, word_wrap = @word_wrap";
             update.Parameters.AddWithValue("@font_size", settings.FontSize);
             update.Parameters.AddWithValue("@font_family", settings.FontFamily ?? string.Empty);
             update.Parameters.AddWithValue("@spellcheck_enabled", settings.SpellcheckEnabled ? 1 : 0);
@@ -140,6 +144,7 @@ namespace Lorestead.Core.DataAccess
             update.Parameters.AddWithValue("@md_code_highlighting", settings.MdCodeHighlighting ? 1 : 0);
             update.Parameters.AddWithValue("@md_highlight", settings.MdHighlight ? 1 : 0);
             update.Parameters.AddWithValue("@remember_cursor_position", settings.RememberCursorPosition ? 1 : 0);
+            update.Parameters.AddWithValue("@word_wrap", settings.WordWrap ? 1 : 0);
             update.ExecuteNonQuery();
         }
     }

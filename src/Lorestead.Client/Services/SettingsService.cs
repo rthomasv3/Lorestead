@@ -1,3 +1,4 @@
+using System;
 using Lorestead.Client.Commands.Contracts;
 using Lorestead.Client.Services.Abstractions;
 using Lorestead.Core.DataAccess;
@@ -7,6 +8,11 @@ namespace Lorestead.Client.Services;
 
 public sealed class SettingsService : ISettingsService
 {
+    // Interface scale bounds in percent. Enforced here as well as by the field: an
+    // out-of-range scale (0, say) would leave no usable UI to correct it from.
+    private const int MinUiScale = 85;
+    private const int MaxUiScale = 130;
+
     private readonly SettingsRepository _repository;
 
     public SettingsService(SettingsRepository repository)
@@ -38,6 +44,7 @@ public sealed class SettingsService : ISettingsService
         settings.AutoUpdate = request.AutoUpdate;
         settings.NewNoteFocus = request.NewNoteFocus;
         settings.NewTaskFocus = request.NewTaskFocus;
+        settings.UiScale = Math.Clamp(request.UiScale, MinUiScale, MaxUiScale);
         _repository.SaveApplication(settings);
         return GetSettings();
     }
@@ -52,6 +59,7 @@ public sealed class SettingsService : ISettingsService
         settings.HighlightActiveLine = request.HighlightActiveLine;
         settings.AutosaveDebounceMs = request.AutosaveDebounceMs;
         settings.RememberCursorPosition = request.RememberCursorPosition;
+        settings.WordWrap = request.WordWrap;
         settings.MdTables = request.MdTables;
         settings.MdTaskLists = request.MdTaskLists;
         settings.MdStrikethrough = request.MdStrikethrough;

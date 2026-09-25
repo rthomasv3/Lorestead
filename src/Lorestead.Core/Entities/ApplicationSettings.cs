@@ -14,6 +14,7 @@ namespace Lorestead.Core.Entities
         public string LastUpdateCheckAt { get; set; }
         public string NewNoteFocus { get; set; }
         public string NewTaskFocus { get; set; }
+        public int UiScale { get; set; }
         public int WindowWidth { get; set; }
         public int WindowHeight { get; set; }
         public string WindowState { get; set; }

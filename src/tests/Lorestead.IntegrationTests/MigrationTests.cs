@@ -39,8 +39,10 @@ namespace Lorestead.IntegrationTests
 
             Assert.Contains("remember_cursor_position", GetColumnNames(db, "editor_settings"));
             Assert.Contains("server_id", GetColumnNames(db, "sync_state"));
+            Assert.Contains("word_wrap", GetColumnNames(db, "editor_settings"));
+            Assert.Contains("ui_scale", GetColumnNames(db, "application_settings"));
 
-            Assert.Equal(9, GetSchemaVersion(db));
+            Assert.Equal(10, GetSchemaVersion(db));
         }
 
         [Fact]
@@ -86,7 +88,7 @@ namespace Lorestead.IntegrationTests
                 migrator.Add(migration);
             }
             migrator.Run(connection);
-            Assert.Equal(9, GetSchemaVersion(db));
+            Assert.Equal(10, GetSchemaVersion(db));
         }
 
         private static List<string> GetSchemaNames(TestDb db, string type)

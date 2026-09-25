@@ -17,6 +17,7 @@ namespace Lorestead.IntegrationTests
             Assert.Equal(30, app.TrashRetentionDays);
             Assert.True(app.AutoCheckUpdates);
             Assert.False(app.AutoUpdate);
+            Assert.Equal(100, app.UiScale);
 
             EditorSettings editor = db.Settings.GetEditor();
             Assert.NotNull(editor);
@@ -28,6 +29,7 @@ namespace Lorestead.IntegrationTests
             Assert.True(editor.MdFootnotes);
             Assert.True(editor.MdCodeHighlighting);
             Assert.True(editor.MdHighlight);
+            Assert.True(editor.WordWrap);
         }
 
         [Fact]
@@ -39,6 +41,7 @@ namespace Lorestead.IntegrationTests
             app.ServerUrl = "https://sync.example.test";
             app.Theme = "dark";
             app.WindowWidth = 1600;
+            app.UiScale = 115;
             db.Settings.SaveApplication(app);
 
             ApplicationSettings reloaded = db.Settings.GetApplication();
@@ -46,15 +49,18 @@ namespace Lorestead.IntegrationTests
             Assert.Equal("https://sync.example.test", reloaded.ServerUrl);
             Assert.Equal("dark", reloaded.Theme);
             Assert.Equal(1600, reloaded.WindowWidth);
+            Assert.Equal(115, reloaded.UiScale);
 
             EditorSettings editor = db.Settings.GetEditor();
             editor.FontSize = 16;
             editor.MdFootnotes = false;
+            editor.WordWrap = false;
             db.Settings.SaveEditor(editor);
 
             EditorSettings reloadedEditor = db.Settings.GetEditor();
             Assert.Equal(16, reloadedEditor.FontSize);
             Assert.False(reloadedEditor.MdFootnotes);
+            Assert.False(reloadedEditor.WordWrap);
         }
 
         [Fact]

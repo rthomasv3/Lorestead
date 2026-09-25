@@ -83,6 +83,8 @@ function settingsExtensions() {
   const extensions = []
   if (editor.showLineCount) extensions.push(lineNumbers())
   if (editor.highlightActiveLine) extensions.push(highlightActiveLine())
+  // Off, long lines run on and the scroller (overflow-auto) scrolls sideways.
+  if (editor.wordWrap) extensions.push(EditorView.lineWrapping)
   extensions.push(EditorView.contentAttributes.of({ spellcheck: editor.spellcheckEnabled ? 'true' : 'false' }))
   extensions.push(EditorView.theme({
     '&': { fontSize: `${editor.fontSize}px`, height: '100%' },
@@ -575,7 +577,6 @@ function createView() {
         syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
         underscoreEmphasis,
         EditorView.domEventHandlers({ paste: onPaste, drop: onDrop, dragover: onDragOver }),
-        EditorView.lineWrapping,
         drawSelection(),
         multipleCursors,
         // placeholder('Start writing...'),

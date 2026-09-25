@@ -37,6 +37,7 @@ namespace Lorestead.Core.DataAccess.Migrations
                 new Db005_RememberCursorPosition(),
                 new Db008_SyncServerId(),
                 new Db009_TaskLabels(),
+                new Db010_WordWrapAndUiScale(),
             };
         }
     }

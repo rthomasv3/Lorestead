@@ -37,7 +37,7 @@ export const SETTINGS_INDEX = [
   ]),
   ...section('Editor', 'settings-editor', [
     'Editor',
-    'Font size', 'Font family', 'Spellcheck', 'Show line count', 'Highlight active line',
+    'Font size', 'Font family', 'Spellcheck', 'Show line count', 'Highlight active line', 'Word wrap',
     'Remember cursor position', 'Autosave debounce', 'Markdown extensions',
     ...MD_TOGGLES.map((toggle) => toggle.label),
   ]),

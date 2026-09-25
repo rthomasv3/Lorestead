@@ -388,6 +388,11 @@ onMounted(async () => {
               @update:model-value="store.saveEditor({ highlightActiveLine: $event })" />
           </SettingRow>
 
+          <SettingRow label="Word wrap" hint="Wrap long lines in the editor (the preview always wraps)">
+            <Toggle :model-value="store.editor.wordWrap"
+              @update:model-value="store.saveEditor({ wordWrap: $event })" />
+          </SettingRow>
+
           <SettingRow label="Remember cursor position" hint="Reopen a note where you left off">
             <Toggle :model-value="store.editor.rememberCursorPosition"
               @update:model-value="store.saveEditor({ rememberCursorPosition: $event })" />

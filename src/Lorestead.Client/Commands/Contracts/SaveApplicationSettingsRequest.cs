@@ -15,4 +15,5 @@ public sealed class SaveApplicationSettingsRequest
     public bool AutoUpdate { get; set; }
     public string NewNoteFocus { get; set; }
     public string NewTaskFocus { get; set; }
+    public int UiScale { get; set; }
 }

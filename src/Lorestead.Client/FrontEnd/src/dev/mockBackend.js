@@ -24,12 +24,13 @@ export function installMockBackend() {
     historyRetention: 50, serverUrl: '', theme: 'system', accentColor: 'indigo',
     dateFormat: 'yyyy-MM-dd', timeFormat: 'HH:mm', trashRetentionDays: 30,
     autoCheckUpdates: true, autoUpdate: false, lastUpdateCheckAt: '',
-    newNoteFocus: 'title', newTaskFocus: 'title',
+    newNoteFocus: 'title', newTaskFocus: 'title', uiScale: 100,
     windowWidth: 1200, windowHeight: 800, windowState: 'normal',
   }
   let editor = {
     fontSize: 14, fontFamily: '', spellcheckEnabled: true, showLineCount: true,
-    highlightActiveLine: true, autosaveDebounceMs: 1000, mdTables: true,
+    highlightActiveLine: true, autosaveDebounceMs: 1000, rememberCursorPosition: true,
+    wordWrap: true, mdTables: true,
     mdTaskLists: true, mdStrikethrough: true, mdAutolinks: true, mdFootnotes: true,
     mdCodeHighlighting: true, mdHighlight: true,
   }

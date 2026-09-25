@@ -25,6 +25,7 @@ const APPLICATION_DEFAULTS = {
   lastUpdateCheckAt: '',
   newNoteFocus: 'title',
   newTaskFocus: 'title',
+  uiScale: 100,
 }
 
 const EDITOR_DEFAULTS = {
@@ -35,6 +36,7 @@ const EDITOR_DEFAULTS = {
   highlightActiveLine: true,
   autosaveDebounceMs: 1000,
   rememberCursorPosition: true,
+  wordWrap: true,
   mdTables: true,
   mdTaskLists: true,
   mdStrikethrough: true,
@@ -74,6 +76,7 @@ function toApplicationRequest(app) {
     autoUpdate: app.autoUpdate,
     newNoteFocus: app.newNoteFocus,
     newTaskFocus: app.newTaskFocus,
+    uiScale: app.uiScale,
   }
 }
 
@@ -86,6 +89,7 @@ function toEditorRequest(editor) {
     highlightActiveLine: editor.highlightActiveLine,
     autosaveDebounceMs: editor.autosaveDebounceMs,
     rememberCursorPosition: editor.rememberCursorPosition,
+    wordWrap: editor.wordWrap,
     mdTables: editor.mdTables,
     mdTaskLists: editor.mdTaskLists,
     mdStrikethrough: editor.mdStrikethrough,
