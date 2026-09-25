@@ -40,7 +40,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out phc-winner-argon2
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: P-H-C/phc-winner-argon2
           ref: ${{ inputs.argon2_ref }}
@@ -136,7 +136,7 @@ jobs:
           file out/*/libargon2.*
 
       - name: Upload desktop and Android libraries
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: argon2-desktop-android
           path: out
@@ -150,7 +150,7 @@ jobs:
     runs-on: macos-latest
     steps:
       - name: Check out phc-winner-argon2
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: P-H-C/phc-winner-argon2
           ref: ${{ inputs.argon2_ref }}
@@ -164,23 +164,23 @@ jobs:
           MIN=14.0   # SupportedOSPlatformVersion for iOS in Lorestead.Client.csproj
           COMMON="-std=c89 -O3 -Iinclude -Isrc -DA2_VISCTL=1 -fvisibility=hidden"
 
-          build_static() {   # sdk arch impl minflag outdir
-            local sdk="$1" arch="$2" impl="$3" minflag="$4" outdir="$5"
+          build_static() {   # sdk arch impl-source extra-cflags min-version-flag outdir
+            local sdk="$1" arch="$2" impl="$3" cflags="$4" minflag="$5" outdir="$6"
             mkdir -p "$outdir"
             local objs=()
-            for src in $ARGON2_SOURCES $impl; do
+            for src in $ARGON2_SOURCES "$impl"; do
               local obj="$outdir/$(basename "${src%.c}").o"
               # shellcheck disable=SC2086
-              xcrun --sdk "$sdk" clang $COMMON -arch "$arch" "$minflag" -c "$src" -o "$obj"
+              xcrun --sdk "$sdk" clang $COMMON $cflags -arch "$arch" "$minflag" -c "$src" -o "$obj"
               objs+=("$obj")
             done
             xcrun --sdk "$sdk" libtool -static -o "$outdir/libargon2.a" "${objs[@]}"
             rm -f "${objs[@]}"
           }
 
-          build_static iphoneos arm64 src/ref.c "-miphoneos-version-min=$MIN" "$OUT/ios-arm64"
-          build_static iphonesimulator arm64 src/ref.c "-mios-simulator-version-min=$MIN" "$OUT/sim-arm64"
-          build_static iphonesimulator x86_64 "src/opt.c -mssse3" "-mios-simulator-version-min=$MIN" "$OUT/sim-x64"
+          build_static iphoneos arm64 src/ref.c "" "-miphoneos-version-min=$MIN" "$OUT/ios-arm64"
+          build_static iphonesimulator arm64 src/ref.c "" "-mios-simulator-version-min=$MIN" "$OUT/sim-arm64"
+          build_static iphonesimulator x86_64 src/opt.c "-mssse3" "-mios-simulator-version-min=$MIN" "$OUT/sim-x64"
 
           mkdir -p "$OUT/iossimulator-arm64" "$OUT/iossimulator-x64"
           mv "$OUT/sim-arm64/libargon2.a" "$OUT/iossimulator-arm64/libargon2.a"
@@ -194,7 +194,7 @@ jobs:
           done
 
       - name: Upload iOS libraries
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: argon2-ios
           path: out
@@ -223,13 +223,13 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: Download libraries
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: argon2-desktop-android
           path: out
 
       - name: Set up .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 10.0.x
 
@@ -294,13 +294,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Download desktop and Android libraries
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: argon2-desktop-android
           path: native/argon2
 
       - name: Download iOS libraries
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: argon2-ios
           path: native/argon2
@@ -328,7 +328,7 @@ jobs:
           cat SHA256SUMS
 
       - name: Upload combined artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: argon2-native-${{ inputs.argon2_ref }}
           path: native/argon2
