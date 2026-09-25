@@ -4,6 +4,7 @@ import { useSettingsStore, ACCENTS } from '../stores/settingsStore'
 import { useSyncStore } from '../stores/syncStore'
 import { useUpdatesStore } from '../stores/updatesStore'
 import { formatTimestamp } from '../utils/dateFormat.js'
+import { copyText } from '../utils/copyCode.js'
 import { getAbout, getLog, getThirdPartyNotices } from '../services/systemService'
 import { DialogTitle } from 'reka-ui'
 import AppDialog from '../components/AppDialog.vue'
@@ -169,17 +170,44 @@ async function openNotices() {
 
 const logOpen = ref(false)
 const logText = ref('')
+const logLoading = ref(false)
+// Until the first read lands, an empty logText means "not loaded", not "empty" -
+// the block stays unrendered rather than flashing the empty message.
+const logLoaded = ref(false)
+const logCopied = ref(false)
+const logPre = ref(null)
+let logCopiedTimer = null
+// Centres the corner buttons on the right edge, as a one-line code block does.
+const logSingleLine = computed(() => !logText.value.trimEnd().includes('\n'))
+
 async function toggleLog() {
   logOpen.value = !logOpen.value
   if (logOpen.value) await refreshLog()
 }
+// The floor keeps the spin visible: a local read returns in a frame, and a
+// refresh that changes nothing would otherwise look like a dead button. It
+// holds only the icon - the text goes in the moment it arrives.
 async function refreshLog() {
+  logLoading.value = true
+  const spinFloor = new Promise((r) => setTimeout(r, 400))
   try {
     const result = await getLog()
     logText.value = result?.text ?? ''
   } catch {
     logText.value = ''
   }
+  logLoaded.value = true
+  // Newest entries are at the end, below the height cap - start there.
+  await nextTick()
+  if (logPre.value) logPre.value.scrollTop = logPre.value.scrollHeight
+  await spinFloor
+  logLoading.value = false
+}
+async function copyLog() {
+  if (!(await copyText(logText.value))) return
+  logCopied.value = true
+  clearTimeout(logCopiedTimer)
+  logCopiedTimer = setTimeout(() => { logCopied.value = false }, 1500)
 }
 
 // Status is the fresher source after a check; the settings column only covers
@@ -448,19 +476,29 @@ onMounted(async () => {
             <i-lucide-chevron-right class="size-4 transition-transform" :class="logOpen ? 'rotate-90' : ''" />
             Logs
           </button>
-          <div v-if="logOpen" class="flex flex-col gap-2">
-            <div class="flex items-center gap-2">
-              <span class="text-xs text-on-surface-muted">System logs and errors</span>
+          <!-- The corner buttons share the markdown code block's look (code-action
+               in style.css); text-sm gives them the same em scale. The pre hugs
+               its text: whitespace inside a pre renders, template indent included. -->
+          <div v-if="logOpen && logLoaded" class="code-block text-sm" :class="logSingleLine ? 'code-block-single' : ''">
+            <pre v-if="logText" ref="logPre"
+              class="font-mono text-xs bg-surface-alt border border-border rounded-md p-3 pr-16 max-h-96 overflow-auto whitespace-pre-wrap">{{ logText }}</pre>
+            <p v-else class="text-xs text-on-surface-muted bg-surface-alt border border-border rounded-md p-3">
+              The log is empty.
+            </p>
+            <div class="code-actions">
               <HoverTip text="Refresh" side="bottom">
-                <Button size="icon" @click="refreshLog">
-                  <i-lucide-refresh-cw class="size-4" />
-                </Button>
+                <button type="button" class="code-action" aria-label="Refresh log" @click="refreshLog">
+                  <i-lucide-refresh-cw :class="logLoading ? 'animate-spin' : ''" />
+                </button>
+              </HoverTip>
+              <HoverTip v-if="logText" text="Copy log" side="bottom">
+                <button type="button" class="code-action" :class="logCopied ? 'copied' : ''" aria-label="Copy log"
+                  @click="copyLog">
+                  <i-lucide-check v-if="logCopied" />
+                  <i-lucide-copy v-else />
+                </button>
               </HoverTip>
             </div>
-            <pre
-              class="font-mono text-xs bg-surface-alt border border-border rounded-md p-3 max-h-96 overflow-auto whitespace-pre-wrap">
-                {{ logText || 'The log is empty.' }}
-            </pre>
           </div>
         </div>
 

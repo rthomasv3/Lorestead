@@ -6,11 +6,15 @@ import checkIcon from '~icons/lucide/check?raw'
 // The icons come from the same @iconify-json/lucide set the <i-lucide-*>
 // components resolve against, as strings: the button is injected into markup
 // that MarkdownPreview hands to v-html, where a Vue component cannot go.
+// code-actions/code-action are the shared corner-button styles (style.css), also
+// used by the Settings log; copy-code is what the preview's click handler finds.
 const BUTTON =
-  '<button type="button" class="copy-code" aria-label="Copy code" title="Copy code">' +
+  '<div class="code-actions">' +
+  '<button type="button" class="code-action copy-code" aria-label="Copy code" title="Copy code">' +
   `<span class="copy-code-idle">${copyIcon}</span>` +
   `<span class="copy-code-done">${checkIcon}</span>` +
-  '</button>'
+  '</button>' +
+  '</div>'
 
 // Wraps every code block in a positioning parent carrying the button. The
 // single-line class is what moves the button from the top corner to the middle
